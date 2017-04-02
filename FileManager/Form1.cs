@@ -7,28 +7,52 @@ using System.Configuration;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using FileManager.Properties;
+using Microsoft.Office.Interop.Outlook;
+using Newtonsoft.Json;
+using Application = System.Windows.Forms.Application;
+using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Runtime.InteropServices;
 
 namespace FileManager
 {
-    
+
 
     public partial class Form1 : Form
     {
         private readonly string _path;
+        private readonly string _config;
+        private readonly string _excel;
         private bool _isMove = true;
         private int _numOfDuplicates;
-        const string LtrMark = "\u200E"; 
+        const string LtrMark = "\u200E";
+        private static readonly object LockObject = new object ();
+        private string CopiedFilesDirectory = "9876789";
+        private readonly List<string> gfoldersList = new List<string>();
+
         public Form1()
         {
             InitializeComponent();
-
+            btnMail.Enabled = false;
             this.MaximumSize = new Size(Size.Width, (Screen.PrimaryScreen.Bounds.Height - 50));
 
             try
             {
                 _path = ConfigurationManager.AppSettings["basePath"];
-                string[] dirs;
+                _config = ConfigurationManager.AppSettings ["ConfigPath"];
+                _excel = ConfigurationManager.AppSettings ["ExcelPath"];
+
+                tabsMain.SelectedTab = tabEEmail;
+                if (_config == string.Empty)
+                {
+                    MessageBox.Show("נתיב לקובץ קונפיגורציה משותף אינו קיים");
+                    return;
+                }
+                if (_excel == string.Empty) {
+                    MessageBox.Show ( "נתיב לקובץ האקסל אינו קיים" );
+                    return;
+                }
+                string [] dirs;
                 try
                 {
                     dirs = Directory.GetDirectories(_path);
@@ -40,34 +64,101 @@ namespace FileManager
                 }
 
                 //adding files to checkbox list
-                foreach (string dir in dirs)
+                
+                
+                foreach (var path in dirs)
                 {
-                    string folder = Path.GetFileName(dir);
+                    var folder = Path.GetFileName(path);
                     if (folder != null)
                     {
-                        FileList.Items.Add(folder);
                         DuplicateFolders.Items.Add(folder);
                         filenames.Items.Add(folder);
+                        //cboDirs.Items.Add(folder);
+                        dirList.Items.Add ( folder );
+                        gfoldersList.Add(folder);
                     }
                 }
-                // checking if the user has some saved checked folder list
-                string countFolderSettings = Settings.Default.selectedFolders;
-                if (!String.IsNullOrEmpty(countFolderSettings))
-                {
-                    string[] folders = countFolderSettings.Split(',');
-                    for (int i = 0; i <= (FileList.Items.Count - 1); i++)
-                    {
-                        foreach (var fol in folders)
-                        {
-                            if (FileList.Items[i].ToString() == fol)
-                            {
-                                FileList.SetItemChecked(i, true);
-                            }
-                        }
 
+                var countsConfigSettings = GetCountSettings ();
+                var countDs = new List<CountSettings> ();
+                foreach (var fol in gfoldersList)
+                {
+                    var curdir = countsConfigSettings.Find ( f => f.dir == fol );
+                    if (curdir != null) {
+                        countDs.Add ( new CountSettings
+                        {
+                            dir = fol,
+                            method = curdir.method,
+                            check = curdir.check
+                        } );
+                    }
+                    else {
+                        countDs.Add ( new CountSettings
+                        {
+                            dir = fol,
+                            method = null,
+                            check = false
+                        } );
                     }
                 }
-                string duplicatesFolderSettings = Settings.Default.duplicatesFolders;
+
+
+                grdCount.AutoGenerateColumns = true;
+                grdCount.DataSource = countDs;
+
+
+                var emailConfigList = GetEmailDirSettings ();
+                var emailsDs = new List<EmailDirSettings>();
+                foreach (var fol in gfoldersList)
+                {
+                    var curdir = emailConfigList.Find ( f => f.dir == fol );
+                    if(curdir != null)
+                    {
+                        emailsDs.Add(new EmailDirSettings
+                        {
+                            dir = fol,
+                            email = curdir.email,
+                            check = curdir.check
+                        });
+                    }
+                    else
+                    {
+                        emailsDs.Add(new EmailDirSettings
+                        {
+                            dir = fol,
+                            email = null,
+                            check = false
+                        } );
+                    }
+                }
+
+                dataGridView1.AutoGenerateColumns = true;
+                dataGridView1.DataSource = emailsDs;
+
+
+
+                var folderSettings = GetFolderSettings ();
+
+                // checking if the user has some saved checked folder list
+                // string countFolderSettings = Settings.Default.selectedFolders;
+                //string countFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().selectedFolders;
+                //if (!String.IsNullOrEmpty(countFolderSettings))
+                //{
+                //    string[] folders = countFolderSettings.Split(',');
+                //    for (int i = 0; i <= (FileList.Items.Count - 1); i++)
+                //    {
+                //        foreach (var fol in folders)
+                //        {
+                //            if (FileList.Items[i].ToString() == fol)
+                //            {
+                //                FileList.SetItemChecked(i, true);
+                //            }
+                //        }
+
+                //    }
+                //}
+                //string duplicatesFolderSettings = Settings.Default.duplicatesFolders;
+                string duplicatesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().duplicatesFolders;
                 if (!String.IsNullOrEmpty(duplicatesFolderSettings))
                 {
                     string[] folders = duplicatesFolderSettings.Split(',');
@@ -83,7 +174,8 @@ namespace FileManager
 
                     }
                 }
-                string fileNamesFolderSettings = Settings.Default.fileNamesFolders;
+               // string fileNamesFolderSettings = Settings.Default.fileNamesFolders;
+                string fileNamesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().fileNamesFolders;
                 if (!String.IsNullOrEmpty(fileNamesFolderSettings))
                 {
                     string[] folders = fileNamesFolderSettings.Split(',');
@@ -100,7 +192,7 @@ namespace FileManager
                     }
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 MessageBox.Show("Error : " + ex.Message);
             }
@@ -118,13 +210,379 @@ namespace FileManager
             boxSummary.Visible = false;
             Application.DoEvents();
             CountFiles();
+            btnMail.Enabled = true;
         }
+
         private void bMigdal_Click(object sender, EventArgs e)
         {
             boxSummary.Visible = false;
             Application.DoEvents();
-            FixFileNames();
+            FixFileNames(true);
+            btnMail.Enabled = true;
         }
+
+        private void btnExcelFiles_Click ( object sender, EventArgs e )
+        {
+            SetExcelNames ();
+        }
+
+        private void Form1_Resize ( object sender, EventArgs e )
+        {
+            Invalidate ();
+        }
+
+        private void rMove_CheckedChanged ( object sender, EventArgs e )
+        {
+            _isMove = rMove.Checked;
+        }
+
+        private void Form1_Paint ( object sender, PaintEventArgs e )
+        {
+
+            try {
+                using (var brush = new LinearGradientBrush ( ClientRectangle,
+                                                                       Color.WhiteSmoke,
+                                                                       Color.SteelBlue,
+                                                                       90F )) {
+                    e.Graphics.FillRectangle ( brush, ClientRectangle );
+                }
+            }
+            catch {
+
+
+            }
+        }
+
+        private void btnMail_Click ( object sender, EventArgs e )
+        {
+            List<EmailDirSettings> dirSettings;
+            Dictionary<string, string> dnames = new Dictionary<string, string> ();
+            List<string> lCopiedNames = new List<string> ();
+            List<string> lpaths = new List<string> ();
+            List<List<string>> arfiles = new List<List<string>> ();
+            List<string> ardirs = new List<string> ();
+            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+
+            // if shared config file exist - take values from there, and save email to the dir selected
+            if (File.Exists ( configPath )) {
+
+                using (StreamReader r = new StreamReader ( configPath )) {
+                    string json = r.ReadToEnd ();
+                    dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>> ( json );
+                }
+            }
+            else {
+                dirSettings = new List<EmailDirSettings> ();
+            }
+
+            foreach (var dirSetting in dirSettings) {
+                // get all files in selected directory
+                arfiles.Clear ();
+                lCopiedNames.Clear ();
+                dnames.Clear ();
+                lpaths.Clear ();
+                ardirs.Clear ();
+                string basePath = Path.Combine ( _path, dirSetting.dir );
+                if (!Directory.Exists ( basePath )) {
+                    continue;
+                }
+                var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
+                     .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".pdf" ) );
+                var files = lfiles as IList<string> ?? lfiles.ToList ();
+                if (files.Any ()) {
+                    //iterate through the files and get the names and insert the names and the paths to lists
+                    foreach (string file in files) {
+                        // good directory is only with the name "1" of a date in format dd.mm.yy like 24.02.17
+                        bool isGoodDirectory = false;
+                        string currentDir = Path.GetFileName ( Path.GetDirectoryName ( file ) );
+                        if (currentDir == "1") {
+                            if (!ardirs.Contains ( currentDir )) {
+                                ardirs.Add ( currentDir );
+                            }
+                            isGoodDirectory = true;
+                        }
+                        else {
+                            string regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
+                            Match m = Regex.Match ( currentDir, regex );
+                            if (m.Success) {
+                                if (!ardirs.Contains(currentDir))
+                                {
+                                    ardirs.Add ( currentDir );
+                                }
+                                
+                                isGoodDirectory = true;
+                            }
+                            else {
+                                isGoodDirectory = false;
+                            }
+                        }
+                        if (!isGoodDirectory) {
+                            continue;
+                        }
+
+                        string fileName = Path.GetFileName ( file );
+                        if (fileName == null || IsThumbsInPath ( file )) {
+                            continue;
+                        }
+                        var newFileName = fileName;
+                        var newFile = file;
+                        if (fileName.Trim ().Contains ( " " )) {
+                            newFileName = fileName.Replace ( " ", "_" );
+                            var copiedPath = Path.Combine ( Path.GetDirectoryName ( file ), CopiedFilesDirectory );
+                            if (!Directory.Exists ( copiedPath )) {
+                                Directory.CreateDirectory ( copiedPath );
+                            }
+                            newFile = Path.Combine ( copiedPath, newFileName );
+                            File.Copy ( file, newFile, true );
+                        }
+                        lCopiedNames.Add ( GetMailFileName ( newFileName, dirSetting.check ) );
+                        if (!dnames.ContainsKey ( newFileName )) {
+                            dnames.Add ( newFileName, GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0] );
+                        }
+                        lpaths.Add ( newFile );
+                    }
+                    // group file names 
+                    var duplicateKeys = lCopiedNames.GroupBy ( x => x )
+                            .Select ( group => group.Key );
+
+                    var enumerable = duplicateKeys as string [] ?? duplicateKeys.ToArray ();
+                    if (enumerable.Any ()) {
+                        // create a list of lists - for every group name, get all the files that match it
+                        // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
+                        foreach (var duplicateKey in enumerable) {
+                            var ll = from ln in lpaths where ln.Contains ( duplicateKey.Split ( '.' ) [0] ) select ln;
+                            arfiles.Add ( new List<string> ( ll.ToList () ) );
+                        }
+                    }
+
+
+                    //for each group open a email from outlook and set the group name as subject, and all files as attachment
+                    foreach (var arfile in arfiles) {
+                        if (string.IsNullOrEmpty ( dirSetting.email )) {
+                            continue;
+                        }
+                        OutlookApp oApp = new OutlookApp ();
+                        MailItem oMsg = (MailItem)oApp.CreateItem ( OlItemType.olMailItem );
+                        oMsg.To = dirSetting.email;
+                        var fileName = Path.GetFileName ( arfile [0] );
+                        //var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
+                        if (fileName != null) oMsg.Subject = dnames [fileName];
+                        foreach (var curFile in arfile) {
+                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                                Log ( curFile, w );
+                            }
+                            oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
+                        }
+
+                        oMsg.Display ( false );
+                        // add this to add signiture to mail body
+                        oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
+                        oMsg = null;
+                        oApp = null;
+                    }
+
+
+
+                    foreach (var arfile in arfiles) {
+                        foreach (var curFile in arfile) {
+                            if (curFile.Contains ( CopiedFilesDirectory )) {
+                                var path = Path.GetDirectoryName ( curFile );
+                                if (Directory.Exists ( path )) {
+                                    Directory.Delete ( path, true );
+                                }
+                            }
+
+                        }
+                    }
+
+                    var dt = DateTime.Now;
+                    var name = dt.Day.ToString ().PadLeft ( 2, '0' ) + "."  + dt.Month.ToString ().PadLeft ( 2, '0' ) + "." + dt.Year % 100 + "." + dt.Hour.ToString ().PadLeft ( 2, '0' ) + "." + dt.Minute.ToString ().PadLeft ( 2, '0' );
+                    var newDir = Path.Combine ( basePath, name );
+                    
+                   
+                    Directory.CreateDirectory ( newDir );
+                    foreach (var ardir in ardirs) {
+                        var checkedPath = Path.Combine ( basePath, ardir );
+                        if (!Directory.Exists ( checkedPath )) {
+                            continue;
+                        }
+                        var dirFiles = Directory.GetFiles ( checkedPath );
+                        foreach (var dirFile in dirFiles) {
+                            File.Move ( dirFile, Path.Combine ( newDir, Path.GetFileName ( dirFile ) ) );
+                        }
+
+                    }
+
+
+
+
+                }
+            }
+
+            MessageBox.Show ( "המיילים נוצרו בהצלחה" );
+            btnMail.Enabled = false;
+        }
+
+        private void dataGridView1_CellEndEdit ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (e.ColumnIndex > 0 && dataGridView1.Columns [e.ColumnIndex] != null && dataGridView1.Columns [e.ColumnIndex].Name == "check") {
+                return;
+            }
+            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+
+            var mail = dataGridView1.Rows [e.RowIndex].Cells ["email"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["email"].Value.ToString ();
+
+            var fol = dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value.ToString ();
+
+            var emailConfigList = GetEmailDirSettings ();
+
+
+            var curdir = emailConfigList.Find ( f => f.dir == fol );
+            if (curdir != null) {
+                if (string.IsNullOrEmpty ( mail )) {
+                    emailConfigList.Remove ( curdir );
+                }
+                else {
+                    curdir.email = mail;
+                }
+
+            }
+            else {
+                if (!string.IsNullOrEmpty ( mail )) {
+                    emailConfigList.Add ( new EmailDirSettings
+                    {
+                        dir = fol,
+                        email = mail,
+                        check = false
+                    } );
+                }
+
+            }
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( emailConfigList.ToArray () );
+                File.WriteAllText ( configPath, sjson );
+            }
+
+        }
+
+        private void dataGridView1_CellContentClick ( object sender, DataGridViewCellEventArgs e )
+        {
+            dataGridView1.CommitEdit ( DataGridViewDataErrorContexts.Commit );
+        }
+
+        private void dataGridView1_CellValueChanged ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (e.RowIndex == -1)
+                return;
+
+            if (dataGridView1.Columns [e.ColumnIndex].Name != "check") {
+                return;
+            }
+            bool check = (bool)dataGridView1 [e.ColumnIndex, e.RowIndex].Value;
+            var dirSettings = GetEmailDirSettings ();
+            var ddir = dataGridView1 [0, e.RowIndex].Value?.ToString ();
+            var dirObj = dirSettings.Find ( f => f.dir == ddir );
+            if (dirObj != null) {
+                dirObj.check = check;
+            }
+            else {
+                dirSettings.Add ( new EmailDirSettings
+                {
+                    dir = ddir,
+                    check = check
+                } );
+            }
+
+
+            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( dirSettings.ToArray () );
+                File.WriteAllText ( configPath, sjson );
+            }
+
+
+        }
+
+        private void grdCount_CellContentClick ( object sender, DataGridViewCellEventArgs e )
+        {
+            grdCount.CommitEdit ( DataGridViewDataErrorContexts.Commit );
+        }
+
+        private void grdCount_CellValueChanged ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (e.RowIndex == -1)
+                return;
+
+            if (grdCount.Columns [e.ColumnIndex].Name != "chb") {
+                return;
+            }
+            bool check = (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
+            var dirSettings = GetCountSettings ();
+            var ddir = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
+            var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
+            var dirObj = dirSettings.Find ( f => f.dir == ddir );
+            if (dirObj != null) {
+                dirObj.check = check;
+            }
+            else {
+                dirSettings.Add ( new CountSettings
+                {
+
+                    dir = ddir,
+                    method = method,
+                    check = check
+                } );
+            }
+
+
+            setCountSettings ( dirSettings );
+
+        }
+
+        private void grdCount_CellEndEdit ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (e.ColumnIndex > 0 && grdCount.Columns [e.ColumnIndex] != null && grdCount.Columns [e.ColumnIndex].Name == "chb") {
+                return;
+            }
+            // string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+            var check = grdCount.Rows [e.RowIndex].Cells ["chb"].Value != null && (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
+
+            var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
+
+            var fol = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
+
+            var countsConfigList = GetCountSettings ();
+
+
+            var curdir = countsConfigList.Find ( f => f.dir == fol );
+            if (curdir != null) {
+                if (string.IsNullOrEmpty ( method ) && check == false) {
+                    countsConfigList.Remove ( curdir );
+                }
+                else {
+                    curdir.method = method;
+                }
+
+            }
+            else {
+                if (!string.IsNullOrEmpty ( method )) {
+                    countsConfigList.Add ( new CountSettings
+                    {
+                        dir = fol,
+                        method = method,
+                        check = check
+                    } );
+                }
+
+            }
+
+            setCountSettings ( countsConfigList );
+        }
+
+
+
         private void SetSelectedDuplicatesFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
             string items = String.Empty;
@@ -133,9 +591,26 @@ namespace FileManager
                 //set a comma delimited string to be saved in Settings
                 items += checkedItem + ",";
             }
-            Settings.Default.duplicatesFolders = items.TrimEnd(',');
-            Settings.Default.Save();
-            Settings.Default.Reload();
+
+            
+            
+
+            var folderSettings = GetFolderSettings ();
+            if (folderSettings.Count > 0) {
+                folderSettings.First ().duplicatesFolders = items.TrimEnd ( ',' );
+            }
+            else {
+                folderSettings.Add ( new FolderSettings
+                {
+                    duplicatesFolders = items.TrimEnd ( ',' ),
+                    fileNamesFolders = string.Empty,
+                    selectedFolders = string.Empty
+                } );
+            }
+            setFolderSettings ( folderSettings );
+            //Settings.Default.duplicatesFolders = items.TrimEnd(',');
+            //Settings.Default.Save();
+            //Settings.Default.Reload();
         }
 
         private void SetSelectedFileNameFolders(CheckedListBox.CheckedItemCollection checkedItems)
@@ -146,12 +621,28 @@ namespace FileManager
                 //set a comma delimited string to be saved in Settings
                 items += checkedItem + ",";
             }
-            Settings.Default.fileNamesFolders = items.TrimEnd(',');
-            Settings.Default.Save();
-            Settings.Default.Reload();
+
+            var folderSettings = GetFolderSettings ();
+            if (folderSettings.Count > 0) {
+                folderSettings.First ().fileNamesFolders = items.TrimEnd ( ',' );
+            }
+            else {
+                folderSettings.Add ( new FolderSettings
+                {
+                    duplicatesFolders = string.Empty,
+                    fileNamesFolders = items.TrimEnd ( ',' ),
+                    selectedFolders = string.Empty
+                } );
+            }
+            setFolderSettings ( folderSettings );
+            
+
+            //Settings.Default.fileNamesFolders = items.TrimEnd(',');
+            //Settings.Default.Save();
+            //Settings.Default.Reload();
         }
         
-        private List<FileCount> SetSelectedItems(CheckedListBox.CheckedItemCollection checkedItems, bool useProgressBar)
+        private List<FileCount> SetSelectedItems(List<CountSettings> checkedItems, bool useProgressBar)
         {
             var list = new List<FileCount>();
             string items = String.Empty;
@@ -165,9 +656,13 @@ namespace FileManager
             foreach (var checkedItem in checkedItems)
             {
                 //set a comma delimited string to be saved in Settings
-                items += checkedItem + ",";
-
-                var lfiles = Directory.GetFiles(Path.Combine(_path, checkedItem.ToString()), "*.*",
+                
+                items += checkedItem.dir + ",";
+                var checkedPath = Path.Combine ( _path, checkedItem.dir );
+                if (!Directory.Exists( checkedPath )) {
+                    continue;
+                }
+                var lfiles = Directory.GetFiles(checkedPath, "*.*",
                     SearchOption.AllDirectories)
                      .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
                 //check if file Thumbs.db exist in folder. If yes than reduce one file from file count.
@@ -188,7 +683,8 @@ namespace FileManager
                 {
                     list.Add(new FileCount
                     {
-                        FileName = checkedItem.ToString(),
+                        FileName = checkedItem.dir,
+                        method = checkedItem.method,
                         Count = fileCount
                     });
                 }
@@ -204,10 +700,28 @@ namespace FileManager
                 }
                 
             }
+
             //save selected items to Settings
-            Settings.Default.selectedFolders = items.TrimEnd(',');
-            Settings.Default.Save();
-            Settings.Default.Reload();
+            var folderSettings = GetFolderSettings ();
+            if(folderSettings.Count > 0)
+            {
+                folderSettings.First ().selectedFolders = items.TrimEnd ( ',' );
+            }
+            else
+            {
+                folderSettings.Add(new FolderSettings
+                {
+                    duplicatesFolders = string.Empty,
+                    fileNamesFolders = string.Empty,
+                    selectedFolders = items.TrimEnd ( ',' )
+            });
+            }
+            setFolderSettings ( folderSettings );
+
+            
+            //Settings.Default.selectedFolders = items.TrimEnd(',');
+            //Settings.Default.Save();
+            //Settings.Default.Reload();
             if (useProgressBar)
             {
                 progressBar1.Value = 100;
@@ -223,37 +737,6 @@ namespace FileManager
             return false;
         }
 
-        private void bSelectAll_Click(object sender, EventArgs e)
-        {
-            bool isCounts = tabsMain.SelectedIndex == 0;
-            bool isDup = tabsMain.SelectedIndex == 1;
-            //bool isFileNames = tabsMain.SelectedIndex == 2;
-            for (int i = 0; i <= (FileList.Items.Count - 1); i++)
-            {
-                if (isCounts)
-                    FileList.SetItemChecked(i, true);
-                else if (isDup)
-                    DuplicateFolders.SetItemChecked(i, true);
-                else
-                    filenames.SetItemChecked(i, true);
-            }
-        }
-
-        private void bUnselect_Click(object sender, EventArgs e)
-        {
-            bool isCounts = tabsMain.SelectedIndex == 0;
-            bool isDup = tabsMain.SelectedIndex == 1;
-            for (int i = 0; i <= (FileList.Items.Count - 1); i++)
-            {
-                if (isCounts)
-                    FileList.SetItemChecked(i, false);
-                else if (isDup)
-                    DuplicateFolders.SetItemChecked(i, false);
-                else
-                    filenames.SetItemChecked(i, false);
-            }
-        }
-
         private void CountFiles()
         {
             try
@@ -263,22 +746,28 @@ namespace FileManager
                 lblProgressMessage.Text = "סופר קבצים";
                 lblProgressMessage.Visible = true;
                 Application.DoEvents();
-                var checkedItems = FileList.CheckedItems;
+
+                var countsSettings = GetCountSettings ();
+
+                var checkedItems = countsSettings.FindAll ( f => f.check);
+
+                
                 if (checkedItems.Count == 0)
                 {
                     FixDuplicates();
-                    FixFileNames();
+                    FixFileNames(false);
                     return;
                 }
                 
                 var list = SetSelectedItems(checkedItems, true);
                 FixDuplicates();
-                FixFileNames();
+                FixFileNames( false );
+                
                 //open the gris form with the selected data.
-                var grid = new ResultGrid(list);
+                var grid = new ResultGrid(list.OrderBy(o=>o.FileName).ToList());
                 grid.Show();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 MessageBox.Show("CountFiles Error :\r" + ex.Message);
             }
@@ -313,23 +802,26 @@ namespace FileManager
                     if (dirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (string dir in dirs)
+                        foreach (string curdir in dirs)
                         {
-                            string folder = Path.GetFileName(dir);
+                            if (!Directory.Exists ( curdir )) {
+                                continue;
+                            }
+                            string folder = Path.GetFileName(curdir);
                             if (folder == counter.ToString())
                             {
                                 // if it is the first folder (dir/1) rename all files 
                                 // from fileName.xxx to fileName_1.xxx
                                 if (counter == 1)
                                 {
-                                    var lfiles = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
+                                    var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
                                          .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
                                     var files = lfiles as IList<string> ?? lfiles.ToList();
                                     if (files.Any())
                                     {
-                                        if (CheckFolderIfNotFirstDuplication(files, dir))
+                                        if (CheckFolderIfNotFirstDuplication(files, curdir))
                                         {
-                                            allFilesPath = dir;
+                                            allFilesPath = curdir;
                                             break;
                                         }
                                         foreach (string file in files)
@@ -347,15 +839,15 @@ namespace FileManager
                                             }
                                             // if it is the first duplication of the file first rename the file in the
                                             // base folder (dir/1) from fileName.xxx to fileName_1.xxx
-                                           if(!File.Exists(Path.Combine(dir, newName)))
+                                           if(!File.Exists(Path.Combine(curdir, newName)))
                                            {
-                                               move(Path.Combine(dir, fileName),
-                                                   Path.Combine(dir, newName));
+                                               move(Path.Combine(curdir, fileName),
+                                                   Path.Combine(curdir, newName));
                                            }
                                             
                                         }
                                     }
-                                    allFilesPath = dir;
+                                    allFilesPath = curdir;
                                     break;
                                 }
 
@@ -368,7 +860,7 @@ namespace FileManager
                         }
                         counter = 1;
                         // run again to get the duplicated folders
-                        foreach (string dir in dirs)
+                        foreach (string curdir in dirs)
                         {
                             // if the folder is the base folder (dir/1) continue - check all duplicated folders only
                             if (counter == 1)
@@ -376,7 +868,10 @@ namespace FileManager
                                 counter++;
                                 continue;
                             }
-                            var lfiles = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
+                            if (!Directory.Exists ( curdir )) {
+                                continue;
+                            }
+                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
                                 .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
                             var files = lfiles as IList<string> ?? lfiles.ToList();
                             if (files.Any())
@@ -526,6 +1021,9 @@ namespace FileManager
                     {
                         for (int i = 0; i < dirs.Length; i++)
                         {
+                            if (!Directory.Exists ( dirs[i] )) {
+                                continue;
+                            }
                             string fileName = Path.GetFileName(dirs[i]);
                             if (fileName == "1")
                             {
@@ -578,14 +1076,14 @@ namespace FileManager
                 lblDuplicateNum.Text = _numOfDuplicates.ToString();
                 Application.DoEvents();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 MessageBox.Show("FixDuplicates Error :\r" + ex.Message);
             }
 
         }
 
-        private void FixFileNames()
+        private void FixFileNames(bool isMigdal)
         {
             try
             {
@@ -616,6 +1114,9 @@ namespace FileManager
                         // run over the array to get the dir/1 folder path where all the files are
                         foreach (string dir in dirs)
                         {
+                            if (!Directory.Exists ( dir )) {
+                                continue;
+                            }
                             var lfiles = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories)
                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
 
@@ -651,7 +1152,7 @@ namespace FileManager
                                     for (int i = 0; i < splits.Length; i++)
                                     {
                                         var part = splits[i];
-                                        if (i == 0)
+                                        if (i == 0 && isMigdal)
                                         {
                                             newName += part + "-";
                                         }
@@ -672,7 +1173,7 @@ namespace FileManager
                 }
                 progressBar1.Value = 100;
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 MessageBox.Show("FixFileNames Error :\r" + ex.Message);
             }
@@ -756,7 +1257,6 @@ namespace FileManager
 
         }
 
-        
         private void CopyFiles(string src, string dest)
         {
             if (_isMove)
@@ -776,22 +1276,24 @@ namespace FileManager
                 File.SetAttributes(src, FileAttributes.Normal);
                 File.Move(src, dest);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 MessageBox.Show("Error while moving file:\r" + src + "\rTo:\r" + dest + "\rError Message:\r" + ex.Message);
             }
         }
+
         private void copy(string src, string dest)
         {
             try
             {
                 File.Copy(src, dest);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 MessageBox.Show("Error while copying file:\r" + src + "\rTo:\r" + dest + "\rError Message:\r" + ex.Message);
             }
         }
+
         private string GetNewFileName(string name, int num)
         {
             string[] splits = name.Split('.');
@@ -814,45 +1316,316 @@ namespace FileManager
             
             return null;
         }
-
         
-        
-
-       
-
-        private void Form1_Paint(object sender, PaintEventArgs e)
+        public static void Log ( string logMessage, TextWriter w )
         {
+            w.Write ( "\r\nLog Entry : " );
+            w.WriteLine ( "{0} {1}", DateTime.Now.ToLongTimeString (),
+                DateTime.Now.ToLongDateString () );
+            w.WriteLine ( "  :" );
+            w.WriteLine ( "  :{0}", logMessage );
+            w.WriteLine ( "-------------------------------" );
+        }
 
-            try
+        private  string GetMailFileName(string fileName, bool isCheck )
+        {
+            // try to plit with _, -, space
+            //var isCheck = ischeck;
+            var type = 1;
+            var splits = fileName.Split('_');
+            if (splits.Length == 1)
             {
-                using (var brush = new LinearGradientBrush(ClientRectangle,
-                                                                       Color.WhiteSmoke,
-                                                                       Color.SteelBlue,
-                                                                       90F))
+                type = 2;
+                splits = fileName.Split('-');
+                if (splits.Length == 1)
                 {
-                    e.Graphics.FillRectangle(brush, ClientRectangle);
+                    type = 3;
+                    splits = fileName.Split(' ');
                 }
             }
-            catch 
+            // if checkbox is checked remove the last part of the splits
+            if (isCheck)
             {
-                
-              
+                var ext = fileName.Split('.');
+                var newName = splits.Take(splits.Count() - 1).ToArray();
+                string sep = type == 1 ? "_" : type == 2 ? "-" : " ";
+                var name = string.Join(sep, newName);
+                return name + "." + ext[1];
+            }
+            else
+            {
+                return fileName;
+            }
+
+
+        }
+
+        private List<EmailDirSettings> GetEmailDirSettings ()
+        {
+            List<EmailDirSettings> dirSettings = new List<EmailDirSettings> ();
+            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+            if (File.Exists ( configPath )) {
+
+                using (StreamReader r = new StreamReader ( configPath )) {
+                    string json = r.ReadToEnd ();
+                    dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>> ( json );
+                }
+            }
+            return dirSettings.Where(c=>c.check).ToList();
+        }
+
+        private void setFolderSettings (List<FolderSettings> folSettings )
+        {
+            string configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
+                File.WriteAllText ( configPath, sjson );
             }
         }
 
-        private void Form1_Resize(object sender, EventArgs e)
+        private List<FolderSettings> GetFolderSettings ()
         {
-            Invalidate();
+            string configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
+            var folderSettings = new List<FolderSettings> ();
+            if (File.Exists ( configPath )) {
+
+                using (StreamReader r = new StreamReader ( configPath )) {
+                    string json = r.ReadToEnd ();
+                    folderSettings = JsonConvert.DeserializeObject<List<FolderSettings>> ( json );
+                }
+            }
+            else {
+                folderSettings = new List<FolderSettings> ();
+            }
+
+            return folderSettings;
         }
 
-        private void rMove_CheckedChanged(object sender, EventArgs e)
+        private void setCountSettings ( List<CountSettings> folSettings )
         {
-            _isMove = rMove.Checked;
+            string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
+                File.WriteAllText ( configPath, sjson );
+            }
         }
 
-        
+        private List<CountSettings> GetCountSettings ()
+        {
+            string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
+            var folderSettings = new List<CountSettings> ();
+            if (File.Exists ( configPath )) {
+
+                using (StreamReader r = new StreamReader ( configPath )) {
+                    string json = r.ReadToEnd ();
+                    folderSettings = JsonConvert.DeserializeObject<List<CountSettings>> ( json );
+                }
+            }
+            else {
+                folderSettings = new List<CountSettings> ();
+            }
+
+            return folderSettings.Where ( c => c.check ).ToList ();
+        }
+
+        private void SetExcelNames ()
+        {
+            var checkedItems = dirList.CheckedItems;
+            if (checkedItems.Count == 0) {
+                return;
+            }
+            var arr = GetExcelValues ();
+            progressBar1.Visible = true;
+            progressBar1.Value = 0;
+            lblProgressMessage.Text = "מתקן שמות מאקסל";
+            lblProgressMessage.Visible = true;
+            Application.DoEvents ();
+            var itemCount = checkedItems.Count;
+            var itemParts = Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
+            int percent = 0;
+            int progress = 0;
+            int index = 0;
+            foreach (var checkedItem in checkedItems) {
+                string basePath = Path.Combine ( _path, checkedItem.ToString () );
+                if (!Directory.Exists ( basePath )) {
+                    continue;
+                }
+                var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
+                           .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".pdf" ) );
+                // var dirs = Directory.GetDirectories ( basePath );
+                // if (dirs.Length > 0) {
+                // run over the array to get the dir/1 folder path where all the files are
+                // foreach (string dir in dirs) {
 
 
+                var files = lfiles as IList<string> ?? lfiles.ToList ();
+                percent =  itemParts / files.Count;
+
+                foreach (string file in files) {
+
+                    string fileName = Path.GetFileName ( file );
+
+                    if (fileName == null) {
+                        continue;
+                    }
+                    var extSplits = fileName.Split ( '.' );
+                    var hyphenSplits = extSplits [0].Split ( '-' );
+                    var splits = hyphenSplits [1].Split ( '_' );
+                    if (splits.Length == 1) {
+                        continue;
+                    }
+                    foreach (var part in splits) {
+                        string result = CheckExcelForItems (arr, part );
+                        if (!string.IsNullOrEmpty ( result )) {
+                            var newFilePath = file.Replace ( part, string.Join ( "", result.Split ( Path.GetInvalidFileNameChars () ) ) );
+
+                            File.Move ( file, newFilePath );
+                            break;
+                        }
+                    }
+                    progress += ( index * itemParts ) + percent;
+                    if (progress > 100) progress = 100;
+                    progressBar1.Value = progress;
+                    //  }
+                    //  }
+                }
+                index++;
+            }
+            progressBar1.Value = 100;
+            MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
+        }
+
+        private object[,] GetExcelValues (  )
+        {
+            var lst = new List<string> ();
+            Excel.Application xlApp = new Excel.Application ();
+            Excel.Workbook xlWorkbook = null;
+            Excel._Worksheet xlWorksheet = null;
+            Excel.Range xlRange = null;
+            try {
+
+                xlWorkbook = xlApp.Workbooks.Open ( _excel );
+                xlApp.Visible = false;
+                xlWorksheet = (Excel._Worksheet)xlWorkbook.Sheets [1];
+                xlRange = xlWorksheet.UsedRange;
+
+                return (object[,])xlRange.Cells.Value2;
+            }
+            catch(System.Exception ex) {
+
+                return new object [0,0];
+            }
+            finally {
+                GC.Collect ();
+                GC.WaitForPendingFinalizers ();
+
+                //rule of thumb for releasing com objects:
+                //  never use two dots, all COM objects must be referenced and released individually
+                //  ex: [somthing].[something].[something] is bad
+
+                //release com objects to fully kill excel process from running in the background
+                Marshal.ReleaseComObject ( xlRange );
+                Marshal.ReleaseComObject ( xlWorksheet );
+
+                //close and release
+                xlWorkbook.Close ();
+                Marshal.ReleaseComObject ( xlWorkbook );
+
+                //quit and release
+                xlApp.Quit ();
+                Marshal.ReleaseComObject ( xlApp );
+            }
+            
+        }
+
+
+        private string CheckExcelForItems ( object [,] arr, string part )
+        {
+            var lst = new List<string> ();
+            for (int x = 1; x <= arr.GetLength ( 0 ); x++) {
+                if (part == arr [x, 1].ToString ()) {
+                    for (int y = 2; y <= arr.GetLength ( 1 ); y++) {
+                        var val = arr [x, y]?.ToString ();
+                        if (!string.IsNullOrEmpty ( val )) {
+                            lst.Add ( val );
+                        }
+                    }
+                }
+            }
+            if (lst.Count > 0) {
+                return String.Join ( " ", lst.ToArray () ).Replace ( " ", "_" );
+            }
+            return null;
+        }
+        //private string CheckExcelForItems ( string part )
+        //{
+        //    var lst = new List<string> ();
+        //    Excel.Application xlApp = new Excel.Application ();
+        //    Excel.Workbook xlWorkbook = null;
+        //    Excel._Worksheet xlWorksheet = null;
+        //    Excel.Range xlRange = null;
+        //    try {
+
+        //        xlWorkbook = xlApp.Workbooks.Open ( _excel );
+        //        xlApp.Visible = false;
+        //        xlWorksheet = (Excel._Worksheet)xlWorkbook.Sheets [1];
+        //        xlRange = xlWorksheet.UsedRange;
+
+        //        int rowCount = xlRange.Rows.Count;
+        //        int colCount = xlRange.Columns.Count;
+
+        //        for (int t = 2; t <= rowCount; t++) {
+        //            string val = ( xlRange.Cells [t, 1] as Excel.Range ).Value2.ToString ();
+        //            if (val == part) {
+        //                for (int j = 2; j <= colCount; j++) {
+        //                    string temp = ( xlRange.Cells [t, j] as Excel.Range ).Value2?.ToString ();
+        //                    if (!string.IsNullOrEmpty ( temp )) {
+        //                        lst.Add ( temp );
+        //                    }
+        //                }
+        //                break;
+        //            }
+        //        }
+
+
+        //        if (lst.Count > 0) {
+        //            return String.Join ( " ", lst.ToArray () ).Replace ( " ", "_" );
+        //        }
+        //        return null;
+
+        //    }
+        //    catch (System.Exception ex) {
+
+        //        return null;
+        //    }
+        //    finally {
+        //        GC.Collect ();
+        //        GC.WaitForPendingFinalizers ();
+
+        //        //rule of thumb for releasing com objects:
+        //        //  never use two dots, all COM objects must be referenced and released individually
+        //        //  ex: [somthing].[something].[something] is bad
+
+        //        //release com objects to fully kill excel process from running in the background
+        //        Marshal.ReleaseComObject ( xlRange );
+        //        Marshal.ReleaseComObject ( xlWorksheet );
+
+        //        //close and release
+        //        xlWorkbook.Close ();
+        //        Marshal.ReleaseComObject ( xlWorkbook );
+
+        //        //quit and release
+        //        xlApp.Quit ();
+        //        Marshal.ReleaseComObject ( xlApp );
+
+
+
+
+        //    }
+
+        //}
         //private string GetName(int ctr, string path, string ext)
         //{
         //    Dictionary<string, int> bases = new Dictionary<string, int>

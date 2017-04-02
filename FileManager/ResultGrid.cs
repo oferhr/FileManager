@@ -17,12 +17,9 @@ namespace FileManager
             this.MaximumSize = new Size(this.Size.Width, (Screen.PrimaryScreen.Bounds.Height-50));
             this.fileGrid.GridColor = Color.Gray;
             this.fileGrid.BorderStyle = BorderStyle.Fixed3D;
-            this.fileGrid.CellBorderStyle =
-                DataGridViewCellBorderStyle.Single;
-            this.fileGrid.RowHeadersBorderStyle =
-                DataGridViewHeaderBorderStyle.Single;
-            this.fileGrid.ColumnHeadersBorderStyle =
-                DataGridViewHeaderBorderStyle.Single;
+            this.fileGrid.CellBorderStyle = DataGridViewCellBorderStyle.Single;
+            this.fileGrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+            this.fileGrid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
             fileGrid.MultiSelect = false;
             fileGrid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
             fileGrid.AllowUserToResizeColumns = false;
@@ -38,6 +35,12 @@ namespace FileManager
             
         }
 
+        public sealed override Size MaximumSize
+        {
+            get { return base.MaximumSize; }
+            set { base.MaximumSize = value; }
+        }
+
 
         private string GetExcelName()
         {
@@ -47,9 +50,11 @@ namespace FileManager
 
         private void bExport_Click(object sender, EventArgs e)
         {
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.Filter = "Excel Documents (*.csv)|*.csv";
-            sfd.FileName = GetExcelName();
+            SaveFileDialog sfd = new SaveFileDialog
+            {
+                Filter = "Excel Documents (*.csv)|*.csv",
+                FileName = GetExcelName()
+            };
             if (sfd.ShowDialog() == DialogResult.OK)
             {
                 //ToCsV(dataGridView1, @"c:\export.xls");
@@ -131,6 +136,10 @@ namespace FileManager
 
         private void ResultGrid_Paint(object sender, PaintEventArgs e)
         {
+            if (this.ClientRectangle.Width == 0)
+            {
+                return;
+            }
             using (LinearGradientBrush brush = new LinearGradientBrush(this.ClientRectangle,
                                                                Color.WhiteSmoke,
                                                                Color.SteelBlue,

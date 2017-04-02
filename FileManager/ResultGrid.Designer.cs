@@ -34,9 +34,10 @@
             this.bExport = new System.Windows.Forms.Button();
             this.bPrint = new System.Windows.Forms.Button();
             this.fileGrid = new System.Windows.Forms.DataGridView();
-            this.bClose = new System.Windows.Forms.Button();
             this.folderName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.fileNum = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.method = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.bClose = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.fileGrid)).BeginInit();
             this.SuspendLayout();
             // 
@@ -84,7 +85,8 @@
             this.fileGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.fileGrid.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.folderName,
-            this.fileNum});
+            this.fileNum,
+            this.method});
             dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
             dataGridViewCellStyle2.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
@@ -111,6 +113,29 @@
             this.fileGrid.Size = new System.Drawing.Size(444, 350);
             this.fileGrid.TabIndex = 2;
             // 
+            // folderName
+            // 
+            this.folderName.DataPropertyName = "FileName";
+            this.folderName.HeaderText = "שם תיקיה";
+            this.folderName.Name = "folderName";
+            this.folderName.ReadOnly = true;
+            this.folderName.Width = 140;
+            // 
+            // fileNum
+            // 
+            this.fileNum.DataPropertyName = "Count";
+            this.fileNum.HeaderText = "כמות קבצים";
+            this.fileNum.Name = "fileNum";
+            this.fileNum.ReadOnly = true;
+            // 
+            // method
+            // 
+            this.method.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.method.DataPropertyName = "method";
+            this.method.HeaderText = "אופן שליחה";
+            this.method.Name = "method";
+            this.method.ReadOnly = true;
+            // 
             // bClose
             // 
             this.bClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -124,22 +149,6 @@
             this.bClose.Text = "סגור";
             this.bClose.UseVisualStyleBackColor = true;
             this.bClose.Click += new System.EventHandler(this.bClose_Click);
-            // 
-            // folderName
-            // 
-            this.folderName.DataPropertyName = "FileName";
-            this.folderName.HeaderText = "שם תיקיה";
-            this.folderName.Name = "folderName";
-            this.folderName.ReadOnly = true;
-            this.folderName.Width = 220;
-            // 
-            // fileNum
-            // 
-            this.fileNum.DataPropertyName = "Count";
-            this.fileNum.HeaderText = "כמות קבצים";
-            this.fileNum.Name = "fileNum";
-            this.fileNum.ReadOnly = true;
-            this.fileNum.Width = 220;
             // 
             // ResultGrid
             // 
@@ -155,7 +164,6 @@
             this.Name = "ResultGrid";
             this.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.ShowIcon = false;
-            this.ShowInTaskbar = false;
             this.Text = "פירוט כמות קבצים";
             this.TopMost = true;
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.ResultGrid_Paint);
@@ -173,5 +181,6 @@
         private System.Windows.Forms.Button bClose;
         private System.Windows.Forms.DataGridViewTextBoxColumn folderName;
         private System.Windows.Forms.DataGridViewTextBoxColumn fileNum;
+        private System.Windows.Forms.DataGridViewTextBoxColumn method;
     }
 }

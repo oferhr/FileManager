@@ -29,31 +29,45 @@
         private void InitializeComponent()
         {
             this.bClose = new System.Windows.Forms.Button();
-            this.FileList = new System.Windows.Forms.CheckedListBox();
             this.bStart = new System.Windows.Forms.Button();
-            this.bSelectAll = new System.Windows.Forms.Button();
-            this.bUnselect = new System.Windows.Forms.Button();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.rCopy = new System.Windows.Forms.RadioButton();
             this.rMove = new System.Windows.Forms.RadioButton();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.tabsMain = new System.Windows.Forms.TabControl();
             this.tabCounts = new System.Windows.Forms.TabPage();
+            this.grdCount = new System.Windows.Forms.DataGridView();
+            this.chb = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.dirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.methods = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabDuplicates = new System.Windows.Forms.TabPage();
             this.DuplicateFolders = new System.Windows.Forms.CheckedListBox();
             this.tabNames = new System.Windows.Forms.TabPage();
             this.filenames = new System.Windows.Forms.CheckedListBox();
+            this.tabEEmail = new System.Windows.Forms.TabPage();
+            this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.dirList = new System.Windows.Forms.CheckedListBox();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
             this.lblDuplicateNum = new System.Windows.Forms.Label();
             this.lbl1 = new System.Windows.Forms.Label();
             this.bMigdal = new System.Windows.Forms.Button();
+            this.btnMail = new System.Windows.Forms.Button();
+            this.btnExcelFiles = new System.Windows.Forms.Button();
+            this.dir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.check = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.email = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.grdCount)).BeginInit();
             this.tabDuplicates.SuspendLayout();
             this.tabNames.SuspendLayout();
+            this.tabEEmail.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            this.tabPage1.SuspendLayout();
             this.boxSummary.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -64,26 +78,13 @@
             this.bClose.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.bClose.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.bClose.ForeColor = System.Drawing.Color.DarkBlue;
-            this.bClose.Location = new System.Drawing.Point(496, 487);
+            this.bClose.Location = new System.Drawing.Point(583, 487);
             this.bClose.Name = "bClose";
             this.bClose.Size = new System.Drawing.Size(75, 23);
             this.bClose.TabIndex = 0;
             this.bClose.Text = "סגור";
             this.bClose.UseVisualStyleBackColor = false;
             this.bClose.Click += new System.EventHandler(this.bClose_Click);
-            // 
-            // FileList
-            // 
-            this.FileList.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.FileList.CheckOnClick = true;
-            this.FileList.FormattingEnabled = true;
-            this.FileList.Location = new System.Drawing.Point(3, 6);
-            this.FileList.Name = "FileList";
-            this.FileList.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.FileList.Size = new System.Drawing.Size(323, 394);
-            this.FileList.TabIndex = 1;
             // 
             // bStart
             // 
@@ -92,7 +93,7 @@
             this.bStart.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.bStart.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.bStart.ForeColor = System.Drawing.Color.DarkBlue;
-            this.bStart.Location = new System.Drawing.Point(442, 62);
+            this.bStart.Location = new System.Drawing.Point(529, 53);
             this.bStart.Name = "bStart";
             this.bStart.Size = new System.Drawing.Size(129, 23);
             this.bStart.TabIndex = 2;
@@ -100,38 +101,10 @@
             this.bStart.UseVisualStyleBackColor = false;
             this.bStart.Click += new System.EventHandler(this.bStart_Click);
             // 
-            // bSelectAll
-            // 
-            this.bSelectAll.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.bSelectAll.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.bSelectAll.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.bSelectAll.ForeColor = System.Drawing.Color.DarkBlue;
-            this.bSelectAll.Location = new System.Drawing.Point(12, 12);
-            this.bSelectAll.Name = "bSelectAll";
-            this.bSelectAll.Size = new System.Drawing.Size(75, 23);
-            this.bSelectAll.TabIndex = 3;
-            this.bSelectAll.Text = "בחר הכל";
-            this.bSelectAll.UseVisualStyleBackColor = false;
-            this.bSelectAll.Click += new System.EventHandler(this.bSelectAll_Click);
-            // 
-            // bUnselect
-            // 
-            this.bUnselect.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.bUnselect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.bUnselect.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.bUnselect.ForeColor = System.Drawing.Color.DarkBlue;
-            this.bUnselect.Location = new System.Drawing.Point(162, 12);
-            this.bUnselect.Name = "bUnselect";
-            this.bUnselect.Size = new System.Drawing.Size(75, 23);
-            this.bUnselect.TabIndex = 4;
-            this.bUnselect.Text = "נקה";
-            this.bUnselect.UseVisualStyleBackColor = false;
-            this.bUnselect.Click += new System.EventHandler(this.bUnselect_Click);
-            // 
             // progressBar1
             // 
             this.progressBar1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.progressBar1.Location = new System.Drawing.Point(371, 170);
+            this.progressBar1.Location = new System.Drawing.Point(458, 223);
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(200, 23);
             this.progressBar1.TabIndex = 6;
@@ -177,7 +150,7 @@
             this.groupBox1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.groupBox1.Font = new System.Drawing.Font("Guttman Frank", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.groupBox1.ForeColor = System.Drawing.Color.Navy;
-            this.groupBox1.Location = new System.Drawing.Point(371, 219);
+            this.groupBox1.Location = new System.Drawing.Point(458, 272);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.groupBox1.Size = new System.Drawing.Size(200, 81);
@@ -192,26 +165,72 @@
             this.tabsMain.Controls.Add(this.tabCounts);
             this.tabsMain.Controls.Add(this.tabDuplicates);
             this.tabsMain.Controls.Add(this.tabNames);
+            this.tabsMain.Controls.Add(this.tabEEmail);
+            this.tabsMain.Controls.Add(this.tabPage1);
             this.tabsMain.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.tabsMain.Location = new System.Drawing.Point(12, 53);
+            this.tabsMain.Location = new System.Drawing.Point(12, 12);
             this.tabsMain.Name = "tabsMain";
             this.tabsMain.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.tabsMain.RightToLeftLayout = true;
             this.tabsMain.SelectedIndex = 0;
-            this.tabsMain.Size = new System.Drawing.Size(340, 455);
+            this.tabsMain.Size = new System.Drawing.Size(409, 509);
             this.tabsMain.TabIndex = 11;
             // 
             // tabCounts
             // 
-            this.tabCounts.Controls.Add(this.FileList);
+            this.tabCounts.Controls.Add(this.grdCount);
             this.tabCounts.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.tabCounts.Location = new System.Drawing.Point(4, 24);
             this.tabCounts.Name = "tabCounts";
             this.tabCounts.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCounts.Size = new System.Drawing.Size(332, 427);
+            this.tabCounts.Size = new System.Drawing.Size(401, 481);
             this.tabCounts.TabIndex = 0;
             this.tabCounts.Text = "תיקיות לספירה";
             this.tabCounts.UseVisualStyleBackColor = true;
+            // 
+            // grdCount
+            // 
+            this.grdCount.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.grdCount.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.grdCount.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.chb,
+            this.dirs,
+            this.methods});
+            this.grdCount.Location = new System.Drawing.Point(0, 3);
+            this.grdCount.Name = "grdCount";
+            this.grdCount.RowHeadersVisible = false;
+            this.grdCount.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
+            this.grdCount.Size = new System.Drawing.Size(401, 478);
+            this.grdCount.TabIndex = 0;
+            this.grdCount.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellContentClick);
+            this.grdCount.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellEndEdit);
+            this.grdCount.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellValueChanged);
+            // 
+            // chb
+            // 
+            this.chb.DataPropertyName = "check";
+            this.chb.HeaderText = "";
+            this.chb.Name = "chb";
+            this.chb.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.chb.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.chb.Width = 30;
+            // 
+            // dirs
+            // 
+            this.dirs.DataPropertyName = "dir";
+            this.dirs.HeaderText = "תיקיות";
+            this.dirs.Name = "dirs";
+            this.dirs.ReadOnly = true;
+            this.dirs.Width = 110;
+            // 
+            // methods
+            // 
+            this.methods.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.methods.DataPropertyName = "method";
+            this.methods.HeaderText = "אופן שליחה";
+            this.methods.Name = "methods";
             // 
             // tabDuplicates
             // 
@@ -220,7 +239,7 @@
             this.tabDuplicates.Location = new System.Drawing.Point(4, 24);
             this.tabDuplicates.Name = "tabDuplicates";
             this.tabDuplicates.Padding = new System.Windows.Forms.Padding(3);
-            this.tabDuplicates.Size = new System.Drawing.Size(332, 427);
+            this.tabDuplicates.Size = new System.Drawing.Size(401, 481);
             this.tabDuplicates.TabIndex = 1;
             this.tabDuplicates.Text = "תיקיות לכפילויות";
             this.tabDuplicates.UseVisualStyleBackColor = true;
@@ -234,7 +253,7 @@
             this.DuplicateFolders.Location = new System.Drawing.Point(3, 6);
             this.DuplicateFolders.Name = "DuplicateFolders";
             this.DuplicateFolders.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.DuplicateFolders.Size = new System.Drawing.Size(323, 409);
+            this.DuplicateFolders.Size = new System.Drawing.Size(392, 469);
             this.DuplicateFolders.TabIndex = 2;
             // 
             // tabNames
@@ -242,7 +261,7 @@
             this.tabNames.Controls.Add(this.filenames);
             this.tabNames.Location = new System.Drawing.Point(4, 24);
             this.tabNames.Name = "tabNames";
-            this.tabNames.Size = new System.Drawing.Size(332, 427);
+            this.tabNames.Size = new System.Drawing.Size(401, 481);
             this.tabNames.TabIndex = 2;
             this.tabNames.Text = "תיקון שמות";
             this.tabNames.UseVisualStyleBackColor = true;
@@ -253,11 +272,63 @@
             | System.Windows.Forms.AnchorStyles.Left)));
             this.filenames.CheckOnClick = true;
             this.filenames.FormattingEnabled = true;
-            this.filenames.Location = new System.Drawing.Point(5, 13);
+            this.filenames.Location = new System.Drawing.Point(3, 0);
             this.filenames.Name = "filenames";
             this.filenames.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.filenames.Size = new System.Drawing.Size(323, 400);
+            this.filenames.Size = new System.Drawing.Size(395, 472);
             this.filenames.TabIndex = 3;
+            // 
+            // tabEEmail
+            // 
+            this.tabEEmail.Controls.Add(this.dataGridView1);
+            this.tabEEmail.Location = new System.Drawing.Point(4, 24);
+            this.tabEEmail.Name = "tabEEmail";
+            this.tabEEmail.Padding = new System.Windows.Forms.Padding(3);
+            this.tabEEmail.Size = new System.Drawing.Size(401, 481);
+            this.tabEEmail.TabIndex = 3;
+            this.tabEEmail.Text = "יצירת מיילים";
+            this.tabEEmail.UseVisualStyleBackColor = true;
+            // 
+            // dataGridView1
+            // 
+            this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.dir,
+            this.check,
+            this.email});
+            this.dataGridView1.Location = new System.Drawing.Point(0, 6);
+            this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.RowHeadersVisible = false;
+            this.dataGridView1.Size = new System.Drawing.Size(395, 472);
+            this.dataGridView1.TabIndex = 16;
+            this.dataGridView1.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick);
+            this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
+            this.dataGridView1.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellValueChanged);
+            // 
+            // tabPage1
+            // 
+            this.tabPage1.Controls.Add(this.dirList);
+            this.tabPage1.Location = new System.Drawing.Point(4, 24);
+            this.tabPage1.Name = "tabPage1";
+            this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage1.Size = new System.Drawing.Size(401, 481);
+            this.tabPage1.TabIndex = 4;
+            this.tabPage1.Text = "שמות אקסל";
+            this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // dirList
+            // 
+            this.dirList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.dirList.CheckOnClick = true;
+            this.dirList.FormattingEnabled = true;
+            this.dirList.Location = new System.Drawing.Point(3, 2);
+            this.dirList.Name = "dirList";
+            this.dirList.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.dirList.Size = new System.Drawing.Size(395, 472);
+            this.dirList.TabIndex = 4;
             // 
             // lblProgressMessage
             // 
@@ -266,7 +337,7 @@
             this.lblProgressMessage.BackColor = System.Drawing.Color.Transparent;
             this.lblProgressMessage.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.lblProgressMessage.ForeColor = System.Drawing.Color.DarkBlue;
-            this.lblProgressMessage.Location = new System.Drawing.Point(493, 152);
+            this.lblProgressMessage.Location = new System.Drawing.Point(580, 205);
             this.lblProgressMessage.Name = "lblProgressMessage";
             this.lblProgressMessage.Size = new System.Drawing.Size(78, 15);
             this.lblProgressMessage.TabIndex = 12;
@@ -283,7 +354,7 @@
             this.boxSummary.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.boxSummary.Font = new System.Drawing.Font("Guttman Frank", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.boxSummary.ForeColor = System.Drawing.Color.Navy;
-            this.boxSummary.Location = new System.Drawing.Point(371, 328);
+            this.boxSummary.Location = new System.Drawing.Point(458, 381);
             this.boxSummary.Name = "boxSummary";
             this.boxSummary.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.boxSummary.Size = new System.Drawing.Size(200, 81);
@@ -338,7 +409,7 @@
             this.bMigdal.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.bMigdal.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.bMigdal.ForeColor = System.Drawing.Color.DarkBlue;
-            this.bMigdal.Location = new System.Drawing.Point(442, 104);
+            this.bMigdal.Location = new System.Drawing.Point(529, 82);
             this.bMigdal.Name = "bMigdal";
             this.bMigdal.Size = new System.Drawing.Size(129, 23);
             this.bMigdal.TabIndex = 14;
@@ -346,22 +417,75 @@
             this.bMigdal.UseVisualStyleBackColor = false;
             this.bMigdal.Click += new System.EventHandler(this.bMigdal_Click);
             // 
+            // btnMail
+            // 
+            this.btnMail.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnMail.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.btnMail.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnMail.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnMail.ForeColor = System.Drawing.Color.DarkBlue;
+            this.btnMail.Location = new System.Drawing.Point(529, 111);
+            this.btnMail.Name = "btnMail";
+            this.btnMail.Size = new System.Drawing.Size(129, 23);
+            this.btnMail.TabIndex = 15;
+            this.btnMail.Text = "יצירת מיילים";
+            this.btnMail.UseVisualStyleBackColor = false;
+            this.btnMail.Click += new System.EventHandler(this.btnMail_Click);
+            // 
+            // btnExcelFiles
+            // 
+            this.btnExcelFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnExcelFiles.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.btnExcelFiles.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExcelFiles.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnExcelFiles.ForeColor = System.Drawing.Color.DarkBlue;
+            this.btnExcelFiles.Location = new System.Drawing.Point(529, 140);
+            this.btnExcelFiles.Name = "btnExcelFiles";
+            this.btnExcelFiles.Size = new System.Drawing.Size(129, 23);
+            this.btnExcelFiles.TabIndex = 16;
+            this.btnExcelFiles.Text = "שמות מאקסל";
+            this.btnExcelFiles.UseVisualStyleBackColor = false;
+            this.btnExcelFiles.Click += new System.EventHandler(this.btnExcelFiles_Click);
+            // 
+            // dir
+            // 
+            this.dir.DataPropertyName = "dir";
+            this.dir.HeaderText = "תיקייה";
+            this.dir.Name = "dir";
+            this.dir.ReadOnly = true;
+            this.dir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            this.dir.Width = 120;
+            // 
+            // check
+            // 
+            this.check.DataPropertyName = "check";
+            this.check.HeaderText = "איחוד קבצים";
+            this.check.Name = "check";
+            this.check.Width = 70;
+            // 
+            // email
+            // 
+            this.email.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.email.DataPropertyName = "email";
+            this.email.HeaderText = "מייל";
+            this.email.Name = "email";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(597, 520);
+            this.ClientSize = new System.Drawing.Size(684, 533);
+            this.Controls.Add(this.btnExcelFiles);
+            this.Controls.Add(this.btnMail);
             this.Controls.Add(this.bMigdal);
             this.Controls.Add(this.boxSummary);
             this.Controls.Add(this.lblProgressMessage);
             this.Controls.Add(this.tabsMain);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.progressBar1);
-            this.Controls.Add(this.bUnselect);
-            this.Controls.Add(this.bSelectAll);
             this.Controls.Add(this.bStart);
             this.Controls.Add(this.bClose);
-            this.MaximumSize = new System.Drawing.Size(613, 800);
+            this.MaximumSize = new System.Drawing.Size(700, 800);
             this.MinimumSize = new System.Drawing.Size(613, 528);
             this.Name = "Form1";
             this.ShowIcon = false;
@@ -372,8 +496,12 @@
             this.groupBox1.PerformLayout();
             this.tabsMain.ResumeLayout(false);
             this.tabCounts.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.grdCount)).EndInit();
             this.tabDuplicates.ResumeLayout(false);
             this.tabNames.ResumeLayout(false);
+            this.tabEEmail.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            this.tabPage1.ResumeLayout(false);
             this.boxSummary.ResumeLayout(false);
             this.boxSummary.PerformLayout();
             this.ResumeLayout(false);
@@ -384,10 +512,7 @@
         #endregion
 
         private System.Windows.Forms.Button bClose;
-        private System.Windows.Forms.CheckedListBox FileList;
         private System.Windows.Forms.Button bStart;
-        private System.Windows.Forms.Button bSelectAll;
-        private System.Windows.Forms.Button bUnselect;
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.RadioButton rCopy;
         private System.Windows.Forms.RadioButton rMove;
@@ -404,6 +529,19 @@
         private System.Windows.Forms.TabPage tabNames;
         private System.Windows.Forms.CheckedListBox filenames;
         private System.Windows.Forms.Button bMigdal;
+        private System.Windows.Forms.TabPage tabEEmail;
+        private System.Windows.Forms.Button btnMail;
+        private System.Windows.Forms.DataGridView dataGridView1;
+        private System.Windows.Forms.DataGridView grdCount;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn chb;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dirs;
+        private System.Windows.Forms.DataGridViewTextBoxColumn methods;
+        private System.Windows.Forms.TabPage tabPage1;
+        private System.Windows.Forms.CheckedListBox dirList;
+        private System.Windows.Forms.Button btnExcelFiles;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dir;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn check;
+        private System.Windows.Forms.DataGridViewTextBoxColumn email;
     }
 }
 
