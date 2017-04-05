@@ -274,7 +274,7 @@ namespace FileManager
             else {
                 dirSettings = new List<EmailDirSettings> ();
             }
-
+            //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
             foreach (var dirSetting in dirSettings) {
                 // get all files in selected directory
                 arfiles.Clear ();
@@ -413,6 +413,15 @@ namespace FileManager
 
                     }
 
+
+                    foreach (var ardir in ardirs) {
+                        var checkedPath = Path.Combine ( basePath, ardir );
+                        if (!Directory.Exists ( checkedPath )) {
+                            continue;
+                        }
+                        Directory.Delete(checkedPath);
+
+                    }
 
 
 
@@ -1371,7 +1380,7 @@ namespace FileManager
                     dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>> ( json );
                 }
             }
-            return dirSettings.Where(c=>c.check).ToList();
+            return dirSettings;
         }
 
         private void setFolderSettings (List<FolderSettings> folSettings )
@@ -1415,7 +1424,7 @@ namespace FileManager
         private List<CountSettings> GetCountSettings ()
         {
             string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
-            var folderSettings = new List<CountSettings> ();
+            List<CountSettings> folderSettings;
             if (File.Exists ( configPath )) {
 
                 using (StreamReader r = new StreamReader ( configPath )) {
@@ -1427,7 +1436,7 @@ namespace FileManager
                 folderSettings = new List<CountSettings> ();
             }
 
-            return folderSettings.Where ( c => c.check ).ToList ();
+            return folderSettings;
         }
 
         private void SetExcelNames ()
