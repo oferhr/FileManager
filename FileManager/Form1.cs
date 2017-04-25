@@ -368,9 +368,9 @@ namespace FileManager
                         //var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
                         if (fileName != null) oMsg.Subject = dnames [fileName];
                         foreach (var curFile in arfile) {
-                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                                Log ( curFile, w );
-                            }
+                            //using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                            //    Log ( curFile, w );
+                            //}
                             oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
                         }
 
@@ -1121,12 +1121,12 @@ namespace FileManager
                     if (dirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (string dir in dirs)
+                        foreach (string curdir in dirs)
                         {
-                            if (!Directory.Exists ( dir )) {
+                            if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
-                            var lfiles = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories)
+                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.AllDirectories)
                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
 
                             var files = lfiles as IList<string> ?? lfiles.ToList();
@@ -1135,6 +1135,7 @@ namespace FileManager
                             foreach (string file in files)
                             {
                                 string fileName = Path.GetFileName(file);
+                                
 
                                 if (fileName == null || fileName.Contains("-"))
                                 {
@@ -1172,7 +1173,26 @@ namespace FileManager
 
                                     }
                                 }
-                                move(Path.Combine(dir, file), Path.Combine(dir, newName.TrimEnd('_') + "." + extSplits[1]));
+                                int miniCounter = 1;
+                                bool isCopy = false;
+                                while (!isCopy) {
+                                    var based = Directory.GetParent ( curdir ).FullName;
+                                    var newdir = Path.Combine ( based, miniCounter.ToString() );
+                                    if (!Directory.Exists ( newdir ))
+                                    {
+                                        Directory.CreateDirectory ( newdir );
+                                    }
+                                    string copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
+                                    if (File.Exists ( copyName )) {
+                                        miniCounter++;
+                                    }
+                                    else {
+                                        isCopy = true;
+                                        move ( file, copyName );
+                                        //move ( file, Path.Combine ( curdir, copyName ) );
+                                    }
+                                }
+                                
                             }
                             
                         }
@@ -1473,23 +1493,51 @@ namespace FileManager
                 percent =  itemParts / files.Count;
 
                 foreach (string file in files) {
-
+                    using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                        Log ( file, w );
+                    }
                     string fileName = Path.GetFileName ( file );
 
                     if (fileName == null) {
                         continue;
                     }
+                    using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                        Log ( "after filename", w );
+                    }
                     var extSplits = fileName.Split ( '.' );
+                    if(extSplits.Length == 0)
+                    {
+                        continue;
+                    }
                     var hyphenSplits = extSplits [0].Split ( '-' );
-                    var splits = hyphenSplits [1].Split ( '_' );
+                    var splitIndex = 0;
+                    if (hyphenSplits.Length > 1)
+                    {
+                        splitIndex = 1;
+                    }
+                    var splits = hyphenSplits [splitIndex].Split ( '_' );
                     if (splits.Length == 1) {
                         continue;
                     }
+                    using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                        Log ( "after splits - start loop", w );
+                    }
                     foreach (var part in splits) {
+                        using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                            Log ( part, w );
+                        }
                         string result = CheckExcelForItems (arr, part );
+                        using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                            Log ( result, w );
+                        }
                         if (!string.IsNullOrEmpty ( result )) {
+                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                                Log ( "in result not null", w );
+                            }
                             var newFilePath = file.Replace ( part, string.Join ( "", result.Split ( Path.GetInvalidFileNameChars () ) ) );
-
+                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                                Log ( newFilePath, w );
+                            }
                             File.Move ( file, newFilePath );
                             break;
                         }
