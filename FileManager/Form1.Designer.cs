@@ -59,6 +59,7 @@
             this.dir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.check = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.email = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.method = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -297,7 +298,8 @@
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.dir,
             this.check,
-            this.email});
+            this.email,
+            this.method});
             this.dataGridView1.Location = new System.Drawing.Point(0, 6);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowHeadersVisible = false;
@@ -454,14 +456,14 @@
             this.dir.Name = "dir";
             this.dir.ReadOnly = true;
             this.dir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
-            this.dir.Width = 120;
+            this.dir.Width = 90;
             // 
             // check
             // 
             this.check.DataPropertyName = "check";
             this.check.HeaderText = "איחוד קבצים";
             this.check.Name = "check";
-            this.check.Width = 70;
+            this.check.Width = 45;
             // 
             // email
             // 
@@ -469,6 +471,13 @@
             this.email.DataPropertyName = "email";
             this.email.HeaderText = "מייל";
             this.email.Name = "email";
+            // 
+            // method
+            // 
+            this.method.DataPropertyName = "method";
+            this.method.HeaderText = "אופן שליחה";
+            this.method.Name = "method";
+            this.method.Width = 80;
             // 
             // Form1
             // 
@@ -542,6 +551,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn dir;
         private System.Windows.Forms.DataGridViewCheckBoxColumn check;
         private System.Windows.Forms.DataGridViewTextBoxColumn email;
+        private System.Windows.Forms.DataGridViewTextBoxColumn method;
     }
 }
 

@@ -118,7 +118,8 @@ namespace FileManager
                         {
                             dir = fol,
                             email = curdir.email,
-                            check = curdir.check
+                            check = curdir.check,
+                            method = curdir.method
                         });
                     }
                     else
@@ -127,7 +128,8 @@ namespace FileManager
                         {
                             dir = fol,
                             email = null,
-                            check = false
+                            check = false,
+                            method = null
                         } );
                     }
                 }
@@ -186,6 +188,19 @@ namespace FileManager
                             if (filenames.Items[i].ToString() == fol)
                             {
                                 filenames.SetItemChecked(i, true);
+                            }
+                        }
+
+                    }
+                }
+
+                string excelFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().ExcelFolders;
+                if (!String.IsNullOrEmpty ( excelFolderSettings )) {
+                    string [] folders = excelFolderSettings.Split ( ',' );
+                    for (int i = 0; i <= ( dirList.Items.Count - 1 ); i++) {
+                        foreach (var fol in folders) {
+                            if (dirList.Items [i].ToString () == fol) {
+                                dirList.SetItemChecked ( i, true );
                             }
                         }
 
@@ -443,25 +458,29 @@ namespace FileManager
 
             var fol = dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value.ToString ();
 
+            var method = dataGridView1.Rows [e.RowIndex].Cells ["method"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["method"].Value.ToString ();
+
             var emailConfigList = GetEmailDirSettings ();
 
 
             var curdir = emailConfigList.Find ( f => f.dir == fol );
             if (curdir != null) {
-                if (string.IsNullOrEmpty ( mail )) {
+                if (string.IsNullOrEmpty ( mail ) && string.IsNullOrEmpty ( method )) {
                     emailConfigList.Remove ( curdir );
                 }
                 else {
                     curdir.email = mail;
+                    curdir.method = method;
                 }
 
             }
             else {
-                if (!string.IsNullOrEmpty ( mail )) {
+                if (!string.IsNullOrEmpty ( mail ) || !string.IsNullOrEmpty ( method )) {
                     emailConfigList.Add ( new EmailDirSettings
                     {
                         dir = fol,
                         email = mail,
+                        method = method,
                         check = false
                     } );
                 }
@@ -614,6 +633,36 @@ namespace FileManager
                     duplicatesFolders = items.TrimEnd ( ',' ),
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty
+                } );
+            }
+            setFolderSettings ( folderSettings );
+            //Settings.Default.duplicatesFolders = items.TrimEnd(',');
+            //Settings.Default.Save();
+            //Settings.Default.Reload();
+        }
+
+        private void SetSelectedExcelFolders ( CheckedListBox.CheckedItemCollection checkedItems )
+        {
+            string items = String.Empty;
+            foreach (var checkedItem in checkedItems) {
+                //set a comma delimited string to be saved in Settings
+                items += checkedItem + ",";
+            }
+
+
+
+
+            var folderSettings = GetFolderSettings ();
+            if (folderSettings.Count > 0) {
+                folderSettings.First ().ExcelFolders = items.TrimEnd ( ',' );
+            }
+            else {
+                folderSettings.Add ( new FolderSettings
+                {
+                    ExcelFolders = items.TrimEnd ( ',' ),
+                    fileNamesFolders = string.Empty,
+                    selectedFolders = string.Empty,
+                    duplicatesFolders = string.Empty
                 } );
             }
             setFolderSettings ( folderSettings );
@@ -1459,6 +1508,23 @@ namespace FileManager
             return folderSettings;
         }
 
+        private List<CountSettings> GetExcelSettings ()
+        {
+            string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
+            List<CountSettings> folderSettings;
+            if (File.Exists ( configPath )) {
+
+                using (StreamReader r = new StreamReader ( configPath )) {
+                    string json = r.ReadToEnd ();
+                    folderSettings = JsonConvert.DeserializeObject<List<CountSettings>> ( json );
+                }
+            }
+            else {
+                folderSettings = new List<CountSettings> ();
+            }
+
+            return folderSettings;
+        }
         private void SetExcelNames ()
         {
             var checkedItems = dirList.CheckedItems;
@@ -1471,6 +1537,9 @@ namespace FileManager
             lblProgressMessage.Text = "מתקן שמות מאקסל";
             lblProgressMessage.Visible = true;
             Application.DoEvents ();
+
+            SetSelectedExcelFolders(checkedItems);
+
             var itemCount = checkedItems.Count;
             var itemParts = Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
             int percent = 0;
@@ -1493,51 +1562,48 @@ namespace FileManager
                 percent =  itemParts / files.Count;
 
                 foreach (string file in files) {
-                    using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                        Log ( file, w );
-                    }
+                    
                     string fileName = Path.GetFileName ( file );
 
                     if (fileName == null) {
                         continue;
                     }
-                    using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                        Log ( "after filename", w );
-                    }
+                   
                     var extSplits = fileName.Split ( '.' );
                     if(extSplits.Length == 0)
                     {
                         continue;
                     }
                     var hyphenSplits = extSplits [0].Split ( '-' );
-                    var splitIndex = 0;
-                    if (hyphenSplits.Length > 1)
+                    //var splitIndex = 0;
+                    //if (hyphenSplits.Length > 1)
+                    //{
+                    //    splitIndex = 1;
+                    //}
+                    //var splits = hyphenSplits [splitIndex].Split ( '_' );
+                    //if (splits.Length == 1) {
+                    //    continue;
+                    //}
+                    
+                    List<string> parts = new List<string>();
+                    foreach (var split in hyphenSplits)
                     {
-                        splitIndex = 1;
-                    }
-                    var splits = hyphenSplits [splitIndex].Split ( '_' );
-                    if (splits.Length == 1) {
-                        continue;
-                    }
-                    using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                        Log ( "after splits - start loop", w );
-                    }
-                    foreach (var part in splits) {
-                        using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                            Log ( part, w );
+                        var splits = split.Split ( '_' );
+                        foreach (var s in splits)
+                        {
+                            parts.Add (s);
                         }
+                        
+                    }
+
+                    foreach (var part in parts) {
+                        
                         string result = CheckExcelForItems (arr, part );
-                        using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                            Log ( result, w );
-                        }
+                        
                         if (!string.IsNullOrEmpty ( result )) {
-                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                                Log ( "in result not null", w );
-                            }
+                            
                             var newFilePath = file.Replace ( part, string.Join ( "", result.Split ( Path.GetInvalidFileNameChars () ) ) );
-                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                                Log ( newFilePath, w );
-                            }
+                            
                             File.Move ( file, newFilePath );
                             break;
                         }

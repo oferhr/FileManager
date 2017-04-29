@@ -17,6 +17,7 @@ namespace FileManager
         public string dir { get; set; }
         public string email { get; set; }
         public bool check { get; set; }
+        public string method { get; set; }
     }
 
     public class FolderSettings
@@ -24,6 +25,7 @@ namespace FileManager
         public string selectedFolders { get; set; }
         public string duplicatesFolders { get; set; }
         public string fileNamesFolders { get; set; }
+        public string ExcelFolders { get; set; }
     }
 
     public class CountSettings
