@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Configuration;
 using System.Linq;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Office.Interop.Outlook;
@@ -13,6 +14,7 @@ using Application = System.Windows.Forms.Application;
 using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
+using Attachment = System.Net.Mail.Attachment;
 
 namespace FileManager
 {
@@ -270,6 +272,12 @@ namespace FileManager
 
         private void btnMail_Click ( object sender, EventArgs e )
         {
+            progressBar1.Visible = true;
+            progressBar1.Value = 0;
+            lblProgressMessage.Text = "שולח מיילים";
+            lblProgressMessage.Visible = true;
+            Application.DoEvents ();
+
             List<EmailDirSettings> dirSettings;
             Dictionary<string, string> dnames = new Dictionary<string, string> ();
             List<string> lCopiedNames = new List<string> ();
@@ -289,6 +297,8 @@ namespace FileManager
             else {
                 dirSettings = new List<EmailDirSettings> ();
             }
+            var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
+            double pbPart = 100 / validDirs.Count();
             //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
             foreach (var dirSetting in dirSettings) {
                 // get all files in selected directory
@@ -302,7 +312,7 @@ namespace FileManager
                     continue;
                 }
                 var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
-                     .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".pdf" ) );
+                     .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
                 var files = lfiles as IList<string> ?? lfiles.ToList ();
                 if (files.Any ()) {
                     //iterate through the files and get the names and insert the names and the paths to lists
@@ -376,24 +386,39 @@ namespace FileManager
                         if (string.IsNullOrEmpty ( dirSetting.email )) {
                             continue;
                         }
-                        OutlookApp oApp = new OutlookApp ();
-                        MailItem oMsg = (MailItem)oApp.CreateItem ( OlItemType.olMailItem );
-                        oMsg.To = dirSetting.email;
+
+                        double pbIncrement = pbPart / arfiles.Count;
+                        //OutlookApp oApp = new OutlookApp ();
+                        //MailItem oMsg = (MailItem)oApp.CreateItem ( OlItemType.olMailItem );
+                        //oMsg.To = dirSetting.email;
                         var fileName = Path.GetFileName ( arfile [0] );
                         //var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
-                        if (fileName != null) oMsg.Subject = dnames [fileName];
-                        foreach (var curFile in arfile) {
+                        var subject = string.Empty;
+                        if (fileName != null)
+                        {
+                            subject = dnames[fileName];
+                        }
+                        //oMsg.Subject = subject;
+                       // foreach (var curFile in arfile) {
                             //using (StreamWriter w = File.AppendText ( "log.txt" )) {
                             //    Log ( curFile, w );
                             //}
-                            oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
-                        }
+                        //    oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
+                       // }
 
-                        oMsg.Display ( false );
+                       // oMsg.Display ( false );
                         // add this to add signiture to mail body
-                        oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
-                        oMsg = null;
-                        oApp = null;
+                      //  oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
+                       // oMsg = null;
+                      //  oApp = null;
+
+                        SendMail ( arfile, subject, dirSetting.email );
+                        double dVal = progressBar1.Value + pbIncrement;
+                        int val = Convert.ToInt32(dVal);
+                        if (val > 100) {
+                            val = 100;
+                        }
+                        progressBar1.Value = val;
                     }
 
 
@@ -427,7 +452,20 @@ namespace FileManager
                         }
 
                     }
-
+                    var curdirfiles  = Directory.GetFiles(newDir);
+                    if (curdirfiles.Length == 0)
+                    {
+                        try
+                        {
+                            Directory.Delete(newDir);
+                        }
+                        catch
+                        {
+                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                                Log ( "could not delete directory:" + newDir, w );
+                            }
+                        }
+                    }
 
                     foreach (var ardir in ardirs) {
                         var checkedPath = Path.Combine ( basePath, ardir );
@@ -443,7 +481,7 @@ namespace FileManager
                 }
             }
 
-            MessageBox.Show ( "המיילים נוצרו בהצלחה" );
+            MessageBox.Show ( "המיילים נשלחו בהצלחה" );
             btnMail.Enabled = false;
         }
 
@@ -722,7 +760,7 @@ namespace FileManager
                 }
                 var lfiles = Directory.GetFiles(checkedPath, "*.*",
                     SearchOption.AllDirectories)
-                     .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
+                     .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
                 //check if file Thumbs.db exist in folder. If yes than reduce one file from file count.
                 var files = lfiles as IList<string> ?? lfiles.ToList();
                 bool isThumbs = files.Any(IsThumbsInPath);
@@ -873,7 +911,7 @@ namespace FileManager
                                 if (counter == 1)
                                 {
                                     var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
-                                         .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
+                                         .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
                                     var files = lfiles as IList<string> ?? lfiles.ToList();
                                     if (files.Any())
                                     {
@@ -930,7 +968,7 @@ namespace FileManager
                                 continue;
                             }
                             var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
-                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
+                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
                             var files = lfiles as IList<string> ?? lfiles.ToList();
                             if (files.Any())
                             {
@@ -1176,7 +1214,7 @@ namespace FileManager
                                 continue;
                             }
                             var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.AllDirectories)
-                               .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".pdf"));
+                               .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
 
                             var files = lfiles as IList<string> ?? lfiles.ToList();
 
@@ -1525,6 +1563,7 @@ namespace FileManager
 
             return folderSettings;
         }
+
         private void SetExcelNames ()
         {
             var checkedItems = dirList.CheckedItems;
@@ -1551,7 +1590,7 @@ namespace FileManager
                     continue;
                 }
                 var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
-                           .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".pdf" ) );
+                           .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
                 // var dirs = Directory.GetDirectories ( basePath );
                 // if (dirs.Length > 0) {
                 // run over the array to get the dir/1 folder path where all the files are
@@ -1663,7 +1702,6 @@ namespace FileManager
             
         }
 
-
         private string CheckExcelForItems ( object [,] arr, string part )
         {
             var lst = new List<string> ();
@@ -1682,6 +1720,46 @@ namespace FileManager
             }
             return null;
         }
+
+        private static void SendMail(List<string> files, string subject, string email)
+        {
+            var server = ConfigurationManager.AppSettings["smptServer"];
+            var port = ConfigurationManager.AppSettings ["smptPort"];
+            var from = ConfigurationManager.AppSettings ["mailFrom"];
+            var user = ConfigurationManager.AppSettings ["userName"];
+            var pwd = ConfigurationManager.AppSettings ["password"];
+
+            using (MailMessage mailMsg = new MailMessage())
+            {
+                mailMsg.To.Add ( email );
+                // From
+                MailAddress mailAddress = new MailAddress ( from );
+                mailMsg.From = mailAddress;
+
+                // Subject and Body
+                mailMsg.Subject = subject;
+                mailMsg.Body = string.Empty + mailMsg.Body;
+
+                foreach (var file in files) {
+                    var attach = new Attachment ( file );
+                    mailMsg.Attachments.Add ( attach );
+                }
+
+
+                int iport = string.IsNullOrEmpty ( port ) ? 80 : int.Parse ( port );
+                // Init SmtpClient and send on port 587 in my case. (Usual=port25)
+                SmtpClient smtpClient = new SmtpClient ( server, iport );
+                smtpClient.EnableSsl = true;
+                System.Net.NetworkCredential credentials =
+                   new System.Net.NetworkCredential ( user, pwd );
+                smtpClient.Credentials = credentials;
+
+                smtpClient.Send ( mailMsg );
+            }
+            
+
+        }
+
         //private string CheckExcelForItems ( string part )
         //{
         //    var lst = new List<string> ();
