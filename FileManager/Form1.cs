@@ -5,7 +5,6 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Configuration;
 using System.Linq;
-using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Office.Interop.Outlook;
@@ -14,7 +13,6 @@ using Application = System.Windows.Forms.Application;
 using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
-using Attachment = System.Net.Mail.Attachment;
 
 namespace FileManager
 {
@@ -388,31 +386,37 @@ namespace FileManager
                         }
 
                         double pbIncrement = pbPart / arfiles.Count;
-                        //OutlookApp oApp = new OutlookApp ();
-                        //MailItem oMsg = (MailItem)oApp.CreateItem ( OlItemType.olMailItem );
-                        //oMsg.To = dirSetting.email;
+                        OutlookApp oApp = new OutlookApp ();
+                        MailItem oMsg = (MailItem)oApp.CreateItem ( OlItemType.olMailItem );
+                        oMsg.To = dirSetting.email;
                         var fileName = Path.GetFileName ( arfile [0] );
-                        //var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
+                       // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
                         var subject = string.Empty;
-                        if (fileName != null)
-                        {
-                            subject = dnames[fileName];
+                        if (fileName != null) {
+                            subject = dnames [fileName];
                         }
-                        //oMsg.Subject = subject;
-                       // foreach (var curFile in arfile) {
+                        oMsg.Subject = subject;
+                        foreach (var curFile in arfile) {
                             //using (StreamWriter w = File.AppendText ( "log.txt" )) {
                             //    Log ( curFile, w );
                             //}
-                        //    oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
-                       // }
+                            oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
+                        }
 
-                       // oMsg.Display ( false );
-                        // add this to add signiture to mail body
-                      //  oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
-                       // oMsg = null;
-                      //  oApp = null;
+                       // oMsg.Display ( true );
+                        //add this to add signiture to mail body
+                        oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
+                        //oMsg.DeleteAfterSubmit = false;
+                        //Outlook.Folder sentFolder = (Outlook.Folder)oApp.Session.GetDefaultFolder ( Outlook.OlDefaultFolders.olFolderSentMail );
+                        //if (sentFolder != null)
+                        //{
+                        //    oMsg.SaveSentMessageFolder = sentFolder;
+                        //}
+                        oMsg.Send ();
+                        oMsg = null;
+                        oApp = null;
 
-                        SendMail ( arfile, subject, dirSetting.email );
+                        //SendMail ( arfile, subject, dirSetting.email );
                         double dVal = progressBar1.Value + pbIncrement;
                         int val = Convert.ToInt32(dVal);
                         if (val > 100) {
@@ -490,7 +494,7 @@ namespace FileManager
             if (e.ColumnIndex > 0 && dataGridView1.Columns [e.ColumnIndex] != null && dataGridView1.Columns [e.ColumnIndex].Name == "check") {
                 return;
             }
-            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+          //  string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
 
             var mail = dataGridView1.Rows [e.RowIndex].Cells ["email"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["email"].Value.ToString ();
 
@@ -525,10 +529,28 @@ namespace FileManager
 
             }
 
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( emailConfigList.ToArray () );
-                File.WriteAllText ( configPath, sjson );
+            setMailSettings(emailConfigList);
+
+            var countsConfigList = GetCountSettings ();
+
+            var curCountDir = countsConfigList.Find ( f => f.dir == fol );
+            if (curCountDir != null) {
+                curCountDir.method = string.IsNullOrEmpty ( method ) ? null : method;
+
             }
+            else {
+                if (!string.IsNullOrEmpty ( method )) {
+                    countsConfigList.Add ( new CountSettings
+                    {
+                        dir = null,
+                        method = method,
+                        check = false
+                    } );
+                }
+
+            }
+
+            setCountSettings ( countsConfigList );
 
         }
 
@@ -620,15 +642,15 @@ namespace FileManager
             var fol = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
 
             var countsConfigList = GetCountSettings ();
+            
 
-
-            var curdir = countsConfigList.Find ( f => f.dir == fol );
-            if (curdir != null) {
+            var curCountDir = countsConfigList.Find ( f => f.dir == fol );
+            if (curCountDir != null) {
                 if (string.IsNullOrEmpty ( method ) && check == false) {
-                    countsConfigList.Remove ( curdir );
+                    countsConfigList.Remove ( curCountDir );
                 }
                 else {
-                    curdir.method = method;
+                    curCountDir.method = method;
                 }
 
             }
@@ -645,6 +667,27 @@ namespace FileManager
             }
 
             setCountSettings ( countsConfigList );
+
+            var emailConfigList = GetEmailDirSettings ();
+
+            var curMailDir = emailConfigList.Find ( f => f.dir == fol );
+            if (curMailDir != null) {
+                curMailDir.method = string.IsNullOrEmpty ( method ) ? null : method;
+
+            }
+            else {
+                if (!string.IsNullOrEmpty ( method )) {
+                    emailConfigList.Add ( new EmailDirSettings
+                    {
+                        dir = null,
+                        method = method,
+                        check = false,
+                        email = null
+                    } );
+                }
+
+            }
+            setMailSettings(emailConfigList);
         }
 
 
@@ -1527,6 +1570,15 @@ namespace FileManager
                 File.WriteAllText ( configPath, sjson );
             }
         }
+        private void setMailSettings ( List<EmailDirSettings> folSettings )
+        {
+            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
+                File.WriteAllText ( configPath, sjson );
+            }
+        }
 
         private List<CountSettings> GetCountSettings ()
         {
@@ -1721,44 +1773,44 @@ namespace FileManager
             return null;
         }
 
-        private static void SendMail(List<string> files, string subject, string email)
-        {
-            var server = ConfigurationManager.AppSettings["smptServer"];
-            var port = ConfigurationManager.AppSettings ["smptPort"];
-            var from = ConfigurationManager.AppSettings ["mailFrom"];
-            var user = ConfigurationManager.AppSettings ["userName"];
-            var pwd = ConfigurationManager.AppSettings ["password"];
+        //private static void SendMail(List<string> files, string subject, string email)
+        //{
+        //    var server = ConfigurationManager.AppSettings["smptServer"];
+        //    var port = ConfigurationManager.AppSettings ["smptPort"];
+        //    var from = ConfigurationManager.AppSettings ["mailFrom"];
+        //    var user = ConfigurationManager.AppSettings ["userName"];
+        //    var pwd = ConfigurationManager.AppSettings ["password"];
 
-            using (MailMessage mailMsg = new MailMessage())
-            {
-                mailMsg.To.Add ( email );
-                // From
-                MailAddress mailAddress = new MailAddress ( from );
-                mailMsg.From = mailAddress;
+        //    using (MailMessage mailMsg = new MailMessage())
+        //    {
+        //        mailMsg.To.Add ( email );
+        //        // From
+        //        MailAddress mailAddress = new MailAddress ( from );
+        //        mailMsg.From = mailAddress;
 
-                // Subject and Body
-                mailMsg.Subject = subject;
-                mailMsg.Body = string.Empty + mailMsg.Body;
+        //        // Subject and Body
+        //        mailMsg.Subject = subject;
+        //        mailMsg.Body = string.Empty + mailMsg.Body;
 
-                foreach (var file in files) {
-                    var attach = new Attachment ( file );
-                    mailMsg.Attachments.Add ( attach );
-                }
+        //        foreach (var file in files) {
+        //            var attach = new Attachment ( file );
+        //            mailMsg.Attachments.Add ( attach );
+        //        }
 
 
-                int iport = string.IsNullOrEmpty ( port ) ? 80 : int.Parse ( port );
-                // Init SmtpClient and send on port 587 in my case. (Usual=port25)
-                SmtpClient smtpClient = new SmtpClient ( server, iport );
-                smtpClient.EnableSsl = true;
-                System.Net.NetworkCredential credentials =
-                   new System.Net.NetworkCredential ( user, pwd );
-                smtpClient.Credentials = credentials;
+        //        int iport = string.IsNullOrEmpty ( port ) ? 80 : int.Parse ( port );
+        //        // Init SmtpClient and send on port 587 in my case. (Usual=port25)
+        //        SmtpClient smtpClient = new SmtpClient ( server, iport );
+        //        smtpClient.EnableSsl = true;
+        //        System.Net.NetworkCredential credentials =
+        //           new System.Net.NetworkCredential ( user, pwd );
+        //        smtpClient.Credentials = credentials;
 
-                smtpClient.Send ( mailMsg );
-            }
+        //        smtpClient.Send ( mailMsg );
+        //    }
             
 
-        }
+        //}
 
         //private string CheckExcelForItems ( string part )
         //{
