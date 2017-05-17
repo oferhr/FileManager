@@ -13,6 +13,7 @@ using Application = System.Windows.Forms.Application;
 using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace FileManager
 {
@@ -23,6 +24,7 @@ namespace FileManager
         private readonly string _path;
         private readonly string _config;
         private readonly string _excel;
+        private readonly int _sleep;
         private bool _isMove = true;
         private int _numOfDuplicates;
         const string LtrMark = "\u200E";
@@ -41,6 +43,13 @@ namespace FileManager
                 _path = ConfigurationManager.AppSettings["basePath"];
                 _config = ConfigurationManager.AppSettings ["ConfigPath"];
                 _excel = ConfigurationManager.AppSettings ["ExcelPath"];
+                var sleep = ConfigurationManager.AppSettings ["MailSleepSeconds"];
+                
+                if (!Int32.TryParse(sleep, out _sleep))
+                {
+                    _sleep = 0;
+                }
+
 
                 tabsMain.SelectedTab = tabEEmail;
                 if (_config == string.Empty)
@@ -270,223 +279,280 @@ namespace FileManager
 
         private void btnMail_Click ( object sender, EventArgs e )
         {
-            progressBar1.Visible = true;
-            progressBar1.Value = 0;
-            lblProgressMessage.Text = "שולח מיילים";
-            lblProgressMessage.Visible = true;
-            Application.DoEvents ();
+            try
+            {
+                progressBar1.Visible = true;
+                progressBar1.Value = 0;
+                lblProgressMessage.Text = "שולח מיילים";
+                lblProgressMessage.Visible = true;
+                Application.DoEvents();
 
-            List<EmailDirSettings> dirSettings;
-            Dictionary<string, string> dnames = new Dictionary<string, string> ();
-            List<string> lCopiedNames = new List<string> ();
-            List<string> lpaths = new List<string> ();
-            List<List<string>> arfiles = new List<List<string>> ();
-            List<string> ardirs = new List<string> ();
-            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+                List<EmailDirSettings> dirSettings;
+                Dictionary<string, string> dnames = new Dictionary<string, string>();
+                List<string> lCopiedNames = new List<string>();
+                List<string> lpaths = new List<string>();
+                List<List<string>> arfiles = new List<List<string>>();
+                List<string> ardirs = new List<string>();
+                string configPath = Path.Combine(_config, "fileManager_emailDirConfig.json");
 
-            // if shared config file exist - take values from there, and save email to the dir selected
-            if (File.Exists ( configPath )) {
+                // if shared config file exist - take values from there, and save email to the dir selected
+                if (File.Exists(configPath))
+                {
 
-                using (StreamReader r = new StreamReader ( configPath )) {
-                    string json = r.ReadToEnd ();
-                    dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>> ( json );
+                    using (StreamReader r = new StreamReader(configPath))
+                    {
+                        string json = r.ReadToEnd();
+                        dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>>(json);
+                    }
                 }
-            }
-            else {
-                dirSettings = new List<EmailDirSettings> ();
-            }
-            var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
-            double pbPart = 100 / validDirs.Count();
-            //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
-            foreach (var dirSetting in dirSettings) {
-                // get all files in selected directory
-                arfiles.Clear ();
-                lCopiedNames.Clear ();
-                dnames.Clear ();
-                lpaths.Clear ();
-                ardirs.Clear ();
-                string basePath = Path.Combine ( _path, dirSetting.dir );
-                if (!Directory.Exists ( basePath )) {
-                    continue;
+                else
+                {
+                    dirSettings = new List<EmailDirSettings>();
                 }
-                var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
-                     .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
-                var files = lfiles as IList<string> ?? lfiles.ToList ();
-                if (files.Any ()) {
-                    //iterate through the files and get the names and insert the names and the paths to lists
-                    foreach (string file in files) {
-                        // good directory is only with the name "1" of a date in format dd.mm.yy like 24.02.17
-                        bool isGoodDirectory = false;
-                        string currentDir = Path.GetFileName ( Path.GetDirectoryName ( file ) );
-                        if (currentDir == "1") {
-                            if (!ardirs.Contains ( currentDir )) {
-                                ardirs.Add ( currentDir );
-                            }
-                            isGoodDirectory = true;
-                        }
-                        else {
-                            string regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
-                            Match m = Regex.Match ( currentDir, regex );
-                            if (m.Success) {
+                var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
+                double pbPart = 100 / validDirs.Count();
+                //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
+                foreach (var dirSetting in dirSettings)
+                {
+                    // get all files in selected directory
+                    arfiles.Clear();
+                    lCopiedNames.Clear();
+                    dnames.Clear();
+                    lpaths.Clear();
+                    ardirs.Clear();
+
+                    if (string.IsNullOrEmpty(dirSetting.email))
+                    {
+                        continue;
+                    }
+
+                    string basePath = Path.Combine(_path, dirSetting.dir);
+                    if (!Directory.Exists(basePath))
+                    {
+                        continue;
+                    }
+                    var lfiles = Directory.GetFiles(basePath, "*.*", SearchOption.AllDirectories)
+                        .Where(
+                            s =>
+                                s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") ||
+                                s.ToLower().EndsWith(".pdf"));
+                    var files = lfiles as IList<string> ?? lfiles.ToList();
+                    if (files.Any())
+                    {
+                        //iterate through the files and get the names and insert the names and the paths to lists
+                        foreach (string file in files)
+                        {
+                            // good directory is only with the name "1" of a date in format dd.mm.yy like 24.02.17
+                            bool isGoodDirectory = false;
+                            string currentDir = Path.GetFileName(Path.GetDirectoryName(file));
+                            if (currentDir == "1")
+                            {
                                 if (!ardirs.Contains(currentDir))
                                 {
-                                    ardirs.Add ( currentDir );
+                                    ardirs.Add(currentDir);
                                 }
-                                
                                 isGoodDirectory = true;
                             }
-                            else {
-                                isGoodDirectory = false;
-                            }
-                        }
-                        if (!isGoodDirectory) {
-                            continue;
-                        }
+                            else
+                            {
+                                string regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
+                                Match m = Regex.Match(currentDir, regex);
+                                if (m.Success)
+                                {
+                                    if (!ardirs.Contains(currentDir))
+                                    {
+                                        ardirs.Add(currentDir);
+                                    }
 
-                        string fileName = Path.GetFileName ( file );
-                        if (fileName == null || IsThumbsInPath ( file )) {
-                            continue;
-                        }
-                        var newFileName = fileName;
-                        var newFile = file;
-                        if (fileName.Trim ().Contains ( " " )) {
-                            newFileName = fileName.Replace ( " ", "_" );
-                            var copiedPath = Path.Combine ( Path.GetDirectoryName ( file ), CopiedFilesDirectory );
-                            if (!Directory.Exists ( copiedPath )) {
-                                Directory.CreateDirectory ( copiedPath );
-                            }
-                            newFile = Path.Combine ( copiedPath, newFileName );
-                            File.Copy ( file, newFile, true );
-                        }
-                        lCopiedNames.Add ( GetMailFileName ( newFileName, dirSetting.check ) );
-                        if (!dnames.ContainsKey ( newFileName )) {
-                            dnames.Add ( newFileName, GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0] );
-                        }
-                        lpaths.Add ( newFile );
-                    }
-                    // group file names 
-                    var duplicateKeys = lCopiedNames.GroupBy ( x => x )
-                            .Select ( group => group.Key );
-
-                    var enumerable = duplicateKeys as string [] ?? duplicateKeys.ToArray ();
-                    if (enumerable.Any ()) {
-                        // create a list of lists - for every group name, get all the files that match it
-                        // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
-                        foreach (var duplicateKey in enumerable) {
-                            var ll = from ln in lpaths where ln.Contains ( duplicateKey.Split ( '.' ) [0] ) select ln;
-                            arfiles.Add ( new List<string> ( ll.ToList () ) );
-                        }
-                    }
-
-
-                    //for each group open a email from outlook and set the group name as subject, and all files as attachment
-                    foreach (var arfile in arfiles) {
-                        if (string.IsNullOrEmpty ( dirSetting.email )) {
-                            continue;
-                        }
-
-                        double pbIncrement = pbPart / arfiles.Count;
-                        OutlookApp oApp = new OutlookApp ();
-                        MailItem oMsg = (MailItem)oApp.CreateItem ( OlItemType.olMailItem );
-                        oMsg.To = dirSetting.email;
-                        var fileName = Path.GetFileName ( arfile [0] );
-                       // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
-                        var subject = string.Empty;
-                        if (fileName != null) {
-                            subject = dnames [fileName];
-                        }
-                        oMsg.Subject = subject;
-                        foreach (var curFile in arfile) {
-                            //using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                            //    Log ( curFile, w );
-                            //}
-                            oMsg.Attachments.Add ( curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing );
-                        }
-
-                       // oMsg.Display ( true );
-                        //add this to add signiture to mail body
-                        oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
-                        //oMsg.DeleteAfterSubmit = false;
-                        //Outlook.Folder sentFolder = (Outlook.Folder)oApp.Session.GetDefaultFolder ( Outlook.OlDefaultFolders.olFolderSentMail );
-                        //if (sentFolder != null)
-                        //{
-                        //    oMsg.SaveSentMessageFolder = sentFolder;
-                        //}
-                        oMsg.Send ();
-                        oMsg = null;
-                        oApp = null;
-
-                        //SendMail ( arfile, subject, dirSetting.email );
-                        double dVal = progressBar1.Value + pbIncrement;
-                        int val = Convert.ToInt32(dVal);
-                        if (val > 100) {
-                            val = 100;
-                        }
-                        progressBar1.Value = val;
-                    }
-
-
-
-                    foreach (var arfile in arfiles) {
-                        foreach (var curFile in arfile) {
-                            if (curFile.Contains ( CopiedFilesDirectory )) {
-                                var path = Path.GetDirectoryName ( curFile );
-                                if (Directory.Exists ( path )) {
-                                    Directory.Delete ( path, true );
+                                    isGoodDirectory = true;
+                                }
+                                else
+                                {
+                                    isGoodDirectory = false;
                                 }
                             }
+                            if (!isGoodDirectory)
+                            {
+                                continue;
+                            }
 
+                            string fileName = Path.GetFileName(file);
+                            if (fileName == null || IsThumbsInPath(file))
+                            {
+                                continue;
+                            }
+                            var newFileName = fileName;
+                            var newFile = file;
+                            if (fileName.Trim().Contains(" "))
+                            {
+                                newFileName = fileName.Replace(" ", "_");
+                                var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
+                                if (!Directory.Exists(copiedPath))
+                                {
+                                    Directory.CreateDirectory(copiedPath);
+                                }
+                                newFile = Path.Combine(copiedPath, newFileName);
+                                File.Copy(file, newFile, true);
+                            }
+                            lCopiedNames.Add(GetMailFileName(newFileName, dirSetting.check));
+                            if (!dnames.ContainsKey(newFileName))
+                            {
+                                dnames.Add(newFileName, GetMailFileName(fileName, dirSetting.check).Split('.')[0]);
+                            }
+                            lpaths.Add(newFile);
                         }
-                    }
+                        // group file names 
+                        var duplicateKeys = lCopiedNames.GroupBy(x => x)
+                            .Select(group => group.Key);
 
-                    var dt = DateTime.Now;
-                    var name = dt.Day.ToString ().PadLeft ( 2, '0' ) + "."  + dt.Month.ToString ().PadLeft ( 2, '0' ) + "." + dt.Year % 100 + "." + dt.Hour.ToString ().PadLeft ( 2, '0' ) + "." + dt.Minute.ToString ().PadLeft ( 2, '0' );
-                    var newDir = Path.Combine ( basePath, name );
-                    
-                   
-                    Directory.CreateDirectory ( newDir );
-                    foreach (var ardir in ardirs) {
-                        var checkedPath = Path.Combine ( basePath, ardir );
-                        if (!Directory.Exists ( checkedPath )) {
-                            continue;
-                        }
-                        var dirFiles = Directory.GetFiles ( checkedPath );
-                        foreach (var dirFile in dirFiles) {
-                            File.Move ( dirFile, Path.Combine ( newDir, Path.GetFileName ( dirFile ) ) );
-                        }
-
-                    }
-                    var curdirfiles  = Directory.GetFiles(newDir);
-                    if (curdirfiles.Length == 0)
-                    {
-                        try
+                        var enumerable = duplicateKeys as string[] ?? duplicateKeys.ToArray();
+                        if (enumerable.Any())
                         {
-                            Directory.Delete(newDir);
-                        }
-                        catch
-                        {
-                            using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                                Log ( "could not delete directory:" + newDir, w );
+                            // create a list of lists - for every group name, get all the files that match it
+                            // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
+                            foreach (var duplicateKey in enumerable)
+                            {
+                                var ll = from ln in lpaths where ln.Contains(duplicateKey.Split('.')[0]) select ln;
+                                arfiles.Add(new List<string>(ll.ToList()));
                             }
                         }
-                    }
 
-                    foreach (var ardir in ardirs) {
-                        var checkedPath = Path.Combine ( basePath, ardir );
-                        if (!Directory.Exists ( checkedPath )) {
-                            continue;
+
+                        //for each group open a email from outlook and set the group name as subject, and all files as attachment
+                        foreach (var arfile in arfiles)
+                        {
+
+
+                            double pbIncrement = pbPart / arfiles.Count;
+                            OutlookApp oApp = new OutlookApp();
+                            MailItem oMsg = (MailItem) oApp.CreateItem(OlItemType.olMailItem);
+                            oMsg.To = dirSetting.email;
+                            var fileName = Path.GetFileName(arfile[0]);
+                            // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
+                            var subject = string.Empty;
+                            if (fileName != null)
+                            {
+                                subject = dnames[fileName];
+                            }
+                            oMsg.Subject = subject;
+                            foreach (var curFile in arfile)
+                            {
+                                //using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                                //    Log ( curFile, w );
+                                //}
+                                oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
+                            }
+
+                            // oMsg.Display ( true );
+                            //add this to add signiture to mail body
+                            oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
+                            //oMsg.DeleteAfterSubmit = false;
+                            //Outlook.Folder sentFolder = (Outlook.Folder)oApp.Session.GetDefaultFolder ( Outlook.OlDefaultFolders.olFolderSentMail );
+                            //if (sentFolder != null)
+                            //{
+                            //    oMsg.SaveSentMessageFolder = sentFolder;
+                            //}
+                            oMsg.Send();
+                            
+                            oMsg = null;
+                            oApp = null;
+
+                            //SendMail ( arfile, subject, dirSetting.email );
+                            double dVal = progressBar1.Value + pbIncrement;
+                            int val = Convert.ToInt32(dVal);
+                            if (val > 100)
+                            {
+                                val = 100;
+                            }
+                            progressBar1.Value = val;
+                            Application.DoEvents();
+                            //if (_sleep > 0)
+                            //{
+                            //    Thread.Sleep(_sleep);
+                            //}
                         }
-                        Directory.Delete(checkedPath);
+
+
+
+                        foreach (var arfile in arfiles)
+                        {
+                            foreach (var curFile in arfile)
+                            {
+                                if (curFile.Contains(CopiedFilesDirectory))
+                                {
+                                    var path = Path.GetDirectoryName(curFile);
+                                    if (Directory.Exists(path))
+                                    {
+                                        Directory.Delete(path, true);
+                                    }
+                                }
+
+                            }
+                        }
+
+                        var dt = DateTime.Now;
+                        var name = dt.Day.ToString().PadLeft(2, '0') + "." + dt.Month.ToString().PadLeft(2, '0') + "." +
+                                   dt.Year % 100 + "." + dt.Hour.ToString().PadLeft(2, '0') + "." +
+                                   dt.Minute.ToString().PadLeft(2, '0');
+                        var newDir = Path.Combine(basePath, name);
+
+
+                        Directory.CreateDirectory(newDir);
+                        foreach (var ardir in ardirs)
+                        {
+                            var checkedPath = Path.Combine(basePath, ardir);
+                            if (!Directory.Exists(checkedPath))
+                            {
+                                continue;
+                            }
+                            var dirFiles = Directory.GetFiles(checkedPath);
+                            foreach (var dirFile in dirFiles)
+                            {
+                                File.Move(dirFile, Path.Combine(newDir, Path.GetFileName(dirFile)));
+                            }
+
+                        }
+                        var curdirfiles = Directory.GetFiles(newDir);
+                        if (curdirfiles.Length == 0)
+                        {
+                            try
+                            {
+                                Directory.Delete(newDir);
+                            }
+                            catch
+                            {
+                                using (StreamWriter w = File.AppendText("log.txt"))
+                                {
+                                    Log("could not delete directory:" + newDir, w);
+                                }
+                            }
+                        }
+
+                        foreach (var ardir in ardirs)
+                        {
+                            var checkedPath = Path.Combine(basePath, ardir);
+                            if (!Directory.Exists(checkedPath))
+                            {
+                                continue;
+                            }
+                            Directory.Delete(checkedPath);
+
+                        }
+
+
 
                     }
+                }
 
-
-
+                MessageBox.Show("המיילים נשלחו בהצלחה");
+                btnMail.Enabled = false;
+            }
+            catch (System.Exception ex)
+            {
+                using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                    Log ("error in mail send : /n" + ex.Message + ",----/n" +  (ex.InnerException?.Message ?? "") + "----/n" + ex.StackTrace, w );
                 }
             }
-
-            MessageBox.Show ( "המיילים נשלחו בהצלחה" );
-            btnMail.Enabled = false;
         }
 
         private void dataGridView1_CellEndEdit ( object sender, DataGridViewCellEventArgs e )
@@ -542,7 +608,7 @@ namespace FileManager
                 if (!string.IsNullOrEmpty ( method )) {
                     countsConfigList.Add ( new CountSettings
                     {
-                        dir = null,
+                        dir = fol,
                         method = method,
                         check = false
                     } );
@@ -679,7 +745,7 @@ namespace FileManager
                 if (!string.IsNullOrEmpty ( method )) {
                     emailConfigList.Add ( new EmailDirSettings
                     {
-                        dir = null,
+                        dir = fol,
                         method = method,
                         check = false,
                         email = null
