@@ -85,6 +85,7 @@ namespace FileManager
                         //cboDirs.Items.Add(folder);
                         dirList.Items.Add ( folder );
                         gfoldersList.Add(folder);
+                        DelList.Items.Add(folder);
                     }
                 }
 
@@ -215,6 +216,19 @@ namespace FileManager
 
                     }
                 }
+
+                string deletedFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().deleteFolders;
+                if (!String.IsNullOrEmpty ( deletedFolderSettings )) {
+                    string [] folders = deletedFolderSettings.Split ( ',' );
+                    for (int i = 0; i <= ( DelList.Items.Count - 1 ); i++) {
+                        foreach (var fol in folders) {
+                            if (DelList.Items [i].ToString () == fol) {
+                                DelList.SetItemChecked ( i, true );
+                            }
+                        }
+
+                    }
+                }
             }
             catch (System.Exception ex)
             {
@@ -233,21 +247,28 @@ namespace FileManager
         {
             boxSummary.Visible = false;
             Application.DoEvents();
-            CountFiles();
-            btnMail.Enabled = true;
-        }
-
-        private void bMigdal_Click(object sender, EventArgs e)
-        {
-            boxSummary.Visible = false;
-            Application.DoEvents();
-            FixFileNames(true);
-            btnMail.Enabled = true;
-        }
-
-        private void btnExcelFiles_Click ( object sender, EventArgs e )
-        {
+            FixFileNames ( true );
+            CountFiles ();
             SetExcelNames ();
+            btnMail.Enabled = true;
+        }
+
+        //private void bMigdal_Click(object sender, EventArgs e)
+        //{
+        //    boxSummary.Visible = false;
+        //    Application.DoEvents();
+        //    FixFileNames(true);
+        //    btnMail.Enabled = true;
+        //}
+
+        //private void btnExcelFiles_Click ( object sender, EventArgs e )
+        //{
+        //    SetExcelNames ();
+        //}
+
+        private void btnDel_Click ( object sender, EventArgs e )
+        {
+            DelteFiles();
         }
 
         private void Form1_Resize ( object sender, EventArgs e )
@@ -756,7 +777,32 @@ namespace FileManager
             setMailSettings(emailConfigList);
         }
 
+        private void SetSelectedDeletedFolders(CheckedListBox.CheckedItemCollection checkedItems)
+        {
+            string items = String.Empty;
+            foreach (var checkedItem in checkedItems) {
+                //set a comma delimited string to be saved in Settings
+                items += checkedItem + ",";
+            }
 
+
+
+
+            var folderSettings = GetFolderSettings ();
+            if (folderSettings.Count > 0) {
+                folderSettings.First ().deleteFolders = items.TrimEnd ( ',' );
+            }
+            else {
+                folderSettings.Add ( new FolderSettings
+                {
+                    deleteFolders = items.TrimEnd ( ',' ),
+                    fileNamesFolders = string.Empty,
+                    selectedFolders = string.Empty,
+                    duplicatesFolders = string.Empty
+                } );
+            }
+            setFolderSettings ( folderSettings );
+        }
 
         private void SetSelectedDuplicatesFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
@@ -779,7 +825,8 @@ namespace FileManager
                 {
                     duplicatesFolders = items.TrimEnd ( ',' ),
                     fileNamesFolders = string.Empty,
-                    selectedFolders = string.Empty
+                    selectedFolders = string.Empty,
+                    deleteFolders = string.Empty
                 } );
             }
             setFolderSettings ( folderSettings );
@@ -836,7 +883,8 @@ namespace FileManager
                 {
                     duplicatesFolders = string.Empty,
                     fileNamesFolders = items.TrimEnd ( ',' ),
-                    selectedFolders = string.Empty
+                    selectedFolders = string.Empty,
+                    deleteFolders = string.Empty
                 } );
             }
             setFolderSettings ( folderSettings );
@@ -918,8 +966,9 @@ namespace FileManager
                 {
                     duplicatesFolders = string.Empty,
                     fileNamesFolders = string.Empty,
-                    selectedFolders = items.TrimEnd ( ',' )
-            });
+                    selectedFolders = items.TrimEnd ( ',' ),
+                    deleteFolders = string.Empty
+                } );
             }
             setFolderSettings ( folderSettings );
 
@@ -946,7 +995,7 @@ namespace FileManager
         {
             try
             {
-                progressBar1.Visible = true;
+                
                 progressBar1.Value = 0;
                 lblProgressMessage.Text = "סופר קבצים";
                 lblProgressMessage.Visible = true;
@@ -1374,16 +1423,16 @@ namespace FileManager
                                 while (!isCopy) {
                                     var based = Directory.GetParent ( curdir ).FullName;
                                     var newdir = Path.Combine ( based, miniCounter.ToString() );
-                                    if (!Directory.Exists ( newdir ))
-                                    {
-                                        Directory.CreateDirectory ( newdir );
-                                    }
+                                    
                                     string copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
                                     if (File.Exists ( copyName )) {
                                         miniCounter++;
                                     }
                                     else {
                                         isCopy = true;
+                                        if (!Directory.Exists ( newdir )) {
+                                            Directory.CreateDirectory ( newdir );
+                                        }
                                         move ( file, copyName );
                                         //move ( file, Path.Combine ( curdir, copyName ) );
                                     }
@@ -1636,6 +1685,7 @@ namespace FileManager
                 File.WriteAllText ( configPath, sjson );
             }
         }
+
         private void setMailSettings ( List<EmailDirSettings> folSettings )
         {
             string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
@@ -1839,6 +1889,122 @@ namespace FileManager
             return null;
         }
 
+        private void DelteFiles ()
+        {
+            try
+            {
+                progressBar1.Visible = true;
+                var filesToDelete = new List<string> ();
+                progressBar1.Value = 0;
+                lblProgressMessage.Text = "מוחק קבצים";
+                lblProgressMessage.Visible = true;
+                Application.DoEvents();
+                var checkedItems = DelList.CheckedItems;
+                if (checkedItems.Count == 0)
+                {
+                    return;
+                }
+                // save selected items to Settings
+                SetSelectedDeletedFolders(checkedItems);
+
+                var itemCount = checkedItems.Count;
+                int percent = Convert.ToInt32 ( Math.Round ( 85.0 / itemCount, 0 ) );
+                foreach (var checkedItem in checkedItems)
+                {
+                    var counter = 1;
+                    // get the base path of each folder
+                    var basePath = Path.Combine(_path, checkedItem.ToString());
+                    var fileParts = new List<string>();
+                    
+                    //get all sub folders of base folder
+                    var dirs1 = Directory.GetDirectories(basePath);
+                    if (dirs1.Length > 0)
+                    {
+                        // run over the array to get the dir/1 folder path where all the files are
+                        foreach (string curdir in dirs1)
+                        {
+                            if (!Directory.Exists(curdir))
+                            {
+                                continue;
+                            }
+                            string folder = Path.GetFileName(curdir);
+                            if (folder == counter.ToString())
+                            {
+                                // if it is the first folder (dir/1) rename all files 
+                                // from fileName.xxx to fileName_1.xxx
+                                if (counter == 1)
+                                {
+                                    var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
+                                        .Where(
+                                            s =>
+                                                s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") ||
+                                                s.ToLower().EndsWith(".pdf"));
+                                    var files = lfiles as IList<string> ?? lfiles.ToList();
+                                    if (files.Any())
+                                    {
+                                        foreach (string file in files)
+                                        {
+                                            var curFile = Path.GetFileNameWithoutExtension(file);
+
+                                            if (curFile != null)
+                                            {
+                                                var splitHyphen = curFile.Split('-');
+                                                foreach (var parts in splitHyphen)
+                                                {
+                                                    var splitUnderscore = parts.Split('_');
+                                                    foreach (var uParts in splitUnderscore)
+                                                    {
+                                                        fileParts.Add(uParts);
+                                                    }
+                                                }
+                                            }
+
+                                            
+                                            foreach (var filePart in fileParts)
+                                            {
+                                                if (filePart == "888")
+                                                {
+                                                    filesToDelete.Add(file);
+                                                }
+                                            }
+                                            fileParts.Clear();
+                                        }
+
+                                        
+                                    }
+                                    counter++;
+                                }
+                            }
+                        }
+                    }
+                    int val = progressBar1.Value + percent;
+                    if (val > 90) {
+                        val = 90;
+                    }
+                    progressBar1.Value = val;
+                    Application.DoEvents ();
+
+
+                    
+                }
+                percent = Convert.ToInt32 ( Math.Round ( 10.0 / filesToDelete.Count, 0 ) );
+                foreach (var fileToDelete in filesToDelete) {
+                    File.Delete ( fileToDelete );
+                    int val = progressBar1.Value + percent;
+                    if (val > 100) {
+                        val = 100;
+                    }
+                    progressBar1.Value = val;
+                    Application.DoEvents ();
+                }
+                progressBar1.Value = 100;
+                Application.DoEvents ();
+            }
+            catch (System.Exception ex) {
+                MessageBox.Show ( "DeleteFiles Error :\r" + ex.Message );
+            }
+        }
+
         //private static void SendMail(List<string> files, string subject, string email)
         //{
         //    var server = ConfigurationManager.AppSettings["smptServer"];
@@ -1874,7 +2040,7 @@ namespace FileManager
 
         //        smtpClient.Send ( mailMsg );
         //    }
-            
+
 
         //}
 

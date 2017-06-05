@@ -26,6 +26,7 @@ namespace FileManager
         public string duplicatesFolders { get; set; }
         public string fileNamesFolders { get; set; }
         public string ExcelFolders { get; set; }
+        public string deleteFolders { get; set; }
     }
 
     public class CountSettings
