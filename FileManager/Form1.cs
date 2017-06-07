@@ -1908,10 +1908,9 @@ namespace FileManager
                 SetSelectedDeletedFolders(checkedItems);
 
                 var itemCount = checkedItems.Count;
-                int percent = Convert.ToInt32 ( Math.Round ( 85.0 / itemCount, 0 ) );
+                int percent = Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
                 foreach (var checkedItem in checkedItems)
                 {
-                    var counter = 1;
                     // get the base path of each folder
                     var basePath = Path.Combine(_path, checkedItem.ToString());
                     var fileParts = new List<string>();
@@ -1920,66 +1919,76 @@ namespace FileManager
                     var dirs1 = Directory.GetDirectories(basePath);
                     if (dirs1.Length > 0)
                     {
-                        // run over the array to get the dir/1 folder path where all the files are
                         foreach (string curdir in dirs1)
                         {
                             if (!Directory.Exists(curdir))
                             {
                                 continue;
                             }
-                            string folder = Path.GetFileName(curdir);
-                            if (folder == counter.ToString())
+                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(s =>
+                                        s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") ||
+                                        s.ToLower().EndsWith(".pdf"));
+                            var files = lfiles as IList<string> ?? lfiles.ToList();
+                            if (files.Any())
                             {
-                                // if it is the first folder (dir/1) rename all files 
-                                // from fileName.xxx to fileName_1.xxx
-                                if (counter == 1)
+                                foreach (string file in files)
                                 {
-                                    var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
-                                        .Where(
-                                            s =>
-                                                s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") ||
-                                                s.ToLower().EndsWith(".pdf"));
-                                    var files = lfiles as IList<string> ?? lfiles.ToList();
-                                    if (files.Any())
+                                    var curFile = Path.GetFileNameWithoutExtension(file);
+
+                                    if (curFile != null)
                                     {
-                                        foreach (string file in files)
+                                        var splitHyphen = curFile.Split('-');
+                                        foreach (var parts in splitHyphen)
                                         {
-                                            var curFile = Path.GetFileNameWithoutExtension(file);
-
-                                            if (curFile != null)
+                                            var splitUnderscore = parts.Split('_');
+                                            foreach (var uParts in splitUnderscore)
                                             {
-                                                var splitHyphen = curFile.Split('-');
-                                                foreach (var parts in splitHyphen)
-                                                {
-                                                    var splitUnderscore = parts.Split('_');
-                                                    foreach (var uParts in splitUnderscore)
-                                                    {
-                                                        fileParts.Add(uParts);
-                                                    }
-                                                }
+                                                fileParts.Add(uParts);
                                             }
-
-                                            
-                                            foreach (var filePart in fileParts)
-                                            {
-                                                if (filePart == "888")
-                                                {
-                                                    filesToDelete.Add(file);
-                                                }
-                                            }
-                                            fileParts.Clear();
                                         }
-
-                                        
                                     }
-                                    counter++;
+
+
+                                    foreach (var filePart in fileParts)
+                                    {
+                                        if (filePart == "888")
+                                        {
+                                            filesToDelete.Add(file);
+                                        }
+                                    }
+                                    fileParts.Clear();
                                 }
+
+
                             }
                         }
+                        foreach (var fileToDelete in filesToDelete) {
+                            File.Delete ( fileToDelete );
+                        }
+                        var dirsToDelete = new List<string> ();
+                        foreach (string curdir in dirs1) {
+                            if (!Directory.Exists ( curdir )) {
+                                continue;
+                            }
+                            var lfiles = Directory.GetFiles ( curdir, "*.*", SearchOption.TopDirectoryOnly )
+                                .Where ( s =>
+                                      s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) ||
+                                      s.ToLower ().EndsWith ( ".pdf" ) );
+                            var files = lfiles as IList<string> ?? lfiles.ToList ();
+                            if (!files.Any ()) {
+                                dirsToDelete.Add ( curdir );
+                            }
+                        }
+                        foreach (var dtd in dirsToDelete) {
+                            Directory.Delete ( dtd );
+                        }
+                        filesToDelete.Clear();
+                        dirsToDelete.Clear();
                     }
                     int val = progressBar1.Value + percent;
-                    if (val > 90) {
-                        val = 90;
+                    if (val > 100) {
+                        val = 100;
                     }
                     progressBar1.Value = val;
                     Application.DoEvents ();
@@ -1987,16 +1996,8 @@ namespace FileManager
 
                     
                 }
-                percent = Convert.ToInt32 ( Math.Round ( 10.0 / filesToDelete.Count, 0 ) );
-                foreach (var fileToDelete in filesToDelete) {
-                    File.Delete ( fileToDelete );
-                    int val = progressBar1.Value + percent;
-                    if (val > 100) {
-                        val = 100;
-                    }
-                    progressBar1.Value = val;
-                    Application.DoEvents ();
-                }
+                
+
                 progressBar1.Value = 100;
                 Application.DoEvents ();
             }
