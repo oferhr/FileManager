@@ -331,7 +331,8 @@ namespace FileManager
                     dirSettings = new List<EmailDirSettings>();
                 }
                 var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
-                double pbPart = 100 / validDirs.Count();
+                var counts = validDirs.Count();
+                double pbPart = counts == 0 ? 100 : 100 / counts;
                 //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
                 foreach (var dirSetting in dirSettings)
                 {
@@ -444,7 +445,7 @@ namespace FileManager
                         {
 
 
-                            double pbIncrement = pbPart / arfiles.Count;
+                            double pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
                             OutlookApp oApp = new OutlookApp();
                             MailItem oMsg = (MailItem) oApp.CreateItem(OlItemType.olMailItem);
                             oMsg.To = dirSetting.email;
@@ -903,7 +904,7 @@ namespace FileManager
             if (useProgressBar)
             {
                 var itemCount = checkedItems.Count;
-                percent = Convert.ToInt32(Math.Round(100.0 / itemCount, 0));
+                percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(100.0 / itemCount, 0));
             }
             //loop over the checked items
             foreach (var checkedItem in checkedItems)
@@ -1044,7 +1045,7 @@ namespace FileManager
                 // save selected items to Settings
                 SetSelectedDuplicatesFolders(checkedItems);
                 var itemCount = checkedItems.Count;
-                int percent = Convert.ToInt32(Math.Round(95.0 / itemCount, 0));
+                int percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0 / itemCount, 0));
                 foreach (var checkedItem in checkedItems)
                 {
                     int counter = 1;
@@ -1356,7 +1357,7 @@ namespace FileManager
                 SetSelectedFileNameFolders(checkedItems);
                 //int counter;
                 var itemCount = checkedItems.Count;
-                int percent = Convert.ToInt32(Math.Round(95.0/itemCount, 0));
+                int percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0/itemCount, 0));
                 int progress = 0;
                 //loop over the checked items
                 foreach (var checkedItem in checkedItems)
@@ -1748,7 +1749,7 @@ namespace FileManager
             SetSelectedExcelFolders(checkedItems);
 
             var itemCount = checkedItems.Count;
-            var itemParts = Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
+            var itemParts = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
             int percent = 0;
             int progress = 0;
             int index = 0;
@@ -1766,7 +1767,7 @@ namespace FileManager
 
 
                 var files = lfiles as IList<string> ?? lfiles.ToList ();
-                percent =  itemParts / files.Count;
+                percent =  files.Count == 0 ? 100 : itemParts / files.Count;
 
                 foreach (string file in files) {
                     
@@ -1908,7 +1909,8 @@ namespace FileManager
                 SetSelectedDeletedFolders(checkedItems);
 
                 var itemCount = checkedItems.Count;
-                int percent = Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
+
+                int percent = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
                 foreach (var checkedItem in checkedItems)
                 {
                     // get the base path of each folder
