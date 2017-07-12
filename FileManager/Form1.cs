@@ -464,18 +464,22 @@ namespace FileManager
                                 //}
                                 oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
                             }
+                            oMsg.GetInspector.Activate ();
+                            var signature = oMsg.HTMLBody;
+                            oMsg.HTMLBody = string.Empty + signature;
 
                             // oMsg.Display ( true );
                             //add this to add signiture to mail body
-                            oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
+                            //oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
                             //oMsg.DeleteAfterSubmit = false;
                             //Outlook.Folder sentFolder = (Outlook.Folder)oApp.Session.GetDefaultFolder ( Outlook.OlDefaultFolders.olFolderSentMail );
                             //if (sentFolder != null)
                             //{
                             //    oMsg.SaveSentMessageFolder = sentFolder;
                             //}
-                            oMsg.Send();
                             
+                            oMsg.Send();
+
                             oMsg = null;
                             oApp = null;
 
@@ -488,10 +492,9 @@ namespace FileManager
                             }
                             progressBar1.Value = val;
                             Application.DoEvents();
-                            //if (_sleep > 0)
-                            //{
-                            //    Thread.Sleep(_sleep);
-                            //}
+                            if (_sleep > 0) {
+                                Thread.Sleep ( _sleep * 1000 );
+                            }
                         }
 
 
