@@ -31,6 +31,7 @@ namespace FileManager
         private static readonly object LockObject = new object ();
         private string CopiedFilesDirectory = "9876789";
         private readonly List<string> gfoldersList = new List<string>();
+        private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר" };
 
         public Form1()
         {
@@ -128,7 +129,7 @@ namespace FileManager
                         {
                             dir = fol,
                             email = curdir.email,
-                            check = curdir.check,
+                            check = curdir.icheck == 0  ? mailCheck[0] : curdir.icheck == 1 ? mailCheck [1] : mailCheck [2],
                             method = curdir.method
                         });
                     }
@@ -138,13 +139,14 @@ namespace FileManager
                         {
                             dir = fol,
                             email = null,
-                            check = false,
+                            check = mailCheck [0],
+                            icheck = 0,
                             method = null
                         } );
                     }
                 }
 
-                dataGridView1.AutoGenerateColumns = true;
+                dataGridView1.AutoGenerateColumns = false;
                 dataGridView1.DataSource = emailsDs;
 
 
@@ -416,10 +418,10 @@ namespace FileManager
                                 newFile = Path.Combine(copiedPath, newFileName);
                                 File.Copy(file, newFile, true);
                             }
-                            lCopiedNames.Add(GetMailFileName(newFileName, dirSetting.check));
+                            lCopiedNames.Add(GetMailFileName(newFileName, dirSetting.icheck));
                             if (!dnames.ContainsKey(newFileName))
                             {
-                                dnames.Add(newFileName, GetMailFileName(fileName, dirSetting.check).Split('.')[0]);
+                                dnames.Add(newFileName, GetMailFileName(fileName, dirSetting.icheck).Split('.')[0]);
                             }
                             lpaths.Add(newFile);
                         }
@@ -454,7 +456,7 @@ namespace FileManager
                             var subject = string.Empty;
                             if (fileName != null)
                             {
-                                subject = dnames[fileName];
+                                subject = dirSetting.icheck == 2 ? GetMailFileName( dnames [fileName], dirSetting.icheck, true) : dnames[fileName];
                             }
                             oMsg.Subject = subject;
                             foreach (var curFile in arfile)
@@ -614,7 +616,8 @@ namespace FileManager
                         dir = fol,
                         email = mail,
                         method = method,
-                        check = false
+                        check = mailCheck [0],
+                        icheck = 0
                     } );
                 }
 
@@ -658,18 +661,26 @@ namespace FileManager
             if (dataGridView1.Columns [e.ColumnIndex].Name != "check") {
                 return;
             }
-            bool check = (bool)dataGridView1 [e.ColumnIndex, e.RowIndex].Value;
+            string check = dataGridView1 [e.ColumnIndex, e.RowIndex].Value.ToString();
+            int icheck = 0;
+            for (int i = 0; i < mailCheck.Length; i++)
+            {
+                if (mailCheck[i] == check)
+                {
+                    icheck = i;
+                }
+            }
             var dirSettings = GetEmailDirSettings ();
             var ddir = dataGridView1 [0, e.RowIndex].Value?.ToString ();
             var dirObj = dirSettings.Find ( f => f.dir == ddir );
             if (dirObj != null) {
-                dirObj.check = check;
+                dirObj.icheck = icheck;
             }
             else {
                 dirSettings.Add ( new EmailDirSettings
                 {
                     dir = ddir,
-                    check = check
+                    icheck = icheck
                 } );
             }
 
@@ -772,7 +783,8 @@ namespace FileManager
                     {
                         dir = fol,
                         method = method,
-                        check = false,
+                        check = mailCheck [0],
+                        icheck = 0,
                         email = null
                     } );
                 }
@@ -1062,6 +1074,11 @@ namespace FileManager
                         // run over the array to get the dir/1 folder path where all the files are
                         foreach (string curdir in dirs)
                         {
+                            var checkdir = Path.GetFileName(curdir);
+                            if (checkdir.Length > 2)
+                            {
+                                continue;
+                            }
                             if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
@@ -1084,6 +1101,7 @@ namespace FileManager
                                         }
                                         foreach (string file in files)
                                         {
+                                           
                                             string fileName = Path.GetFileName(file);
                                             
                                             if (fileName == null || IsThumbsInPath(file))
@@ -1605,7 +1623,7 @@ namespace FileManager
             w.WriteLine ( "-------------------------------" );
         }
 
-        private  string GetMailFileName(string fileName, bool isCheck )
+        private  string GetMailFileName(string fileName, int isCheck, bool shortenName = false )
         {
             // try to plit with _, -, space
             //var isCheck = ischeck;
@@ -1622,13 +1640,13 @@ namespace FileManager
                 }
             }
             // if checkbox is checked remove the last part of the splits
-            if (isCheck)
+            if (isCheck == 0 || shortenName)
             {
                 var ext = fileName.Split('.');
                 var newName = splits.Take(splits.Count() - 1).ToArray();
                 string sep = type == 1 ? "_" : type == 2 ? "-" : " ";
                 var name = string.Join(sep, newName);
-                return name + "." + ext[1];
+                return ext.Length == 1 ? name : name + "." + ext[1];
             }
             else
             {

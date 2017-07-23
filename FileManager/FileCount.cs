@@ -16,7 +16,8 @@ namespace FileManager
     {
         public string dir { get; set; }
         public string email { get; set; }
-        public bool check { get; set; }
+        public string check { get; set; }
+        public int icheck { get; set; }
         public string method { get; set; }
     }
 

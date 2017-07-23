@@ -46,12 +46,10 @@
             this.filenames = new System.Windows.Forms.CheckedListBox();
             this.tabEEmail = new System.Windows.Forms.TabPage();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.dir = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.check = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.email = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.method = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.dirList = new System.Windows.Forms.CheckedListBox();
+            this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.DelList = new System.Windows.Forms.CheckedListBox();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
@@ -59,8 +57,10 @@
             this.lbl1 = new System.Windows.Forms.Label();
             this.btnMail = new System.Windows.Forms.Button();
             this.btnDel = new System.Windows.Forms.Button();
-            this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.DelList = new System.Windows.Forms.CheckedListBox();
+            this.dir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.check = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.email = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.method = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -70,8 +70,8 @@
             this.tabEEmail.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.tabPage1.SuspendLayout();
-            this.boxSummary.SuspendLayout();
             this.tabPage2.SuspendLayout();
+            this.boxSummary.SuspendLayout();
             this.SuspendLayout();
             // 
             // bClose
@@ -312,36 +312,6 @@
             this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
             this.dataGridView1.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellValueChanged);
             // 
-            // dir
-            // 
-            this.dir.DataPropertyName = "dir";
-            this.dir.HeaderText = "תיקייה";
-            this.dir.Name = "dir";
-            this.dir.ReadOnly = true;
-            this.dir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
-            this.dir.Width = 90;
-            // 
-            // check
-            // 
-            this.check.DataPropertyName = "check";
-            this.check.HeaderText = "איחוד קבצים";
-            this.check.Name = "check";
-            this.check.Width = 45;
-            // 
-            // email
-            // 
-            this.email.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.email.DataPropertyName = "email";
-            this.email.HeaderText = "מייל";
-            this.email.Name = "email";
-            // 
-            // method
-            // 
-            this.method.DataPropertyName = "method";
-            this.method.HeaderText = "אופן שליחה";
-            this.method.Name = "method";
-            this.method.Width = 80;
-            // 
             // tabPage1
             // 
             this.tabPage1.Controls.Add(this.dirList);
@@ -364,6 +334,29 @@
             this.dirList.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.dirList.Size = new System.Drawing.Size(471, 472);
             this.dirList.TabIndex = 4;
+            // 
+            // tabPage2
+            // 
+            this.tabPage2.Controls.Add(this.DelList);
+            this.tabPage2.Location = new System.Drawing.Point(4, 24);
+            this.tabPage2.Name = "tabPage2";
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage2.Size = new System.Drawing.Size(480, 484);
+            this.tabPage2.TabIndex = 5;
+            this.tabPage2.Text = "מחיקת קבצים";
+            this.tabPage2.UseVisualStyleBackColor = true;
+            // 
+            // DelList
+            // 
+            this.DelList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.DelList.CheckOnClick = true;
+            this.DelList.FormattingEnabled = true;
+            this.DelList.Location = new System.Drawing.Point(5, 6);
+            this.DelList.Name = "DelList";
+            this.DelList.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.DelList.Size = new System.Drawing.Size(471, 472);
+            this.DelList.TabIndex = 5;
             // 
             // lblProgressMessage
             // 
@@ -467,28 +460,40 @@
             this.btnDel.UseVisualStyleBackColor = false;
             this.btnDel.Click += new System.EventHandler(this.btnDel_Click);
             // 
-            // tabPage2
+            // dir
             // 
-            this.tabPage2.Controls.Add(this.DelList);
-            this.tabPage2.Location = new System.Drawing.Point(4, 24);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(480, 484);
-            this.tabPage2.TabIndex = 5;
-            this.tabPage2.Text = "מחיקת קבצים";
-            this.tabPage2.UseVisualStyleBackColor = true;
+            this.dir.DataPropertyName = "dir";
+            this.dir.HeaderText = "תיקייה";
+            this.dir.Name = "dir";
+            this.dir.ReadOnly = true;
+            this.dir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            this.dir.Width = 90;
             // 
-            // DelList
+            // check
             // 
-            this.DelList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.DelList.CheckOnClick = true;
-            this.DelList.FormattingEnabled = true;
-            this.DelList.Location = new System.Drawing.Point(5, 6);
-            this.DelList.Name = "DelList";
-            this.DelList.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.DelList.Size = new System.Drawing.Size(471, 472);
-            this.DelList.TabIndex = 5;
+            this.check.DataPropertyName = "check";
+            this.check.HeaderText = "איחוד קבצים";
+            this.check.Items.AddRange(new object[] {
+            "איחוד-קצר",
+            "בודד-זהה",
+            "בודד-קצר"});
+            this.check.Name = "check";
+            this.check.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.check.Width = 85;
+            // 
+            // email
+            // 
+            this.email.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.email.DataPropertyName = "email";
+            this.email.HeaderText = "מייל";
+            this.email.Name = "email";
+            // 
+            // method
+            // 
+            this.method.DataPropertyName = "method";
+            this.method.HeaderText = "אופן שליחה";
+            this.method.Name = "method";
+            this.method.Width = 80;
             // 
             // Form1
             // 
@@ -521,9 +526,9 @@
             this.tabEEmail.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.tabPage1.ResumeLayout(false);
+            this.tabPage2.ResumeLayout(false);
             this.boxSummary.ResumeLayout(false);
             this.boxSummary.PerformLayout();
-            this.tabPage2.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -557,13 +562,13 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn methods;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.CheckedListBox dirList;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dir;
-        private System.Windows.Forms.DataGridViewCheckBoxColumn check;
-        private System.Windows.Forms.DataGridViewTextBoxColumn email;
-        private System.Windows.Forms.DataGridViewTextBoxColumn method;
         private System.Windows.Forms.Button btnDel;
         private System.Windows.Forms.TabPage tabPage2;
         private System.Windows.Forms.CheckedListBox DelList;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dir;
+        private System.Windows.Forms.DataGridViewComboBoxColumn check;
+        private System.Windows.Forms.DataGridViewTextBoxColumn email;
+        private System.Windows.Forms.DataGridViewTextBoxColumn method;
     }
 }
 
