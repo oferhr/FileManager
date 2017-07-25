@@ -1047,7 +1047,7 @@ namespace FileManager
         {
             try
             {
-                string[] dirs;
+                string[] availDirs;
                 progressBar1.Value = 0;
                 _numOfDuplicates = 0;
                 lblProgressMessage.Text = "מתקן כפילויות";
@@ -1068,14 +1068,14 @@ namespace FileManager
                     string basePath = Path.Combine(_path, checkedItem.ToString());
                     string allFilesPath = String.Empty;
                     //get all sub folders of base folder
-                    dirs = Directory.GetDirectories(basePath);
-                    if (dirs.Length > 0)
+                    availDirs = Directory.GetDirectories(basePath);
+                    if (availDirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (string curdir in dirs)
+                        foreach (string curdir in availDirs)
                         {
                             var checkdir = Path.GetFileName(curdir);
-                            if (checkdir.Length > 2)
+                            if (checkdir == null || checkdir.Length > 2)
                             {
                                 continue;
                             }
@@ -1136,27 +1136,29 @@ namespace FileManager
                         }
                         counter = 1;
                         // run again to get the duplicated folders
-                        foreach (string curdir in dirs)
+                        //foreach (string curdir in availDirs)
+                        for (int i = 0; i < availDirs.Length; i++)
                         {
+                            string curAvailDir = availDirs[i];
                             // if the folder is the base folder (dir/1) continue - check all duplicated folders only
                             if (counter == 1)
                             {
                                 counter++;
                                 continue;
                             }
-                            if (!Directory.Exists ( curdir )) {
+                            if (!Directory.Exists ( curAvailDir )) {
                                 continue;
                             }
-                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
-                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
+                            var lfiles = Directory.GetFiles( curAvailDir, "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(s => s.Length < 3 &&(s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf")));
                             var files = lfiles as IList<string> ?? lfiles.ToList();
                             if (files.Any())
                             {
                                 //run over the files in the duplicated folder (dir/2...)
-                                foreach (string file in files)
+                                foreach (string xfile in files)
                                 {
-                                    string fileName = Path.GetFileName(file);
-                                    if (fileName == null || IsThumbsInPath(file))
+                                    string fileName = Path.GetFileName(xfile);
+                                    if (fileName == null || IsThumbsInPath(xfile))
                                     {
                                         continue;
                                     }
@@ -1181,7 +1183,7 @@ namespace FileManager
                                             {
                                                 isCopy = true;
                                                 _numOfDuplicates++;
-                                                CopyFiles(file,
+                                                CopyFiles(xfile,
                                                 Path.Combine(allFilesPath, copyName));
                                             }
                                         }
@@ -1292,35 +1294,35 @@ namespace FileManager
                 foreach (var checkedItem in checkedItems)
                 {
                     string basePath = Path.Combine(_path, checkedItem.ToString());
-                    dirs = Directory.GetDirectories(basePath);
-                    if (dirs.Length > 1)
+                    availDirs = Directory.GetDirectories(basePath);
+                    if (availDirs.Length > 1)
                     {
-                        for (int i = 0; i < dirs.Length; i++)
+                        for (int i = 0; i < availDirs.Length; i++)
                         {
-                            if (!Directory.Exists ( dirs[i] )) {
+                            if (!Directory.Exists ( availDirs[i] )) {
                                 continue;
                             }
-                            string fileName = Path.GetFileName(dirs[i]);
+                            string fileName = Path.GetFileName(availDirs[i]);
                             if (fileName == "1")
                             {
                                 continue;
                             }
                             // delete all remaining files so get all files not only tif and pdf
-                            var lfiles = Directory.GetFiles(dirs[i], "*.*", SearchOption.TopDirectoryOnly);
+                            var lfiles = Directory.GetFiles(availDirs[i], "*.*", SearchOption.TopDirectoryOnly);
                             var files = lfiles as IList<string> ?? lfiles.ToList();
                             if (!files.Any())
                             {
                                 try
                                 {
-                                    Directory.Delete(dirs[i]);
+                                    Directory.Delete(availDirs[i]);
                                 }
                                 catch (IOException)
                                 {
-                                    Directory.Delete(dirs[i], true);
+                                    Directory.Delete(availDirs[i], true);
                                 }
                                 catch (UnauthorizedAccessException)
                                 {
-                                    Directory.Delete(dirs[i], true);
+                                    Directory.Delete(availDirs[i], true);
                                 }
                             }
                             else if (files.Count == 1 && IsThumbsInPath(files[0]))
@@ -1329,15 +1331,15 @@ namespace FileManager
                                 {
                                     File.SetAttributes(files[0], FileAttributes.Normal);
                                     File.Delete(files[0]);
-                                    Directory.Delete(dirs[i]);
+                                    Directory.Delete(availDirs[i]);
                                 }
                                 catch (IOException)
                                 {
-                                    Directory.Delete(dirs[i], true);
+                                    Directory.Delete(availDirs[i], true);
                                 }
                                 catch (UnauthorizedAccessException)
                                 {
-                                    Directory.Delete(dirs[i], true);
+                                    Directory.Delete(availDirs[i], true);
                                 }
                             }
                         }
