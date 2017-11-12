@@ -1074,9 +1074,8 @@ namespace FileManager
                         // run over the array to get the dir/1 folder path where all the files are
                         foreach (string curdir in availDirs)
                         {
-                            var checkdir = Path.GetFileName(curdir);
-                            if (checkdir == null || checkdir.Length > 2)
-                            {
+                            var checkdir = Path.GetFileName ( curdir );
+                            if (checkdir == null || checkdir.Length > 2) {
                                 continue;
                             }
                             if (!Directory.Exists ( curdir )) {
@@ -1303,7 +1302,7 @@ namespace FileManager
                                 continue;
                             }
                             string fileName = Path.GetFileName(availDirs[i]);
-                            if (fileName == "1")
+                            if (fileName == "1" || fileName.Length > 2)
                             {
                                 continue;
                             }
@@ -1393,6 +1392,10 @@ namespace FileManager
                         foreach (string curdir in dirs)
                         {
                             if (!Directory.Exists ( curdir )) {
+                                continue;
+                            }
+                            var checkdir = Path.GetFileName ( curdir );
+                            if (checkdir == null || checkdir.Length > 2) {
                                 continue;
                             }
                             var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.AllDirectories)
