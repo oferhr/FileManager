@@ -1148,13 +1148,17 @@ namespace FileManager
                             if (!Directory.Exists ( curAvailDir )) {
                                 continue;
                             }
-                            var lfiles = Directory.GetFiles( curAvailDir, "*.*", SearchOption.TopDirectoryOnly)
-                                .Where(s => s.Length < 3 &&(s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf")));
-                            var files = lfiles as IList<string> ?? lfiles.ToList();
-                            if (files.Any())
+                            var checkdir = Path.GetFileName ( curAvailDir );
+                            if (checkdir == null || checkdir.Length > 2) {
+                                continue;
+                            }
+                            var llfiles = Directory.GetFiles( curAvailDir, "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
+                            var ffiles = llfiles as IList<string> ?? llfiles.ToList();
+                            if (ffiles.Any())
                             {
                                 //run over the files in the duplicated folder (dir/2...)
-                                foreach (string xfile in files)
+                                foreach (string xfile in ffiles)
                                 {
                                     string fileName = Path.GetFileName(xfile);
                                     if (fileName == null || IsThumbsInPath(xfile))
