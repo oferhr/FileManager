@@ -1047,7 +1047,7 @@ namespace FileManager
         {
             try
             {
-                string[] availDirs;
+                string[] availDirs, allAvailDirs;
                 progressBar1.Value = 0;
                 _numOfDuplicates = 0;
                 lblProgressMessage.Text = "מתקן כפילויות";
@@ -1068,7 +1068,12 @@ namespace FileManager
                     string basePath = Path.Combine(_path, checkedItem.ToString());
                     string allFilesPath = String.Empty;
                     //get all sub folders of base folder
-                    availDirs = Directory.GetDirectories(basePath);
+                    allAvailDirs = Directory.GetDirectories(basePath);
+                    availDirs = allAvailDirs.Where(w =>
+                    {
+                        var dn = Path.GetFileName(w);
+                        return dn != null && dn.Length < 3;
+                    }).ToArray();
                     if (availDirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
@@ -1139,16 +1144,17 @@ namespace FileManager
                         for (int i = 0; i < availDirs.Length; i++)
                         {
                             string curAvailDir = availDirs[i];
-                            // if the folder is the base folder (dir/1) continue - check all duplicated folders only
-                            if (counter == 1)
-                            {
-                                counter++;
-                                continue;
-                            }
                             if (!Directory.Exists ( curAvailDir )) {
                                 continue;
                             }
                             var checkdir = Path.GetFileName ( curAvailDir );
+                            // if the folder is the base folder (dir/1) continue - check all duplicated folders only
+                            if (checkdir == "1")
+                            {
+                                counter++;
+                                continue;
+                            }
+                            
                             if (checkdir == null || checkdir.Length > 2) {
                                 continue;
                             }
@@ -1167,7 +1173,7 @@ namespace FileManager
                                     }
 
                                     string newName = GetNewFileName(fileName, 1);
-                                    if (String.IsNullOrEmpty(newName))
+                                    if (string.IsNullOrEmpty(newName))
                                     {
                                         continue;
                                     }
@@ -1297,7 +1303,12 @@ namespace FileManager
                 foreach (var checkedItem in checkedItems)
                 {
                     string basePath = Path.Combine(_path, checkedItem.ToString());
-                    availDirs = Directory.GetDirectories(basePath);
+                    allAvailDirs = Directory.GetDirectories ( basePath );
+                    availDirs = allAvailDirs.Where ( w => {
+                        var dn = Path.GetFileName ( w );
+                        return dn != null && dn.Length < 3;
+                    } ).ToArray ();
+                    //availDirs = Directory.GetDirectories(basePath);
                     if (availDirs.Length > 1)
                     {
                         for (int i = 0; i < availDirs.Length; i++)
