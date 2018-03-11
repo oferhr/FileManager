@@ -1648,7 +1648,8 @@ namespace FileManager
             // try to plit with _, -, space
             //var isCheck = ischeck;
             var type = 1;
-            var splits = fileName.Split('_');
+            var ext = fileName.Split ( '.' );
+            var splits = ext[0].Split('_');
             if (splits.Length == 1)
             {
                 type = 2;
@@ -1662,9 +1663,24 @@ namespace FileManager
             // if checkbox is checked remove the last part of the splits
             if (isCheck == 0 || shortenName)
             {
-                var ext = fileName.Split('.');
-                var newName = splits.Take(splits.Count() - 1).ToArray();
+                var first = splits[0];
+                var last = splits[splits.Length - 1];
+                string[] newName;
                 string sep = type == 1 ? "_" : type == 2 ? "-" : " ";
+                //check if the first split is diget only
+                if (!first.Any(ch => ch < '0' || ch > '9'))
+                {
+                    newName = splits.Skip(1).Take ( splits.Count () ).ToArray ();
+                }
+                else if (!last.Any(ch => ch < '0' || ch > '9'))
+                {
+                    newName = splits.Take(splits.Count() - 1).ToArray();
+                }
+                else
+                {
+                    newName = splits;
+                }
+                
                 var name = string.Join(sep, newName);
                 return ext.Length == 1 ? name : name + "." + ext[1];
             }
