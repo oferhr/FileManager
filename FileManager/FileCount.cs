@@ -28,6 +28,7 @@ namespace FileManager
         public string fileNamesFolders { get; set; }
         public string ExcelFolders { get; set; }
         public string deleteFolders { get; set; }
+        public string reportsFolders { get; set; }
     }
 
     public class CountSettings
@@ -35,5 +36,10 @@ namespace FileManager
         public string dir { get; set; }
         public string method { get; set; }
         public bool check { get; set; }
+    }
+    public class Grouper
+    {
+        public string id { get; set; }
+        public List<string> files { get; set; }
     }
 }

@@ -52,7 +52,7 @@ namespace FileManager
                 }
 
 
-                tabsMain.SelectedTab = tabEEmail;
+                tabsMain.SelectedTab = tabReports;
                 if (_config == string.Empty)
                 {
                     MessageBox.Show("נתיב לקובץ קונפיגורציה משותף אינו קיים");
@@ -82,6 +82,7 @@ namespace FileManager
                     if (folder != null)
                     {
                         DuplicateFolders.Items.Add(folder);
+                        reportFolders.Items.Add(folder);
                         filenames.Items.Add(folder);
                         //cboDirs.Items.Add(folder);
                         dirList.Items.Add ( folder );
@@ -172,6 +173,24 @@ namespace FileManager
                 //    }
                 //}
                 //string duplicatesFolderSettings = Settings.Default.duplicatesFolders;
+                if (!string.IsNullOrEmpty(Properties.Settings.Default.reportsDestName))
+                {
+                    txtReportDest.Text = Properties.Settings.Default.reportsDestName;
+                }
+                string reportFoldersSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().reportsFolders;
+                if (!String.IsNullOrEmpty ( reportFoldersSettings )) {
+                    string [] folders = reportFoldersSettings.Split ( ',' );
+                    for (int i = 0; i <= ( reportFolders.Items.Count - 1 ); i++) {
+                        foreach (var fol in folders) {
+                            if (reportFolders.Items [i].ToString () == fol) {
+                                reportFolders.SetItemChecked ( i, true );
+                            }
+                        }
+
+                    }
+                }
+
+
                 string duplicatesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().duplicatesFolders;
                 if (!String.IsNullOrEmpty(duplicatesFolderSettings))
                 {
@@ -247,11 +266,17 @@ namespace FileManager
 
         private void bStart_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty ( txtReportDest.Text )) {
+                MessageBox.Show ( "שם תיקיית היעד לשינוי שמות לדוחות לא קיים" );
+                return;
+            }
             boxSummary.Visible = false;
             Application.DoEvents();
+
             FixFileNames ( true );
             CountFiles ();
             SetExcelNames ();
+            SetReportsNames();
             btnMail.Enabled = true;
         }
 
@@ -812,6 +837,7 @@ namespace FileManager
                 folderSettings.Add ( new FolderSettings
                 {
                     deleteFolders = items.TrimEnd ( ',' ),
+                    reportsFolders = string.Empty,
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty,
                     duplicatesFolders = string.Empty
@@ -820,7 +846,7 @@ namespace FileManager
             setFolderSettings ( folderSettings );
         }
 
-        private void SetSelectedDuplicatesFolders(CheckedListBox.CheckedItemCollection checkedItems)
+        private void SetSelectedReportFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
             string items = String.Empty;
             foreach (var checkedItem in checkedItems)
@@ -834,12 +860,13 @@ namespace FileManager
 
             var folderSettings = GetFolderSettings ();
             if (folderSettings.Count > 0) {
-                folderSettings.First ().duplicatesFolders = items.TrimEnd ( ',' );
+                folderSettings.First ().reportsFolders = items.TrimEnd ( ',' );
             }
             else {
                 folderSettings.Add ( new FolderSettings
                 {
                     duplicatesFolders = items.TrimEnd ( ',' ),
+                    reportsFolders = string.Empty,
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty,
                     deleteFolders = string.Empty
@@ -850,7 +877,36 @@ namespace FileManager
             //Settings.Default.Save();
             //Settings.Default.Reload();
         }
+        private void SetSelectedDuplicatesFolders ( CheckedListBox.CheckedItemCollection checkedItems )
+        {
+            string items = String.Empty;
+            foreach (var checkedItem in checkedItems) {
+                //set a comma delimited string to be saved in Settings
+                items += checkedItem + ",";
+            }
 
+
+
+
+            var folderSettings = GetFolderSettings ();
+            if (folderSettings.Count > 0) {
+                folderSettings.First ().reportsFolders = items.TrimEnd ( ',' );
+            }
+            else {
+                folderSettings.Add ( new FolderSettings
+                {
+                    duplicatesFolders = string.Empty,
+                    fileNamesFolders = string.Empty,
+                    selectedFolders = string.Empty,
+                    deleteFolders = string.Empty,
+                    reportsFolders = items.TrimEnd ( ',' )
+                } );
+            }
+            setFolderSettings ( folderSettings );
+            //Settings.Default.duplicatesFolders = items.TrimEnd(',');
+            //Settings.Default.Save();
+            //Settings.Default.Reload();
+        }
         private void SetSelectedExcelFolders ( CheckedListBox.CheckedItemCollection checkedItems )
         {
             string items = String.Empty;
@@ -870,6 +926,7 @@ namespace FileManager
                 folderSettings.Add ( new FolderSettings
                 {
                     ExcelFolders = items.TrimEnd ( ',' ),
+                    reportsFolders = string.Empty,
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty,
                     duplicatesFolders = string.Empty
@@ -899,6 +956,7 @@ namespace FileManager
                 {
                     duplicatesFolders = string.Empty,
                     fileNamesFolders = items.TrimEnd ( ',' ),
+                    reportsFolders = string.Empty,
                     selectedFolders = string.Empty,
                     deleteFolders = string.Empty
                 } );
@@ -982,6 +1040,7 @@ namespace FileManager
                 {
                     duplicatesFolders = string.Empty,
                     fileNamesFolders = string.Empty,
+                    reportsFolders = string.Empty,
                     selectedFolders = items.TrimEnd ( ',' ),
                     deleteFolders = string.Empty
                 } );
@@ -1043,6 +1102,187 @@ namespace FileManager
             }
         }
 
+        private void SetReportsNames()
+        {
+            try
+            {
+                string [] availDirs, allAvailDirs;
+                progressBar1.Visible = true;
+                progressBar1.Value = 0;
+                var isError = false;
+                _numOfDuplicates = 0;
+                lblProgressMessage.Text = "מתקן שמות דוחות";
+                lblProgressMessage.Visible = true;
+                Application.DoEvents ();
+                var checkedItems = reportFolders.CheckedItems;
+                if (checkedItems.Count == 0) {
+                    return;
+                }
+                var destFolName = txtReportDest.Text;
+                Properties.Settings.Default.reportsDestName = destFolName;
+                Properties.Settings.Default.Save();
+                // save selected items to Settings
+                SetSelectedReportFolders ( checkedItems );
+                var itemCount = checkedItems.Count;
+                int percent = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
+
+                foreach (var checkedItem in checkedItems)
+                {
+                    int counter = 1;
+                    // get the base path of each folder
+                    string basePath = Path.Combine(_path, checkedItem.ToString());
+                    var dest = Path.Combine ( basePath, destFolName );
+                    if (!Directory.Exists ( dest )) {
+                        Directory.CreateDirectory ( dest );
+                    }
+                    //string allFilesPath = String.Empty;
+                    //get all sub folders of base folder
+                    allAvailDirs = Directory.GetDirectories(basePath);
+                    availDirs = allAvailDirs.Where(w =>
+                    {
+                        var dn = Path.GetFileName(w);
+                        return dn != null && dn.Length < 3 && dn != destFolName;
+                    }).ToArray();
+
+
+                    if (availDirs.Length > 0)
+                    {
+                        // run over the array to get the dir/1 folder path where all the files are
+                        foreach (string curdir in availDirs)
+                        {
+                            
+                            var checkdir = Path.GetFileName(curdir);
+                            if (checkdir == null || checkdir.Length > 2)
+                            {
+                                continue;
+                            }
+                            if (!Directory.Exists(curdir))
+                            {
+                                continue;
+                            }
+                            string source = curdir;
+                            string sourceName = Path.GetFileName( basePath ) + " -- " + Path.GetFileName ( source);
+                            var reportFiles = Directory.GetFiles ( source, "*.*", SearchOption.TopDirectoryOnly );
+                            if (!reportFiles.Any ()) {
+                                continue;
+                            }
+                            var grouper = new List<Grouper> ();
+                            txtLog.AppendText ( "מתחיל בבדיקת קבצי המקור לתקייה - " + sourceName  + Environment.NewLine );
+                            txtLog.AppendText ( "נמצאו  " + reportFiles.Length + " קבצים " + Environment.NewLine );
+                            Application.DoEvents ();
+                            Thread.Sleep ( 100 );
+                            try {
+                                foreach (var file in reportFiles) {
+                                    var parts = getParts ( file );
+                                    var id = parts [1];
+                                    var report = parts [parts.Length - 1];
+                                    var concatId = string.Concat ( id, report );
+                                    if (grouper.Exists ( f => f.id == concatId )) {
+                                        grouper.Find ( f => f.id == concatId ).files.Add ( file );
+                                    }
+                                    else {
+                                        grouper.Add ( new Grouper
+                                        {
+                                            id = concatId,
+                                            files = new List<string> { file }
+                                        } );
+                                    }
+                                }
+                            }
+                            catch (System.Exception ex) {
+                                txtLog.AppendText ( "בעיה נמצאה בקריאת קבצי המקור, " + ex.Message);
+                                Application.DoEvents ();
+                                isError = true;
+                                continue;
+                            }
+
+                            txtLog.AppendText ( "סיום בדיקת קבצי המקור לתיקיית - " + sourceName +  Environment.NewLine );
+                            txtLog.AppendText ( Environment.NewLine );
+                            Application.DoEvents ();
+
+                            int max = 1;
+                            var destFiles = Directory.GetFiles ( dest, "*.*", SearchOption.TopDirectoryOnly );
+                            txtLog.AppendText ( "מתחיל בבדיקת קבצי היעד לתקיית - " + sourceName + Environment.NewLine );
+                            Application.DoEvents ();
+                            Thread.Sleep ( 100 );
+                            try {
+                                foreach (var destFile in destFiles) {
+                                    int num;
+                                    var destParts = getParts ( destFile );
+                                    if (int.TryParse ( destParts [destParts.Length - 1], out num )) {
+                                        if (num > max) {
+                                            max = num;
+                                        }
+                                    }
+                                }
+                                if (max > 1) {
+                                    max++;
+                                }
+                            }
+                            catch (System.Exception ex) {
+                               
+                                txtLog.AppendText ( "בעיה נמצאה בבדיקת קבצי היעד, " + ex.Message );
+                                Application.DoEvents ();
+                                isError = true;
+                                continue;
+                            }
+
+                            txtLog.AppendText ( "סיום בדיקת קבצי היעד לתיקיית - " + sourceName + Environment.NewLine );
+                            Application.DoEvents ();
+                            Thread.Sleep ( 100 );
+                            txtLog.AppendText ( Environment.NewLine );
+                            txtLog.AppendText ( "מתחיל בהעברת הקבצים בתקיית - " + sourceName + Environment.NewLine );
+                            Application.DoEvents ();
+
+                            try {
+                                foreach (var grp in grouper) {
+                                    foreach (var grpFile in grp.files) {
+                                        var ext = grpFile.Split ( '.' ) [1];
+                                        var grpParts = getParts ( grpFile );
+                                        grpParts [grpParts.Length - 1] = max.ToString ( "D3" );
+                                        var newFile = string.Empty;
+                                        foreach (var grpPart in grpParts) {
+                                            newFile += grpPart + "-";
+                                        }
+                                        newFile = newFile.TrimEnd ( '-' ) + "." + ext;
+                                        Thread.Sleep ( 50 );
+                                        txtLog.AppendText ( "מעביר קובץ " + Path.GetFileName ( grpFile ) + Environment.NewLine );
+                                        Application.DoEvents ();
+                                        File.Move ( grpFile, Path.Combine ( dest, Path.GetFileName ( newFile ) ) );
+                                    }
+                                    max++;
+                                }
+                            }
+                            catch (System.Exception ex) {
+                                txtLog.AppendText ( "בעיה בהעברת הקובץ, " + ex.Message );
+                                Application.DoEvents ();
+                                isError = true;
+                            }
+                            var msg = isError ? "הפעולה הסתיימה עם בעיות" : "הפעולה הסתיימה בהצלחה";
+                            txtLog.AppendText ( Environment.NewLine );
+                            txtLog.AppendText ( msg );
+                            txtLog.AppendText ( Environment.NewLine );
+                            txtLog.AppendText ( Environment.NewLine );
+                            txtLog.AppendText ( Environment.NewLine );
+                            Application.DoEvents ();
+
+                        }
+                    }
+                    int val = progressBar1.Value + percent;
+                    if (val > 100) {
+                        val = 100;
+                    }
+                    progressBar1.Value = val;
+                    Application.DoEvents ();
+                }
+                progressBar1.Value = 100;
+                Application.DoEvents ();
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show ( "Report names Error :\r" + ex.Message );
+            }
+        }
         private void FixDuplicates()
         {
             try
@@ -2064,7 +2304,12 @@ namespace FileManager
                 MessageBox.Show ( "DeleteFiles Error :\r" + ex.Message );
             }
         }
-
+        private string [] getParts ( string file )
+        {
+            var names = file.Split ( '.' );
+            var name = names [0];
+            return name.Split ( '-' );
+        }
         //private static void SendMail(List<string> files, string subject, string email)
         //{
         //    var server = ConfigurationManager.AppSettings["smptServer"];
