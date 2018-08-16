@@ -865,8 +865,8 @@ namespace FileManager
             else {
                 folderSettings.Add ( new FolderSettings
                 {
-                    duplicatesFolders = items.TrimEnd ( ',' ),
-                    reportsFolders = string.Empty,
+                    duplicatesFolders = string.Empty,
+                    reportsFolders = items.TrimEnd ( ',' ),
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty,
                     deleteFolders = string.Empty
@@ -895,11 +895,11 @@ namespace FileManager
             else {
                 folderSettings.Add ( new FolderSettings
                 {
-                    duplicatesFolders = string.Empty,
+                    duplicatesFolders = items.TrimEnd ( ',' ),
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty,
                     deleteFolders = string.Empty,
-                    reportsFolders = items.TrimEnd ( ',' )
+                    reportsFolders = string.Empty
                 } );
             }
             setFolderSettings ( folderSettings );
