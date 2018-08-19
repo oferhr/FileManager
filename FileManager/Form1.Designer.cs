@@ -55,6 +55,11 @@
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.DelList = new System.Windows.Forms.CheckedListBox();
             this.tabReports = new System.Windows.Forms.TabPage();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
+            this.txtLog = new System.Windows.Forms.TextBox();
+            this.txtReportDest = new System.Windows.Forms.TextBox();
+            this.reportFolders = new System.Windows.Forms.CheckedListBox();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
@@ -62,11 +67,6 @@
             this.lbl1 = new System.Windows.Forms.Label();
             this.btnMail = new System.Windows.Forms.Button();
             this.btnDel = new System.Windows.Forms.Button();
-            this.reportFolders = new System.Windows.Forms.CheckedListBox();
-            this.txtReportDest = new System.Windows.Forms.TextBox();
-            this.txtLog = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -185,7 +185,7 @@
             this.tabsMain.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.tabsMain.RightToLeftLayout = true;
             this.tabsMain.SelectedIndex = 0;
-            this.tabsMain.Size = new System.Drawing.Size(834, 725);
+            this.tabsMain.Size = new System.Drawing.Size(834, 721);
             this.tabsMain.TabIndex = 11;
             // 
             // tabCounts
@@ -298,7 +298,7 @@
             this.tabEEmail.Location = new System.Drawing.Point(4, 24);
             this.tabEEmail.Name = "tabEEmail";
             this.tabEEmail.Padding = new System.Windows.Forms.Padding(3);
-            this.tabEEmail.Size = new System.Drawing.Size(826, 697);
+            this.tabEEmail.Size = new System.Drawing.Size(826, 693);
             this.tabEEmail.TabIndex = 3;
             this.tabEEmail.Text = "יצירת מיילים";
             this.tabEEmail.UseVisualStyleBackColor = true;
@@ -421,6 +421,59 @@
             this.tabReports.Text = "שמות לדוחות";
             this.tabReports.UseVisualStyleBackColor = true;
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Guttman Frank", 9F);
+            this.label2.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label2.Location = new System.Drawing.Point(733, 73);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(75, 15);
+            this.label2.TabIndex = 16;
+            this.label2.Text = "פירוט התהליך";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Guttman Frank", 9F);
+            this.label1.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label1.Location = new System.Drawing.Point(733, 37);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(78, 15);
+            this.label1.TabIndex = 15;
+            this.label1.Text = "שם תקיית יעד";
+            // 
+            // txtLog
+            // 
+            this.txtLog.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.txtLog.Location = new System.Drawing.Point(268, 91);
+            this.txtLog.Multiline = true;
+            this.txtLog.Name = "txtLog";
+            this.txtLog.ReadOnly = true;
+            this.txtLog.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtLog.Size = new System.Drawing.Size(552, 597);
+            this.txtLog.TabIndex = 14;
+            // 
+            // txtReportDest
+            // 
+            this.txtReportDest.Location = new System.Drawing.Point(520, 37);
+            this.txtReportDest.Name = "txtReportDest";
+            this.txtReportDest.Size = new System.Drawing.Size(169, 20);
+            this.txtReportDest.TabIndex = 4;
+            // 
+            // reportFolders
+            // 
+            this.reportFolders.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.reportFolders.CheckOnClick = true;
+            this.reportFolders.FormattingEnabled = true;
+            this.reportFolders.Location = new System.Drawing.Point(3, 9);
+            this.reportFolders.Name = "reportFolders";
+            this.reportFolders.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.reportFolders.Size = new System.Drawing.Size(259, 679);
+            this.reportFolders.TabIndex = 3;
+            // 
             // lblProgressMessage
             // 
             this.lblProgressMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -523,64 +576,11 @@
             this.btnDel.UseVisualStyleBackColor = false;
             this.btnDel.Click += new System.EventHandler(this.btnDel_Click);
             // 
-            // reportFolders
-            // 
-            this.reportFolders.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.reportFolders.CheckOnClick = true;
-            this.reportFolders.FormattingEnabled = true;
-            this.reportFolders.Location = new System.Drawing.Point(3, 9);
-            this.reportFolders.Name = "reportFolders";
-            this.reportFolders.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.reportFolders.Size = new System.Drawing.Size(259, 679);
-            this.reportFolders.TabIndex = 3;
-            // 
-            // txtReportDest
-            // 
-            this.txtReportDest.Location = new System.Drawing.Point(520, 37);
-            this.txtReportDest.Name = "txtReportDest";
-            this.txtReportDest.Size = new System.Drawing.Size(169, 20);
-            this.txtReportDest.TabIndex = 4;
-            // 
-            // txtLog
-            // 
-            this.txtLog.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.txtLog.Location = new System.Drawing.Point(268, 91);
-            this.txtLog.Multiline = true;
-            this.txtLog.Name = "txtLog";
-            this.txtLog.ReadOnly = true;
-            this.txtLog.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-            this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtLog.Size = new System.Drawing.Size(552, 597);
-            this.txtLog.TabIndex = 14;
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Guttman Frank", 9F);
-            this.label1.ForeColor = System.Drawing.Color.DarkBlue;
-            this.label1.Location = new System.Drawing.Point(733, 37);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(78, 15);
-            this.label1.TabIndex = 15;
-            this.label1.Text = "שם תקיית יעד";
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Guttman Frank", 9F);
-            this.label2.ForeColor = System.Drawing.Color.DarkBlue;
-            this.label2.Location = new System.Drawing.Point(733, 73);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(75, 15);
-            this.label2.TabIndex = 16;
-            this.label2.Text = "פירוט התהליך";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1107, 749);
+            this.ClientSize = new System.Drawing.Size(1107, 745);
             this.Controls.Add(this.btnDel);
             this.Controls.Add(this.btnMail);
             this.Controls.Add(this.boxSummary);

@@ -890,7 +890,7 @@ namespace FileManager
 
             var folderSettings = GetFolderSettings ();
             if (folderSettings.Count > 0) {
-                folderSettings.First ().reportsFolders = items.TrimEnd ( ',' );
+                folderSettings.First ().duplicatesFolders = items.TrimEnd ( ',' );
             }
             else {
                 folderSettings.Add ( new FolderSettings
