@@ -74,22 +74,20 @@ namespace FileManager
                 }
 
                 //adding files to checkbox list
-                
-                
-                foreach (var path in dirs)
-                {
-                    var folder = Path.GetFileName(path);
-                    if (folder != null)
-                    {
-                        DuplicateFolders.Items.Add(folder);
-                        reportFolders.Items.Add(folder);
-                        filenames.Items.Add(folder);
+
+                foreach (var path in dirs) {
+                    var folder = Path.GetFileName ( path );
+                    if (folder != null) {
+                        DuplicateFolders.Items.Add ( folder );
+                        reportFolders.Items.Add ( folder );
+                        filenames.Items.Add ( folder );
                         //cboDirs.Items.Add(folder);
                         dirList.Items.Add ( folder );
-                        gfoldersList.Add(folder);
-                        DelList.Items.Add(folder);
+                        gfoldersList.Add ( folder );
+                        DelList.Items.Add ( folder );
                     }
                 }
+
 
                 var countsConfigSettings = GetCountSettings ();
                 var countDs = new List<CountSettings> ();

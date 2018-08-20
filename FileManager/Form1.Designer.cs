@@ -195,7 +195,7 @@
             this.tabCounts.Location = new System.Drawing.Point(4, 24);
             this.tabCounts.Name = "tabCounts";
             this.tabCounts.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCounts.Size = new System.Drawing.Size(826, 697);
+            this.tabCounts.Size = new System.Drawing.Size(826, 693);
             this.tabCounts.TabIndex = 0;
             this.tabCounts.Text = "תיקיות לספירה";
             this.tabCounts.UseVisualStyleBackColor = true;
@@ -251,7 +251,7 @@
             this.tabDuplicates.Location = new System.Drawing.Point(4, 24);
             this.tabDuplicates.Name = "tabDuplicates";
             this.tabDuplicates.Padding = new System.Windows.Forms.Padding(3);
-            this.tabDuplicates.Size = new System.Drawing.Size(826, 697);
+            this.tabDuplicates.Size = new System.Drawing.Size(826, 693);
             this.tabDuplicates.TabIndex = 1;
             this.tabDuplicates.Text = "תיקיות לכפילויות";
             this.tabDuplicates.UseVisualStyleBackColor = true;
@@ -274,7 +274,7 @@
             this.tabNames.Font = new System.Drawing.Font("Arial", 8.25F);
             this.tabNames.Location = new System.Drawing.Point(4, 24);
             this.tabNames.Name = "tabNames";
-            this.tabNames.Size = new System.Drawing.Size(826, 697);
+            this.tabNames.Size = new System.Drawing.Size(826, 693);
             this.tabNames.TabIndex = 2;
             this.tabNames.Text = "תיקון שמות";
             this.tabNames.UseVisualStyleBackColor = true;
@@ -307,6 +307,9 @@
             // 
             this.dataGridView1.AllowUserToAddRows = false;
             this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.dir,
@@ -364,7 +367,7 @@
             this.tabPage1.Location = new System.Drawing.Point(4, 24);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(826, 697);
+            this.tabPage1.Size = new System.Drawing.Size(826, 693);
             this.tabPage1.TabIndex = 4;
             this.tabPage1.Text = "שמות אקסל";
             this.tabPage1.UseVisualStyleBackColor = true;
@@ -388,7 +391,7 @@
             this.tabPage2.Location = new System.Drawing.Point(4, 24);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(826, 697);
+            this.tabPage2.Size = new System.Drawing.Size(826, 693);
             this.tabPage2.TabIndex = 5;
             this.tabPage2.Text = "מחיקת קבצים";
             this.tabPage2.UseVisualStyleBackColor = true;
@@ -416,7 +419,7 @@
             this.tabReports.Location = new System.Drawing.Point(4, 24);
             this.tabReports.Name = "tabReports";
             this.tabReports.Padding = new System.Windows.Forms.Padding(3);
-            this.tabReports.Size = new System.Drawing.Size(826, 697);
+            this.tabReports.Size = new System.Drawing.Size(826, 693);
             this.tabReports.TabIndex = 6;
             this.tabReports.Text = "שמות לדוחות";
             this.tabReports.UseVisualStyleBackColor = true;
@@ -578,8 +581,7 @@
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1107, 745);
             this.Controls.Add(this.btnDel);
             this.Controls.Add(this.btnMail);
@@ -590,6 +592,7 @@
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.bStart);
             this.Controls.Add(this.bClose);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
             this.MaximumSize = new System.Drawing.Size(1200, 1200);
             this.MinimumSize = new System.Drawing.Size(613, 528);
             this.Name = "Form1";
