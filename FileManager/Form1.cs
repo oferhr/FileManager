@@ -30,6 +30,7 @@ namespace FileManager
         const string LtrMark = "\u200E";
         private static readonly object LockObject = new object ();
         private string CopiedFilesDirectory = "9876789";
+        private  DateTime dtDeleteFiles;
         private readonly List<string> gfoldersList = new List<string>();
         private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר" };
 
@@ -175,10 +176,10 @@ namespace FileManager
                 {
                     txtReportDest.Text = Properties.Settings.Default.reportsDestName;
                 }
-                string reportFoldersSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().reportsFolders;
+                var reportFoldersSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().reportsFolders;
                 if (!String.IsNullOrEmpty ( reportFoldersSettings )) {
-                    string [] folders = reportFoldersSettings.Split ( ',' );
-                    for (int i = 0; i <= ( reportFolders.Items.Count - 1 ); i++) {
+                    var folders = reportFoldersSettings.Split ( ',' );
+                    for (var i = 0; i <= ( reportFolders.Items.Count - 1 ); i++) {
                         foreach (var fol in folders) {
                             if (reportFolders.Items [i].ToString () == fol) {
                                 reportFolders.SetItemChecked ( i, true );
@@ -189,11 +190,11 @@ namespace FileManager
                 }
 
 
-                string duplicatesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().duplicatesFolders;
+                var duplicatesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().duplicatesFolders;
                 if (!String.IsNullOrEmpty(duplicatesFolderSettings))
                 {
-                    string[] folders = duplicatesFolderSettings.Split(',');
-                    for (int i = 0; i <= (DuplicateFolders.Items.Count - 1); i++)
+                    var folders = duplicatesFolderSettings.Split(',');
+                    for (var i = 0; i <= (DuplicateFolders.Items.Count - 1); i++)
                     {
                         foreach (var fol in folders)
                         {
@@ -206,11 +207,11 @@ namespace FileManager
                     }
                 }
                // string fileNamesFolderSettings = Settings.Default.fileNamesFolders;
-                string fileNamesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().fileNamesFolders;
+                var fileNamesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().fileNamesFolders;
                 if (!String.IsNullOrEmpty(fileNamesFolderSettings))
                 {
-                    string[] folders = fileNamesFolderSettings.Split(',');
-                    for (int i = 0; i <= (filenames.Items.Count - 1); i++)
+                    var folders = fileNamesFolderSettings.Split(',');
+                    for (var i = 0; i <= (filenames.Items.Count - 1); i++)
                     {
                         foreach (var fol in folders)
                         {
@@ -223,10 +224,10 @@ namespace FileManager
                     }
                 }
 
-                string excelFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().ExcelFolders;
+                var excelFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().ExcelFolders;
                 if (!String.IsNullOrEmpty ( excelFolderSettings )) {
-                    string [] folders = excelFolderSettings.Split ( ',' );
-                    for (int i = 0; i <= ( dirList.Items.Count - 1 ); i++) {
+                    var folders = excelFolderSettings.Split ( ',' );
+                    for (var i = 0; i <= ( dirList.Items.Count - 1 ); i++) {
                         foreach (var fol in folders) {
                             if (dirList.Items [i].ToString () == fol) {
                                 dirList.SetItemChecked ( i, true );
@@ -236,10 +237,10 @@ namespace FileManager
                     }
                 }
 
-                string deletedFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().deleteFolders;
+                var deletedFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().deleteFolders;
                 if (!String.IsNullOrEmpty ( deletedFolderSettings )) {
-                    string [] folders = deletedFolderSettings.Split ( ',' );
-                    for (int i = 0; i <= ( DelList.Items.Count - 1 ); i++) {
+                    var folders = deletedFolderSettings.Split ( ',' );
+                    for (var i = 0; i <= ( DelList.Items.Count - 1 ); i++) {
                         foreach (var fol in folders) {
                             if (DelList.Items [i].ToString () == fol) {
                                 DelList.SetItemChecked ( i, true );
@@ -248,6 +249,14 @@ namespace FileManager
 
                     }
                 }
+                if (nDaysToDelete.Value < 0)
+                {
+                    MessageBox.Show("מספר הימים למחיקה קטן מאפס");
+                    return;
+                }
+                var dys = Properties.Settings.Default.DaysToDelete;
+                nDaysToDelete.Value = dys;
+                
             }
             catch (System.Exception ex)
             {
@@ -274,7 +283,7 @@ namespace FileManager
             FixFileNames ( true );
             CountFiles ();
             SetExcelNames ();
-            SetReportsNames();
+            SetReportsNames ();
             btnMail.Enabled = true;
         }
 
@@ -334,20 +343,20 @@ namespace FileManager
                 Application.DoEvents();
 
                 List<EmailDirSettings> dirSettings;
-                Dictionary<string, string> dnames = new Dictionary<string, string>();
-                List<string> lCopiedNames = new List<string>();
-                List<string> lpaths = new List<string>();
-                List<List<string>> arfiles = new List<List<string>>();
-                List<string> ardirs = new List<string>();
-                string configPath = Path.Combine(_config, "fileManager_emailDirConfig.json");
+                var dnames = new Dictionary<string, string>();
+                var lCopiedNames = new List<string>();
+                var lpaths = new List<string>();
+                var arfiles = new List<List<string>>();
+                var ardirs = new List<string>();
+                var configPath = Path.Combine(_config, "fileManager_emailDirConfig.json");
 
                 // if shared config file exist - take values from there, and save email to the dir selected
                 if (File.Exists(configPath))
                 {
 
-                    using (StreamReader r = new StreamReader(configPath))
+                    using (var r = new StreamReader(configPath))
                     {
-                        string json = r.ReadToEnd();
+                        var json = r.ReadToEnd();
                         dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>>(json);
                     }
                 }
@@ -373,7 +382,7 @@ namespace FileManager
                         continue;
                     }
 
-                    string basePath = Path.Combine(_path, dirSetting.dir);
+                    var basePath = Path.Combine(_path, dirSetting.dir);
                     if (!Directory.Exists(basePath))
                     {
                         continue;
@@ -387,11 +396,11 @@ namespace FileManager
                     if (files.Any())
                     {
                         //iterate through the files and get the names and insert the names and the paths to lists
-                        foreach (string file in files)
+                        foreach (var file in files)
                         {
                             // good directory is only with the name "1" of a date in format dd.mm.yy like 24.02.17
-                            bool isGoodDirectory = false;
-                            string currentDir = Path.GetFileName(Path.GetDirectoryName(file));
+                            var isGoodDirectory = false;
+                            var currentDir = Path.GetFileName(Path.GetDirectoryName(file));
                             if (currentDir == "1")
                             {
                                 if (!ardirs.Contains(currentDir))
@@ -402,8 +411,8 @@ namespace FileManager
                             }
                             else
                             {
-                                string regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
-                                Match m = Regex.Match(currentDir, regex);
+                                var regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
+                                var m = Regex.Match(currentDir, regex);
                                 if (m.Success)
                                 {
                                     if (!ardirs.Contains(currentDir))
@@ -423,7 +432,7 @@ namespace FileManager
                                 continue;
                             }
 
-                            string fileName = Path.GetFileName(file);
+                            var fileName = Path.GetFileName(file);
                             if (fileName == null || IsThumbsInPath(file))
                             {
                                 continue;
@@ -470,9 +479,9 @@ namespace FileManager
                         {
 
 
-                            double pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
-                            OutlookApp oApp = new OutlookApp();
-                            MailItem oMsg = (MailItem) oApp.CreateItem(OlItemType.olMailItem);
+                            var pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
+                            var oApp = new OutlookApp();
+                            var oMsg = (MailItem) oApp.CreateItem(OlItemType.olMailItem);
                             oMsg.To = dirSetting.email;
                             var fileName = Path.GetFileName(arfile[0]);
                             // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
@@ -509,8 +518,8 @@ namespace FileManager
                             oApp = null;
 
                             //SendMail ( arfile, subject, dirSetting.email );
-                            double dVal = progressBar1.Value + pbIncrement;
-                            int val = Convert.ToInt32(dVal);
+                            var dVal = progressBar1.Value + pbIncrement;
+                            var val = Convert.ToInt32(dVal);
                             if (val > 100)
                             {
                                 val = 100;
@@ -571,7 +580,7 @@ namespace FileManager
                             }
                             catch
                             {
-                                using (StreamWriter w = File.AppendText("log.txt"))
+                                using (var w = File.AppendText("log.txt"))
                                 {
                                     Log("could not delete directory:" + newDir, w);
                                 }
@@ -599,7 +608,7 @@ namespace FileManager
             }
             catch (System.Exception ex)
             {
-                using (StreamWriter w = File.AppendText ( "log.txt" )) {
+                using (var w = File.AppendText ( "log.txt" )) {
                     Log ("error in mail send : /n" + ex.Message + ",----/n" +  (ex.InnerException?.Message ?? "") + "----/n" + ex.StackTrace, w );
                 }
             }
@@ -684,9 +693,9 @@ namespace FileManager
             if (dataGridView1.Columns [e.ColumnIndex].Name != "check") {
                 return;
             }
-            string check = dataGridView1 [e.ColumnIndex, e.RowIndex].Value.ToString();
-            int icheck = 0;
-            for (int i = 0; i < mailCheck.Length; i++)
+            var check = dataGridView1 [e.ColumnIndex, e.RowIndex].Value.ToString();
+            var icheck = 0;
+            for (var i = 0; i < mailCheck.Length; i++)
             {
                 if (mailCheck[i] == check)
                 {
@@ -708,7 +717,7 @@ namespace FileManager
             }
 
 
-            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
 
             lock (LockObject) {
                 var sjson = JsonConvert.SerializeObject ( dirSettings.ToArray () );
@@ -731,7 +740,7 @@ namespace FileManager
             if (grdCount.Columns [e.ColumnIndex].Name != "chb") {
                 return;
             }
-            bool check = (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
+            var check = (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
             var dirSettings = GetCountSettings ();
             var ddir = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
             var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
@@ -818,7 +827,7 @@ namespace FileManager
 
         private void SetSelectedDeletedFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
-            string items = String.Empty;
+            var items = String.Empty;
             foreach (var checkedItem in checkedItems) {
                 //set a comma delimited string to be saved in Settings
                 items += checkedItem + ",";
@@ -846,7 +855,7 @@ namespace FileManager
 
         private void SetSelectedReportFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
-            string items = String.Empty;
+            var items = String.Empty;
             foreach (var checkedItem in checkedItems)
             {
                 //set a comma delimited string to be saved in Settings
@@ -877,7 +886,7 @@ namespace FileManager
         }
         private void SetSelectedDuplicatesFolders ( CheckedListBox.CheckedItemCollection checkedItems )
         {
-            string items = String.Empty;
+            var items = String.Empty;
             foreach (var checkedItem in checkedItems) {
                 //set a comma delimited string to be saved in Settings
                 items += checkedItem + ",";
@@ -907,7 +916,7 @@ namespace FileManager
         }
         private void SetSelectedExcelFolders ( CheckedListBox.CheckedItemCollection checkedItems )
         {
-            string items = String.Empty;
+            var items = String.Empty;
             foreach (var checkedItem in checkedItems) {
                 //set a comma delimited string to be saved in Settings
                 items += checkedItem + ",";
@@ -938,7 +947,7 @@ namespace FileManager
 
         private void SetSelectedFileNameFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
-            string items = String.Empty;
+            var items = String.Empty;
             foreach (var checkedItem in checkedItems)
             {
                 //set a comma delimited string to be saved in Settings
@@ -970,8 +979,8 @@ namespace FileManager
         private List<FileCount> SetSelectedItems(List<CountSettings> checkedItems, bool useProgressBar)
         {
             var list = new List<FileCount>();
-            string items = String.Empty;
-            int percent = 0;
+            var items = String.Empty;
+            var percent = 0;
             if (useProgressBar)
             {
                 var itemCount = checkedItems.Count;
@@ -992,7 +1001,7 @@ namespace FileManager
                      .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
                 //check if file Thumbs.db exist in folder. If yes than reduce one file from file count.
                 var files = lfiles as IList<string> ?? lfiles.ToList();
-                bool isThumbs = files.Any(IsThumbsInPath);
+                var isThumbs = files.Any(IsThumbsInPath);
 
                 int fileCount;
                 if (isThumbs)
@@ -1016,7 +1025,7 @@ namespace FileManager
                 
                 if (useProgressBar)
                 {
-                    int val = progressBar1.Value + percent;
+                    var val = progressBar1.Value + percent;
                     if (val > 100)
                     {
                         val = 100;
@@ -1122,13 +1131,13 @@ namespace FileManager
                 // save selected items to Settings
                 SetSelectedReportFolders ( checkedItems );
                 var itemCount = checkedItems.Count;
-                int percent = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
+                var percent = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
 
                 foreach (var checkedItem in checkedItems)
                 {
-                    int counter = 1;
+                    var counter = 1;
                     // get the base path of each folder
-                    string basePath = Path.Combine(_path, checkedItem.ToString());
+                    var basePath = Path.Combine(_path, checkedItem.ToString());
                     var dest = Path.Combine ( basePath, destFolName );
                     if (!Directory.Exists ( dest )) {
                         Directory.CreateDirectory ( dest );
@@ -1146,7 +1155,7 @@ namespace FileManager
                     if (availDirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (string curdir in availDirs)
+                        foreach (var curdir in availDirs)
                         {
                             
                             var checkdir = Path.GetFileName(curdir);
@@ -1158,8 +1167,8 @@ namespace FileManager
                             {
                                 continue;
                             }
-                            string source = curdir;
-                            string sourceName = Path.GetFileName( basePath ) + " -- " + Path.GetFileName ( source);
+                            var source = curdir;
+                            var sourceName = Path.GetFileName( basePath ) + " -- " + Path.GetFileName ( source);
                             var reportFiles = Directory.GetFiles ( source, "*.*", SearchOption.TopDirectoryOnly );
                             if (!reportFiles.Any ()) {
                                 continue;
@@ -1198,7 +1207,7 @@ namespace FileManager
                             txtLog.AppendText ( Environment.NewLine );
                             Application.DoEvents ();
 
-                            int max = 1;
+                            var max = 1;
                             var destFiles = Directory.GetFiles ( dest, "*.*", SearchOption.TopDirectoryOnly );
                             txtLog.AppendText ( "מתחיל בבדיקת קבצי היעד לתקיית - " + sourceName + Environment.NewLine );
                             Application.DoEvents ();
@@ -1266,7 +1275,7 @@ namespace FileManager
 
                         }
                     }
-                    int val = progressBar1.Value + percent;
+                    var val = progressBar1.Value + percent;
                     if (val > 100) {
                         val = 100;
                     }
@@ -1298,13 +1307,13 @@ namespace FileManager
                 // save selected items to Settings
                 SetSelectedDuplicatesFolders(checkedItems);
                 var itemCount = checkedItems.Count;
-                int percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0 / itemCount, 0));
+                var percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0 / itemCount, 0));
                 foreach (var checkedItem in checkedItems)
                 {
-                    int counter = 1;
+                    var counter = 1;
                     // get the base path of each folder
-                    string basePath = Path.Combine(_path, checkedItem.ToString());
-                    string allFilesPath = String.Empty;
+                    var basePath = Path.Combine(_path, checkedItem.ToString());
+                    var allFilesPath = String.Empty;
                     //get all sub folders of base folder
                     allAvailDirs = Directory.GetDirectories(basePath);
                     availDirs = allAvailDirs.Where(w =>
@@ -1315,7 +1324,7 @@ namespace FileManager
                     if (availDirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (string curdir in availDirs)
+                        foreach (var curdir in availDirs)
                         {
                             var checkdir = Path.GetFileName ( curdir );
                             if (checkdir == null || checkdir.Length > 2) {
@@ -1324,7 +1333,7 @@ namespace FileManager
                             if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
-                            string folder = Path.GetFileName(curdir);
+                            var folder = Path.GetFileName(curdir);
                             if (folder == counter.ToString())
                             {
                                 // if it is the first folder (dir/1) rename all files 
@@ -1341,16 +1350,16 @@ namespace FileManager
                                             allFilesPath = curdir;
                                             break;
                                         }
-                                        foreach (string file in files)
+                                        foreach (var file in files)
                                         {
                                            
-                                            string fileName = Path.GetFileName(file);
+                                            var fileName = Path.GetFileName(file);
                                             
                                             if (fileName == null || IsThumbsInPath(file))
                                             {
                                                 continue;
                                             }
-                                            string newName = GetNewFileName(fileName, 1);
+                                            var newName = GetNewFileName(fileName, 1);
                                             if (String.IsNullOrEmpty(newName))
                                             {
                                                 continue;
@@ -1379,9 +1388,9 @@ namespace FileManager
                         counter = 1;
                         // run again to get the duplicated folders
                         //foreach (string curdir in availDirs)
-                        for (int i = 0; i < availDirs.Length; i++)
+                        for (var i = 0; i < availDirs.Length; i++)
                         {
-                            string curAvailDir = availDirs[i];
+                            var curAvailDir = availDirs[i];
                             if (!Directory.Exists ( curAvailDir )) {
                                 continue;
                             }
@@ -1402,23 +1411,23 @@ namespace FileManager
                             if (ffiles.Any())
                             {
                                 //run over the files in the duplicated folder (dir/2...)
-                                foreach (string xfile in ffiles)
+                                foreach (var xfile in ffiles)
                                 {
-                                    string fileName = Path.GetFileName(xfile);
+                                    var fileName = Path.GetFileName(xfile);
                                     if (fileName == null || IsThumbsInPath(xfile))
                                     {
                                         continue;
                                     }
 
-                                    string newName = GetNewFileName(fileName, 1);
+                                    var newName = GetNewFileName(fileName, 1);
                                     if (string.IsNullOrEmpty(newName))
                                     {
                                         continue;
                                     }
                                     if (File.Exists(Path.Combine(allFilesPath, newName)))
                                     {
-                                        int miniCounter = 2;
-                                        bool isCopy = false;
+                                        var miniCounter = 2;
+                                        var isCopy = false;
                                         while (!isCopy)
                                         {
                                             var copyName = GetNewFileName(fileName, miniCounter);
@@ -1530,7 +1539,7 @@ namespace FileManager
                             //}
                         }
                     }
-                    int val = progressBar1.Value + percent;
+                    var val = progressBar1.Value + percent;
                     if (val > 100)
                     {
                         val = 100;
@@ -1540,7 +1549,7 @@ namespace FileManager
                 // run second time over the folders to delete empty folders
                 foreach (var checkedItem in checkedItems)
                 {
-                    string basePath = Path.Combine(_path, checkedItem.ToString());
+                    var basePath = Path.Combine(_path, checkedItem.ToString());
                     allAvailDirs = Directory.GetDirectories ( basePath );
                     availDirs = allAvailDirs.Where ( w => {
                         var dn = Path.GetFileName ( w );
@@ -1549,12 +1558,12 @@ namespace FileManager
                     //availDirs = Directory.GetDirectories(basePath);
                     if (availDirs.Length > 1)
                     {
-                        for (int i = 0; i < availDirs.Length; i++)
+                        for (var i = 0; i < availDirs.Length; i++)
                         {
                             if (!Directory.Exists ( availDirs[i] )) {
                                 continue;
                             }
-                            string fileName = Path.GetFileName(availDirs[i]);
+                            var fileName = Path.GetFileName(availDirs[i]);
                             if (fileName == "1" || fileName.Length > 2)
                             {
                                 continue;
@@ -1632,17 +1641,17 @@ namespace FileManager
                 SetSelectedFileNameFolders(checkedItems);
                 //int counter;
                 var itemCount = checkedItems.Count;
-                int percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0/itemCount, 0));
-                int progress = 0;
+                var percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0/itemCount, 0));
+                var progress = 0;
                 //loop over the checked items
                 foreach (var checkedItem in checkedItems)
                 {
-                    string basePath = Path.Combine(_path, checkedItem.ToString());
+                    var basePath = Path.Combine(_path, checkedItem.ToString());
                     var dirs = Directory.GetDirectories(basePath);
                     if (dirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (string curdir in dirs)
+                        foreach (var curdir in dirs)
                         {
                             if (!Directory.Exists ( curdir )) {
                                 continue;
@@ -1657,9 +1666,9 @@ namespace FileManager
                             var files = lfiles as IList<string> ?? lfiles.ToList();
 
 
-                            foreach (string file in files)
+                            foreach (var file in files)
                             {
-                                string fileName = Path.GetFileName(file);
+                                var fileName = Path.GetFileName(file);
                                 
 
                                 if (fileName == null || fileName.Contains("-"))
@@ -1672,10 +1681,10 @@ namespace FileManager
                                 {
                                     continue;
                                 }
-                                string newName = String.Empty;
+                                var newName = String.Empty;
                                 if (splits[1] == "9999999999")
                                 {
-                                    for (int i = 0; i < splits.Length; i++)
+                                    for (var i = 0; i < splits.Length; i++)
                                     {
                                         if (i == 1) continue;
                                         var part = splits[i];
@@ -1684,7 +1693,7 @@ namespace FileManager
                                 }
                                 else
                                 {
-                                    for (int i = 0; i < splits.Length; i++)
+                                    for (var i = 0; i < splits.Length; i++)
                                     {
                                         var part = splits[i];
                                         if (i == 0 && isMigdal)
@@ -1698,13 +1707,13 @@ namespace FileManager
 
                                     }
                                 }
-                                int miniCounter = 1;
-                                bool isCopy = false;
+                                var miniCounter = 1;
+                                var isCopy = false;
                                 while (!isCopy) {
                                     var based = Directory.GetParent ( curdir ).FullName;
                                     var newdir = Path.Combine ( based, miniCounter.ToString() );
                                     
-                                    string copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
+                                    var copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
                                     if (File.Exists ( copyName )) {
                                         miniCounter++;
                                     }
@@ -1738,14 +1747,14 @@ namespace FileManager
             //checks if all the files ends with underscore and 1 or 2 digits
             //if yes than it is not the first duplication
             // and make sure all files have underscore
-            bool isDuplicated = false;
+            var isDuplicated = false;
             var newFiles = new List<string>();
             var duplicatedFiles = new List<string>();
-            Regex r = new Regex(@".+?[_][0-9]{1,2}$");
+            var r = new Regex(@".+?[_][0-9]{1,2}$");
             //iterate the files and place all files in the right List<>
             foreach (var file in files)
             {
-                string ff = Path.GetFileNameWithoutExtension(file);
+                var ff = Path.GetFileNameWithoutExtension(file);
                 if (ff != null && !IsThumbsInPath(ff) && ((r.Match(ff).Success || ff.Contains(LtrMark))))
                 {
                     duplicatedFiles.Add(ff);
@@ -1765,16 +1774,16 @@ namespace FileManager
             {
                 foreach (var file in newFiles)
                 {
-                    string fileName = Path.GetFileName(file);
-                    string noExt = Path.GetFileNameWithoutExtension(file);
+                    var fileName = Path.GetFileName(file);
+                    var noExt = Path.GetFileNameWithoutExtension(file);
                     if (fileName == null || noExt == null)
                     {
                         continue;
                     }
                     //regex for file names with numbers
-                    Regex matcher = new Regex(@"^" + noExt + "[_][0-9]{1,2}$");
+                    var matcher = new Regex(@"^" + noExt + "[_][0-9]{1,2}$");
                     //regex for file names with letters
-                    Regex matcher2 = new Regex(@"^" + noExt + LtrMark + @"[ \d]{1,2}$");
+                    var matcher2 = new Regex(@"^" + noExt + LtrMark + @"[ \d]{1,2}$");
                     var sameFiles = new List<string>();
                     //add matched files to list
                     sameFiles.AddRange(duplicatedFiles.FindAll(matcher.IsMatch));
@@ -1783,11 +1792,11 @@ namespace FileManager
                     // if not add filename and 1
                     if (sameFiles.Count > 0)
                     {
-                        int miniCounter = 2;
-                        bool isCopy = false;
+                        var miniCounter = 2;
+                        var isCopy = false;
                         while (!isCopy)
                         {
-                            string copyName = GetNewFileName(fileName, miniCounter);
+                            var copyName = GetNewFileName(fileName, miniCounter);
                             if (File.Exists(Path.Combine(dir, copyName)))
                             {
                                 miniCounter++;
@@ -1801,7 +1810,7 @@ namespace FileManager
                     }
                     else
                     {
-                        string newName = GetNewFileName(fileName, 1);
+                        var newName = GetNewFileName(fileName, 1);
                         move(file, Path.Combine(dir, newName));
                     }
                 }
@@ -1850,11 +1859,11 @@ namespace FileManager
 
         private string GetNewFileName(string name, int num)
         {
-            string[] splits = name.Split('.');
+            var splits = name.Split('.');
             if (splits.Length == 2)
             {
-                Regex re = new Regex(@"\d+");
-                Match m = re.Match(name);
+                var re = new Regex(@"\d+");
+                var m = re.Match(name);
 
                 if (m.Success)
                 {
@@ -1862,7 +1871,7 @@ namespace FileManager
                 }
                 
                 
-                string newname= splits[0] + LtrMark + " " + num + "." + splits[1];
+                var newname= splits[0] + LtrMark + " " + num + "." + splits[1];
                 return newname;
                 
             }
@@ -1904,7 +1913,7 @@ namespace FileManager
                 var first = splits[0];
                 var last = splits[splits.Length - 1];
                 string[] newName;
-                string sep = type == 1 ? "_" : type == 2 ? "-" : " ";
+                var sep = type == 1 ? "_" : type == 2 ? "-" : " ";
                 //check if the first split is diget only
                 if (!first.Any(ch => ch < '0' || ch > '9'))
                 {
@@ -1932,12 +1941,12 @@ namespace FileManager
 
         private List<EmailDirSettings> GetEmailDirSettings ()
         {
-            List<EmailDirSettings> dirSettings = new List<EmailDirSettings> ();
-            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+            var dirSettings = new List<EmailDirSettings> ();
+            var configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
             if (File.Exists ( configPath )) {
 
-                using (StreamReader r = new StreamReader ( configPath )) {
-                    string json = r.ReadToEnd ();
+                using (var r = new StreamReader ( configPath )) {
+                    var json = r.ReadToEnd ();
                     dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>> ( json );
                 }
             }
@@ -1946,7 +1955,7 @@ namespace FileManager
 
         private void setFolderSettings (List<FolderSettings> folSettings )
         {
-            string configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
 
             lock (LockObject) {
                 var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
@@ -1956,12 +1965,12 @@ namespace FileManager
 
         private List<FolderSettings> GetFolderSettings ()
         {
-            string configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
             var folderSettings = new List<FolderSettings> ();
             if (File.Exists ( configPath )) {
 
-                using (StreamReader r = new StreamReader ( configPath )) {
-                    string json = r.ReadToEnd ();
+                using (var r = new StreamReader ( configPath )) {
+                    var json = r.ReadToEnd ();
                     folderSettings = JsonConvert.DeserializeObject<List<FolderSettings>> ( json );
                 }
             }
@@ -1974,7 +1983,7 @@ namespace FileManager
 
         private void setCountSettings ( List<CountSettings> folSettings )
         {
-            string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
 
             lock (LockObject) {
                 var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
@@ -1984,7 +1993,7 @@ namespace FileManager
 
         private void setMailSettings ( List<EmailDirSettings> folSettings )
         {
-            string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
 
             lock (LockObject) {
                 var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
@@ -1994,12 +2003,12 @@ namespace FileManager
 
         private List<CountSettings> GetCountSettings ()
         {
-            string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
             List<CountSettings> folderSettings;
             if (File.Exists ( configPath )) {
 
-                using (StreamReader r = new StreamReader ( configPath )) {
-                    string json = r.ReadToEnd ();
+                using (var r = new StreamReader ( configPath )) {
+                    var json = r.ReadToEnd ();
                     folderSettings = JsonConvert.DeserializeObject<List<CountSettings>> ( json );
                 }
             }
@@ -2012,12 +2021,12 @@ namespace FileManager
 
         private List<CountSettings> GetExcelSettings ()
         {
-            string configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
+            var configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
             List<CountSettings> folderSettings;
             if (File.Exists ( configPath )) {
 
-                using (StreamReader r = new StreamReader ( configPath )) {
-                    string json = r.ReadToEnd ();
+                using (var r = new StreamReader ( configPath )) {
+                    var json = r.ReadToEnd ();
                     folderSettings = JsonConvert.DeserializeObject<List<CountSettings>> ( json );
                 }
             }
@@ -2045,28 +2054,24 @@ namespace FileManager
 
             var itemCount = checkedItems.Count;
             var itemParts = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
-            int percent = 0;
-            int progress = 0;
-            int index = 0;
+            var progress = 0;
+            var index = 0;
             foreach (var checkedItem in checkedItems) {
-                string basePath = Path.Combine ( _path, checkedItem.ToString () );
+                var basePath = Path.Combine ( _path, checkedItem.ToString () );
                 if (!Directory.Exists ( basePath )) {
                     continue;
                 }
                 var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
                            .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
-                // var dirs = Directory.GetDirectories ( basePath );
-                // if (dirs.Length > 0) {
-                // run over the array to get the dir/1 folder path where all the files are
-                // foreach (string dir in dirs) {
+                
 
 
                 var files = lfiles as IList<string> ?? lfiles.ToList ();
-                percent =  files.Count == 0 ? 100 : itemParts / files.Count;
+                var percent = files.Count == 0 ? 100 : itemParts / files.Count;
 
-                foreach (string file in files) {
+                foreach (var file in files) {
                     
-                    string fileName = Path.GetFileName ( file );
+                    var fileName = Path.GetFileName ( file );
 
                     if (fileName == null) {
                         continue;
@@ -2078,17 +2083,9 @@ namespace FileManager
                         continue;
                     }
                     var hyphenSplits = extSplits [0].Split ( '-' );
-                    //var splitIndex = 0;
-                    //if (hyphenSplits.Length > 1)
-                    //{
-                    //    splitIndex = 1;
-                    //}
-                    //var splits = hyphenSplits [splitIndex].Split ( '_' );
-                    //if (splits.Length == 1) {
-                    //    continue;
-                    //}
                     
-                    List<string> parts = new List<string>();
+                    
+                    var parts = new List<string>();
                     foreach (var split in hyphenSplits)
                     {
                         var splits = split.Split ( '_' );
@@ -2101,21 +2098,26 @@ namespace FileManager
 
                     foreach (var part in parts) {
                         
-                        string result = CheckExcelForItems (arr, part );
+                        var result = CheckExcelForItems (arr, part );
                         
                         if (!string.IsNullOrEmpty ( result )) {
                             
-                            var newFilePath = file.Replace ( part, string.Join ( "", result.Split ( Path.GetInvalidFileNameChars () ) ) );
-                            
-                            File.Move ( file, newFilePath );
+                            var newFileName = SetExcelFileName(parts, part, result) + "." + extSplits[1];
+                            var dir = Path.GetDirectoryName(file);
+                            if (dir != null)
+                            {
+                                var newFilePath = Path.Combine (dir, newFileName );
+                                File.Move ( file, newFilePath );
+                            }
+                           
                             break;
                         }
                     }
                     progress += ( index * itemParts ) + percent;
                     if (progress > 100) progress = 100;
                     progressBar1.Value = progress;
-                    //  }
-                    //  }
+                   
+
                 }
                 index++;
             }
@@ -2123,10 +2125,18 @@ namespace FileManager
             MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
         }
 
+        private string SetExcelFileName(List<string> parts, string part, string result)
+        {
+            var arPart = parts.IndexOf(part);
+            parts[arPart] = result;
+
+            return parts[2] + "_" + parts[0] + "-" + parts[1];
+        }
+
         private object[,] GetExcelValues (  )
         {
             var lst = new List<string> ();
-            Excel.Application xlApp = new Excel.Application ();
+            var xlApp = new Excel.Application ();
             Excel.Workbook xlWorkbook = null;
             Excel._Worksheet xlWorksheet = null;
             Excel.Range xlRange = null;
@@ -2169,9 +2179,9 @@ namespace FileManager
         private string CheckExcelForItems ( object [,] arr, string part )
         {
             var lst = new List<string> ();
-            for (int x = 1; x <= arr.GetLength ( 0 ); x++) {
+            for (var x = 1; x <= arr.GetLength ( 0 ); x++) {
                 if (part == arr [x, 1].ToString ()) {
-                    for (int y = 2; y <= arr.GetLength ( 1 ); y++) {
+                    for (var y = 2; y <= arr.GetLength ( 1 ); y++) {
                         var val = arr [x, y]?.ToString ();
                         if (!string.IsNullOrEmpty ( val )) {
                             lst.Add ( val );
@@ -2180,7 +2190,7 @@ namespace FileManager
                 }
             }
             if (lst.Count > 0) {
-                return String.Join ( " ", lst.ToArray () ).Replace ( " ", "_" );
+                return String.Join ( " ", lst.ToArray () );
             }
             return null;
         }
@@ -2200,12 +2210,20 @@ namespace FileManager
                 {
                     return;
                 }
+                var daysToDelete = nDaysToDelete.Value;
+
+                Properties.Settings.Default.DaysToDelete = (int)daysToDelete;
+                Properties.Settings.Default.Save();
+
+                dtDeleteFiles = DateTime.Now.AddDays ( (double)daysToDelete * -1 );
+                var tts = new TimeSpan ( 0, 0, 0 );
+                dtDeleteFiles = dtDeleteFiles.Date + tts;
                 // save selected items to Settings
-                SetSelectedDeletedFolders(checkedItems);
+                SetSelectedDeletedFolders (checkedItems);
 
                 var itemCount = checkedItems.Count;
 
-                int percent = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
+                var percent = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 95.0 / itemCount, 0 ) );
                 foreach (var checkedItem in checkedItems)
                 {
                     // get the base path of each folder
@@ -2216,7 +2234,7 @@ namespace FileManager
                     var dirs1 = Directory.GetDirectories(basePath);
                     if (dirs1.Length > 0)
                     {
-                        foreach (string curdir in dirs1)
+                        foreach (var curdir in dirs1)
                         {
                             if (!Directory.Exists(curdir))
                             {
@@ -2229,8 +2247,13 @@ namespace FileManager
                             var files = lfiles as IList<string> ?? lfiles.ToList();
                             if (files.Any())
                             {
-                                foreach (string file in files)
+                                foreach (var file in files)
                                 {
+                                    var creatineDate = File.GetLastWriteTime ( file);
+                                    if (creatineDate >= dtDeleteFiles)
+                                    {
+                                        continue;
+                                    } 
                                     var curFile = Path.GetFileNameWithoutExtension(file);
 
                                     if (curFile != null)
@@ -2264,7 +2287,7 @@ namespace FileManager
                             File.Delete ( fileToDelete );
                         }
                         var dirsToDelete = new List<string> ();
-                        foreach (string curdir in dirs1) {
+                        foreach (var curdir in dirs1) {
                             if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
@@ -2283,7 +2306,7 @@ namespace FileManager
                         filesToDelete.Clear();
                         dirsToDelete.Clear();
                     }
-                    int val = progressBar1.Value + percent;
+                    var val = progressBar1.Value + percent;
                     if (val > 100) {
                         val = 100;
                     }

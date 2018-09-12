@@ -67,6 +67,9 @@
             this.lbl1 = new System.Windows.Forms.Label();
             this.btnMail = new System.Windows.Forms.Button();
             this.btnDel = new System.Windows.Forms.Button();
+            this.grpDatesDelete = new System.Windows.Forms.GroupBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.nDaysToDelete = new System.Windows.Forms.NumericUpDown();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -79,6 +82,8 @@
             this.tabPage2.SuspendLayout();
             this.tabReports.SuspendLayout();
             this.boxSummary.SuspendLayout();
+            this.grpDatesDelete.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).BeginInit();
             this.SuspendLayout();
             // 
             // bClose
@@ -579,10 +584,55 @@
             this.btnDel.UseVisualStyleBackColor = false;
             this.btnDel.Click += new System.EventHandler(this.btnDel_Click);
             // 
+            // grpDatesDelete
+            // 
+            this.grpDatesDelete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.grpDatesDelete.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.grpDatesDelete.Controls.Add(this.nDaysToDelete);
+            this.grpDatesDelete.Controls.Add(this.label3);
+            this.grpDatesDelete.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.grpDatesDelete.Font = new System.Drawing.Font("Guttman Frank", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.grpDatesDelete.ForeColor = System.Drawing.Color.Navy;
+            this.grpDatesDelete.Location = new System.Drawing.Point(881, 497);
+            this.grpDatesDelete.Name = "grpDatesDelete";
+            this.grpDatesDelete.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.grpDatesDelete.Size = new System.Drawing.Size(200, 81);
+            this.grpDatesDelete.TabIndex = 16;
+            this.grpDatesDelete.TabStop = false;
+            this.grpDatesDelete.Text = "מספר ימים עד למחיקה";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.BackColor = System.Drawing.Color.Transparent;
+            this.label3.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.label3.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label3.Location = new System.Drawing.Point(132, 42);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(59, 15);
+            this.label3.TabIndex = 14;
+            this.label3.Text = "מספר ימים";
+            this.label3.Visible = false;
+            // 
+            // nDaysToDelete
+            // 
+            this.nDaysToDelete.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.nDaysToDelete.Location = new System.Drawing.Point(49, 33);
+            this.nDaysToDelete.Name = "nDaysToDelete";
+            this.nDaysToDelete.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.nDaysToDelete.Size = new System.Drawing.Size(60, 22);
+            this.nDaysToDelete.TabIndex = 15;
+            this.nDaysToDelete.Value = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+            // 
             // Form1
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1107, 745);
+            this.Controls.Add(this.grpDatesDelete);
             this.Controls.Add(this.btnDel);
             this.Controls.Add(this.btnMail);
             this.Controls.Add(this.boxSummary);
@@ -598,6 +648,7 @@
             this.Name = "Form1";
             this.ShowIcon = false;
             this.Text = "ערן מור ניהול קבצים";
+            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form1_Paint);
             this.Resize += new System.EventHandler(this.Form1_Resize);
             this.groupBox1.ResumeLayout(false);
@@ -615,6 +666,9 @@
             this.tabReports.PerformLayout();
             this.boxSummary.ResumeLayout(false);
             this.boxSummary.PerformLayout();
+            this.grpDatesDelete.ResumeLayout(false);
+            this.grpDatesDelete.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -661,6 +715,9 @@
         private System.Windows.Forms.TextBox txtLog;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.GroupBox grpDatesDelete;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.NumericUpDown nDaysToDelete;
     }
 }
 

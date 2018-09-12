@@ -17,5 +17,8 @@
     <Setting Name="reportsDestName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="DaysToDelete" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">11</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

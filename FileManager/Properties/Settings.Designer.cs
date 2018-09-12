@@ -82,5 +82,17 @@ namespace FileManager.Properties {
                 this["reportsDestName"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("11")]
+        public int DaysToDelete {
+            get {
+                return ((int)(this["DaysToDelete"]));
+            }
+            set {
+                this["DaysToDelete"] = value;
+            }
+        }
     }
 }
