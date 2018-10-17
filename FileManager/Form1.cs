@@ -2100,13 +2100,21 @@ namespace FileManager
                         
                         var result = CheckExcelForItems (arr, part );
                         
-                        if (!string.IsNullOrEmpty ( result )) {
-                            
-                            var newFileName = SetExcelFileName(parts, part, result) + "." + extSplits[1];
-                            var dir = Path.GetDirectoryName(file);
-                            if (dir != null)
+                        if (!string.IsNullOrEmpty ( result ))
+                        {
+                            string newFileName;
+                            if (Regex.IsMatch(fileName, @"[\p{IsHebrew}]+"))
                             {
-                                var newFilePath = Path.Combine (dir, newFileName );
+                                newFileName = SetExcelFileName(parts, part, result) + "." + extSplits[1];
+                            }
+                            else
+                            {
+                                newFileName = SetExcelFileName2 ( parts, part, result ) + "." + extSplits [1];
+                            }
+                            var ndir = Path.GetDirectoryName(file);
+                            if (ndir != null)
+                            {
+                                var newFilePath = Path.Combine ( ndir, newFileName );
                                 File.Move ( file, newFilePath );
                             }
                            
@@ -2132,7 +2140,29 @@ namespace FileManager
 
             return parts[2] + "_" + parts[0] + "-" + parts[1];
         }
-
+        private string SetExcelFileName2 ( List<string> parts, string part, string result )
+        {
+            var arPart = parts.IndexOf ( part );
+            parts [arPart] = result;
+            string name = string.Empty;
+            for (int i = 0; i < parts.Count; i++)
+            {
+                if (i > 0)
+                {
+                    if (i < parts.Count - 1)
+                    {
+                        name += "_";
+                    }
+                    else {
+                        name += "-";
+                    }
+                }
+                name += parts[i];
+                
+            }
+            
+            return name;
+        }
         private object[,] GetExcelValues (  )
         {
             var lst = new List<string> ();
