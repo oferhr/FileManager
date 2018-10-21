@@ -2136,7 +2136,11 @@ namespace FileManager
         private string SetExcelFileName(List<string> parts, string part, string result)
         {
             var arPart = parts.IndexOf(part);
-            parts[arPart] = result;
+            if (parts.Count > arPart)
+            {
+                parts [arPart] = result;
+            }
+            
 
             return parts[2] + "_" + parts[0] + "-" + parts[1];
         }
