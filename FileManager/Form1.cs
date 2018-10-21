@@ -2140,8 +2140,16 @@ namespace FileManager
             {
                 parts [arPart] = result;
             }
-            
 
+            if (parts.Count < 3)
+            {
+                string name = string.Empty;
+                foreach (var part1 in parts)
+                {
+                    name += part1 + '-';
+                }
+                return name.TrimEnd('-');
+            }
             return parts[2] + "_" + parts[0] + "-" + parts[1];
         }
         private string SetExcelFileName2 ( List<string> parts, string part, string result )
