@@ -2135,13 +2135,17 @@ namespace FileManager
 
         private string SetExcelFileName(List<string> parts, string part, string result)
         {
+            if (parts == null)
+            {
+                return string.Empty;
+            }
             var arPart = parts.IndexOf(part);
             if (parts.Count > arPart && arPart >= 0)
             {
                 parts [arPart] = result;
             }
 
-            if (parts.Count < 3)
+            if (parts.Count != 3)
             {
                 string name = string.Empty;
                 foreach (var part1 in parts)
