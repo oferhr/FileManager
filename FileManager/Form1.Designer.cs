@@ -68,8 +68,8 @@
             this.btnMail = new System.Windows.Forms.Button();
             this.btnDel = new System.Windows.Forms.Button();
             this.grpDatesDelete = new System.Windows.Forms.GroupBox();
-            this.label3 = new System.Windows.Forms.Label();
             this.nDaysToDelete = new System.Windows.Forms.NumericUpDown();
+            this.label3 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -265,7 +265,6 @@
             // 
             this.DuplicateFolders.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.DuplicateFolders.CheckOnClick = true;
             this.DuplicateFolders.FormattingEnabled = true;
             this.DuplicateFolders.Location = new System.Drawing.Point(3, 6);
             this.DuplicateFolders.Name = "DuplicateFolders";
@@ -288,7 +287,6 @@
             // 
             this.filenames.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.filenames.CheckOnClick = true;
             this.filenames.FormattingEnabled = true;
             this.filenames.Location = new System.Drawing.Point(3, 0);
             this.filenames.Name = "filenames";
@@ -381,7 +379,6 @@
             // 
             this.dirList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.dirList.CheckOnClick = true;
             this.dirList.FormattingEnabled = true;
             this.dirList.Location = new System.Drawing.Point(3, 2);
             this.dirList.Name = "dirList";
@@ -405,7 +402,6 @@
             // 
             this.DelList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.DelList.CheckOnClick = true;
             this.DelList.FormattingEnabled = true;
             this.DelList.Location = new System.Drawing.Point(5, 6);
             this.DelList.Name = "DelList";
@@ -474,7 +470,6 @@
             // 
             this.reportFolders.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.reportFolders.CheckOnClick = true;
             this.reportFolders.FormattingEnabled = true;
             this.reportFolders.Location = new System.Drawing.Point(3, 9);
             this.reportFolders.Name = "reportFolders";
@@ -601,19 +596,6 @@
             this.grpDatesDelete.TabStop = false;
             this.grpDatesDelete.Text = "מספר ימים עד למחיקה";
             // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.BackColor = System.Drawing.Color.Transparent;
-            this.label3.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.label3.ForeColor = System.Drawing.Color.DarkBlue;
-            this.label3.Location = new System.Drawing.Point(132, 42);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(59, 15);
-            this.label3.TabIndex = 14;
-            this.label3.Text = "מספר ימים";
-            this.label3.Visible = false;
-            // 
             // nDaysToDelete
             // 
             this.nDaysToDelete.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
@@ -627,6 +609,19 @@
             0,
             0,
             0});
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.BackColor = System.Drawing.Color.Transparent;
+            this.label3.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.label3.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label3.Location = new System.Drawing.Point(132, 42);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(59, 15);
+            this.label3.TabIndex = 14;
+            this.label3.Text = "מספר ימים";
+            this.label3.Visible = false;
             // 
             // Form1
             // 
