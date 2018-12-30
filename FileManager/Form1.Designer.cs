@@ -60,6 +60,11 @@
             this.txtLog = new System.Windows.Forms.TextBox();
             this.txtReportDest = new System.Windows.Forms.TextBox();
             this.reportFolders = new System.Windows.Forms.CheckedListBox();
+            this.tabSplit = new System.Windows.Forms.TabPage();
+            this.grdFolderSplit = new System.Windows.Forms.DataGridView();
+            this.chbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.cdir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dest = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
@@ -81,6 +86,8 @@
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
             this.tabReports.SuspendLayout();
+            this.tabSplit.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.grdFolderSplit)).BeginInit();
             this.boxSummary.SuspendLayout();
             this.grpDatesDelete.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).BeginInit();
@@ -184,6 +191,7 @@
             this.tabsMain.Controls.Add(this.tabPage1);
             this.tabsMain.Controls.Add(this.tabPage2);
             this.tabsMain.Controls.Add(this.tabReports);
+            this.tabsMain.Controls.Add(this.tabSplit);
             this.tabsMain.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.tabsMain.Location = new System.Drawing.Point(12, 12);
             this.tabsMain.Name = "tabsMain";
@@ -477,6 +485,64 @@
             this.reportFolders.Size = new System.Drawing.Size(259, 679);
             this.reportFolders.TabIndex = 3;
             // 
+            // tabSplit
+            // 
+            this.tabSplit.Controls.Add(this.grdFolderSplit);
+            this.tabSplit.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.tabSplit.Location = new System.Drawing.Point(4, 24);
+            this.tabSplit.Name = "tabSplit";
+            this.tabSplit.Padding = new System.Windows.Forms.Padding(3);
+            this.tabSplit.Size = new System.Drawing.Size(826, 693);
+            this.tabSplit.TabIndex = 7;
+            this.tabSplit.Text = "תיקיות לפיצול";
+            this.tabSplit.UseVisualStyleBackColor = true;
+            // 
+            // grdFolderSplit
+            // 
+            this.grdFolderSplit.AllowUserToAddRows = false;
+            this.grdFolderSplit.AllowUserToDeleteRows = false;
+            this.grdFolderSplit.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.grdFolderSplit.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.chbdirs,
+            this.cdir,
+            this.dest});
+            this.grdFolderSplit.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.grdFolderSplit.Location = new System.Drawing.Point(3, 3);
+            this.grdFolderSplit.Name = "grdFolderSplit";
+            this.grdFolderSplit.ReadOnly = true;
+            this.grdFolderSplit.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.grdFolderSplit.RowHeadersVisible = false;
+            this.grdFolderSplit.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
+            this.grdFolderSplit.Size = new System.Drawing.Size(820, 687);
+            this.grdFolderSplit.TabIndex = 0;
+            this.grdFolderSplit.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdFolderSplit_CellClick);
+            this.grdFolderSplit.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdFolderSplit_CellContentClick);
+            // 
+            // chbdirs
+            // 
+            this.chbdirs.DataPropertyName = "check";
+            this.chbdirs.HeaderText = "";
+            this.chbdirs.Name = "chbdirs";
+            this.chbdirs.ReadOnly = true;
+            this.chbdirs.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.chbdirs.Width = 30;
+            // 
+            // cdir
+            // 
+            this.cdir.DataPropertyName = "dir";
+            this.cdir.HeaderText = "תיקיות";
+            this.cdir.Name = "cdir";
+            this.cdir.ReadOnly = true;
+            this.cdir.Width = 110;
+            // 
+            // dest
+            // 
+            this.dest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.dest.DataPropertyName = "dest";
+            this.dest.HeaderText = "תיקיית יעד";
+            this.dest.Name = "dest";
+            this.dest.ReadOnly = true;
+            // 
             // lblProgressMessage
             // 
             this.lblProgressMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -659,6 +725,8 @@
             this.tabPage2.ResumeLayout(false);
             this.tabReports.ResumeLayout(false);
             this.tabReports.PerformLayout();
+            this.tabSplit.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.grdFolderSplit)).EndInit();
             this.boxSummary.ResumeLayout(false);
             this.boxSummary.PerformLayout();
             this.grpDatesDelete.ResumeLayout(false);
@@ -713,6 +781,11 @@
         private System.Windows.Forms.GroupBox grpDatesDelete;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.NumericUpDown nDaysToDelete;
+        private System.Windows.Forms.TabPage tabSplit;
+        private System.Windows.Forms.DataGridView grdFolderSplit;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn chbdirs;
+        private System.Windows.Forms.DataGridViewTextBoxColumn cdir;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dest;
     }
 }
 

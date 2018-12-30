@@ -118,6 +118,38 @@ namespace FileManager
                 grdCount.DataSource = countDs;
 
 
+
+                var splitConfigSettings = GetSplitSettings();
+                var splitDs = new List<SplitSettings> ();
+
+                foreach (var fol in gfoldersList) {
+                    var curdir = splitConfigSettings.Find ( f => f.dir == fol );
+                    if (curdir != null) {
+                        splitDs.Add ( new SplitSettings
+                        {
+                            dir = fol,
+                            dest = curdir.dest,
+                            check = curdir.check
+                        } );
+                    }
+                    else {
+                        splitDs.Add ( new SplitSettings
+                        {
+                            dir = fol,
+                            dest = null,
+                            check = false
+                        } );
+                    }
+                }
+
+                
+
+              //  grdFolderSplit.AutoGenerateColumns = true;
+                grdFolderSplit.DataSource = splitDs;
+
+
+                
+
                 var emailConfigList = GetEmailDirSettings ();
                 var emailsDs = new List<EmailDirSettings>();
                 foreach (var fol in gfoldersList)
@@ -279,7 +311,7 @@ namespace FileManager
             }
             boxSummary.Visible = false;
             Application.DoEvents();
-
+            SplitFolders();
             FixFileNames ( true );
             CountFiles ();
             SetExcelNames ();
@@ -726,7 +758,61 @@ namespace FileManager
 
 
         }
+        private void grdFolderSplit_CellContentClick ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (grdFolderSplit.Columns [e.ColumnIndex].Name == "chbdirs")
+            {
+                grdFolderSplit.Rows[e.RowIndex].Cells[2].Value = Convert.ToBoolean(grdFolderSplit.Rows[e.RowIndex].Cells[2].EditedFormattedValue) != true;
+                var check = (bool)grdFolderSplit.Rows [e.RowIndex].Cells ["chbdirs"].Value;
+                var ddir = grdFolderSplit.Rows [e.RowIndex].Cells ["cdir"].Value == null ? string.Empty : grdFolderSplit.Rows [e.RowIndex].Cells ["cdir"].Value.ToString ();
+                var dest = grdFolderSplit.Rows [e.RowIndex].Cells ["dest"].Value == null ? string.Empty : grdFolderSplit.Rows [e.RowIndex].Cells ["dest"].Value.ToString ();
+                var dirSettings = GetSplitSettings();
+                var dirObj = dirSettings.Find ( f => f.dir == ddir );
+                if (dirObj != null) {
+                    dirObj.check = check;
+                }
+                else {
+                    dirSettings.Add ( new SplitSettings
+                    {
 
+                        dir = ddir,
+                        dest = dest,
+                        check = check
+                    } );
+                }
+                setSplitSettings( dirSettings );
+            }
+        }
+        
+        private void grdFolderSplit_CellClick ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (grdFolderSplit.Columns[e.ColumnIndex].Name != "chbdirs")
+            {
+                var dialog = new FolderBrowserDialog ();
+                if (dialog.ShowDialog () == DialogResult.OK) {
+                    grdFolderSplit [e.ColumnIndex, e.RowIndex].Value = dialog.SelectedPath;
+                    var check = (bool)grdFolderSplit.Rows [e.RowIndex].Cells ["chbdirs"].Value;
+                    var ddir = grdFolderSplit.Rows [e.RowIndex].Cells ["cdir"].Value == null ? string.Empty : grdFolderSplit.Rows [e.RowIndex].Cells ["cdir"].Value.ToString ();
+                    var dest = grdFolderSplit.Rows [e.RowIndex].Cells ["dest"].Value == null ? string.Empty : grdFolderSplit.Rows [e.RowIndex].Cells ["dest"].Value.ToString ();
+                    var dirSettings = GetSplitSettings ();
+                    var dirObj = dirSettings.Find ( f => f.dir == ddir );
+                    if (dirObj != null) {
+                        dirObj.dest = dest;
+                    }
+                    else {
+                        dirSettings.Add ( new SplitSettings
+                        {
+
+                            dir = ddir,
+                            dest = dest,
+                            check = check
+                        } );
+                    }
+                    setSplitSettings ( dirSettings );
+                }
+                
+            }
+        }
         private void grdCount_CellContentClick ( object sender, DataGridViewCellEventArgs e )
         {
             grdCount.CommitEdit ( DataGridViewDataErrorContexts.Commit );
@@ -1073,6 +1159,108 @@ namespace FileManager
             return false;
         }
 
+        private void SplitFolders()
+        {
+            progressBar1.Value = 0;
+            lblProgressMessage.Text = "מפצל תיקיות";
+            lblProgressMessage.Visible = true;
+            Application.DoEvents ();
+
+            var splitSettings = GetSplitSettings();
+
+            var checkedItems = splitSettings.FindAll ( f => f.check );
+
+
+            if (checkedItems.Count == 0) {
+                return;
+            }
+            try
+            {
+                foreach (var checkedItem in checkedItems)
+                {
+                    // get the base path of each folder
+                    var basePath = Path.Combine(_path, checkedItem.dir);
+                    var destPath = checkedItem.dest;
+                    var availDirs = Directory.GetDirectories(basePath);
+                    if (availDirs.Length > 0)
+                    {
+                        
+                        // run over the array to get the dir/1 folder path where all the files are
+                        foreach (var curdir in availDirs)
+                        {
+                            txtLog.AppendText ( "בודק תיקיה - " + curdir + Environment.NewLine );
+                            var checkdir = Path.GetFileName(curdir);
+                            if (checkdir == null || checkdir.Length > 2)
+                            {
+                                continue;
+                            }
+                            if (!Directory.Exists(curdir))
+                            {
+                                continue;
+                            }
+
+                            var files = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly);
+                            if (!files.Any())
+                            {
+                                continue;
+                            }
+                            var counter = 1;
+                            foreach (var file in files)
+                            {
+                                counter++;
+                                var fname = Path.GetFileName(file);
+                                string sFile = null;
+                                if (fname != null && fname.Contains("9999"))
+                                {
+                                    try
+                                    {
+                                        var destDir = Path.Combine(destPath, checkdir);
+                                        if (!Directory.Exists(destDir))
+                                        {
+                                            Directory.CreateDirectory(destDir);
+                                        }
+                                        var destFile =  Path.Combine(destDir, fname);
+                                        sFile = Path.Combine(curdir, fname);
+                                        if (File.Exists(destFile))
+                                        {
+                                            MessageBox.Show("פיצול תיקיות - שם קובץ כפול - " + destFile);
+                                            continue;
+                                        }
+                                        File.Move(sFile, destFile);
+                                        txtLog.AppendText("מעביר קובץ - " + sFile + Environment.NewLine);
+                                        Application.DoEvents();
+                                        Thread.Sleep(100);
+                                    }
+                                    catch (System.Exception e)
+                                    {
+                                        txtLog.AppendText("נכשל בהעברת קובץ " + sFile + "----" + e.Message +
+                                                          Environment.NewLine);
+                                    }
+
+                                }
+                                var val = progressBar1.Value + (counter / files.Length) * 100;
+                                if (val > 100)
+                                {
+                                    val = 100;
+                                }
+                                progressBar1.Value = val;
+                                Application.DoEvents ();
+
+                            }
+
+                        }
+                        progressBar1.Value = 100;
+                        Application.DoEvents ();
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show("תקלה בפיצול תיקיות - " + ex.Message);
+            }
+
+
+        }
         private void CountFiles()
         {
             try
@@ -1990,6 +2178,15 @@ namespace FileManager
                 File.WriteAllText ( configPath, sjson );
             }
         }
+        private void setSplitSettings ( List<SplitSettings> folSettings )
+        {
+            var configPath = Path.Combine ( _config, "fileManager_splitConfig.json" );
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
+                File.WriteAllText ( configPath, sjson );
+            }
+        }
 
         private void setMailSettings ( List<EmailDirSettings> folSettings )
         {
@@ -2018,7 +2215,23 @@ namespace FileManager
 
             return folderSettings;
         }
+        private List<SplitSettings> GetSplitSettings ()
+        {
+            var configPath = Path.Combine ( _config, "fileManager_splitConfig.json" );
+            List<SplitSettings> folderSettings;
+            if (File.Exists ( configPath )) {
 
+                using (var r = new StreamReader ( configPath )) {
+                    var json = r.ReadToEnd ();
+                    folderSettings = JsonConvert.DeserializeObject<List<SplitSettings>> ( json );
+                }
+            }
+            else {
+                folderSettings = new List<SplitSettings> ();
+            }
+
+            return folderSettings;
+        }
         private List<CountSettings> GetExcelSettings ()
         {
             var configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
@@ -2377,6 +2590,14 @@ namespace FileManager
             var name = names [0];
             return name.Split ( '-' );
         }
+
+        
+
+
+
+
+
+
         //private static void SendMail(List<string> files, string subject, string email)
         //{
         //    var server = ConfigurationManager.AppSettings["smptServer"];

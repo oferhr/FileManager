@@ -37,6 +37,12 @@ namespace FileManager
         public string method { get; set; }
         public bool check { get; set; }
     }
+    public class SplitSettings
+    {
+        public string dir { get; set; }
+        public string dest { get; set; }
+        public bool check { get; set; }
+    }
     public class Grouper
     {
         public string id { get; set; }
