@@ -1210,7 +1210,16 @@ namespace FileManager
                                 counter++;
                                 var fname = Path.GetFileName(file);
                                 string sFile = null;
-                                if (fname != null && fname.Contains("9999"))
+                                if (fname == null)
+                                {
+                                    continue;
+                                }
+                                if (fname.Contains("777"))
+                                {
+                                    File.Delete(file);
+                                    continue;
+                                }
+                                    if (fname.Contains("999"))
                                 {
                                     try
                                     {
