@@ -1214,12 +1214,8 @@ namespace FileManager
                                 {
                                     continue;
                                 }
-                                if (fname.Contains("777"))
-                                {
-                                    File.Delete(file);
-                                    continue;
-                                }
-                                    if (fname.Contains("999"))
+                                
+                                if (fname.Contains("999"))
                                 {
                                     try
                                     {
@@ -1246,6 +1242,13 @@ namespace FileManager
                                                           Environment.NewLine);
                                     }
 
+                                }
+                                if (fname.Contains ( "777" )) {
+                                    if (File.Exists(file))
+                                    {
+                                        File.Delete ( file );
+                                        continue;
+                                    }
                                 }
                                 var val = progressBar1.Value + (counter / files.Length) * 100;
                                 if (val > 100)
