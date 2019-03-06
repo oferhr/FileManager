@@ -1215,7 +1215,7 @@ namespace FileManager
                                     continue;
                                 }
                                 
-                                if (fname.Contains("999"))
+                                if (fname.Contains("999-888") || fname.Contains ( "999_888" ) || fname.Contains ( "888-999" ) || fname.Contains ( "888_999" ))
                                 {
                                     try
                                     {
