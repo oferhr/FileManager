@@ -33,6 +33,7 @@ namespace FileManager
         private  DateTime dtDeleteFiles;
         private readonly List<string> gfoldersList = new List<string>();
         private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר" };
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger ();
 
         public Form1()
         {
@@ -42,6 +43,7 @@ namespace FileManager
 
             try
             {
+                
                 _path = ConfigurationManager.AppSettings["basePath"];
                 _config = ConfigurationManager.AppSettings ["ConfigPath"];
                 _excel = ConfigurationManager.AppSettings ["ExcelPath"];
@@ -71,6 +73,8 @@ namespace FileManager
                 catch 
                 {
                     MessageBox.Show("Path in config file does not exist, or you do not have permission to query it.");
+
+                    logger.Info("Path in config file does not exist, or you do not have permission to query it." );
                     return;
                 }
 
@@ -293,6 +297,7 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("Error : " + ex.Message);
+                logger.Error(ex);
             }
         }
 
@@ -1166,6 +1171,8 @@ namespace FileManager
             lblProgressMessage.Visible = true;
             Application.DoEvents ();
 
+            string destDir = null, destFile = null, curdir = null, sFile = null;
+
             var splitSettings = GetSplitSettings();
 
             var checkedItems = splitSettings.FindAll ( f => f.check );
@@ -1182,13 +1189,15 @@ namespace FileManager
                     var basePath = Path.Combine(_path, checkedItem.dir);
                     var destPath = checkedItem.dest;
                     var availDirs = Directory.GetDirectories(basePath);
+
                     if (availDirs.Length > 0)
                     {
-                        
+
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (var curdir in availDirs)
+                        foreach (var cd in availDirs)
                         {
-                            txtLog.AppendText ( "בודק תיקיה - " + curdir + Environment.NewLine );
+                            curdir = cd;
+                            txtLog.AppendText("בודק תיקיה - " + curdir + Environment.NewLine);
                             var checkdir = Path.GetFileName(curdir);
                             if (checkdir == null || checkdir.Length > 2)
                             {
@@ -1209,26 +1218,28 @@ namespace FileManager
                             {
                                 counter++;
                                 var fname = Path.GetFileName(file);
-                                string sFile = null;
+                                sFile = null;
                                 if (fname == null)
                                 {
                                     continue;
                                 }
-                                
-                                if (fname.Contains("999-888") || fname.Contains ( "999_888" ) || fname.Contains ( "888-999" ) || fname.Contains ( "888_999" ))
+
+                                if (fname.Contains("999-888") || fname.Contains("999_888") || fname.Contains("888-999") ||
+                                    fname.Contains("888_999"))
                                 {
                                     try
                                     {
-                                        var destDir = Path.Combine(destPath, checkdir);
+                                        destDir = Path.Combine(destPath, checkdir);
                                         if (!Directory.Exists(destDir))
                                         {
                                             Directory.CreateDirectory(destDir);
                                         }
-                                        var destFile =  Path.Combine(destDir, fname);
+                                        destFile = Path.Combine(destDir, fname);
                                         sFile = Path.Combine(curdir, fname);
                                         if (File.Exists(destFile))
                                         {
                                             MessageBox.Show("פיצול תיקיות - שם קובץ כפול - " + destFile);
+                                            logger.Info("פיצול תיקיות - שם קובץ כפול - " + destFile);
                                             continue;
                                         }
                                         File.Move(sFile, destFile);
@@ -1240,13 +1251,22 @@ namespace FileManager
                                     {
                                         txtLog.AppendText("נכשל בהעברת קובץ " + sFile + "----" + e.Message +
                                                           Environment.NewLine);
+                                        logger.Error(e, "נכשל בהעברת קובץ", new Dictionary<string, string>
+                                        {
+                                            {"method", "SplitFolders" },
+                                            {"destDir", destDir},
+                                            {"destFile", destFile},
+                                            {"curdir", curdir},
+                                            {"curFile", sFile}
+                                        });
                                     }
 
                                 }
-                                if (fname.Contains ( "777" )) {
+                                if (fname.Contains("777"))
+                                {
                                     if (File.Exists(file))
                                     {
-                                        File.Delete ( file );
+                                        File.Delete(file);
                                         continue;
                                     }
                                 }
@@ -1256,19 +1276,28 @@ namespace FileManager
                                     val = 100;
                                 }
                                 progressBar1.Value = val;
-                                Application.DoEvents ();
+                                Application.DoEvents();
 
                             }
 
                         }
                         progressBar1.Value = 100;
-                        Application.DoEvents ();
+                        Application.DoEvents();
                     }
                 }
             }
             catch (System.Exception ex)
             {
                 MessageBox.Show("תקלה בפיצול תיקיות - " + ex.Message);
+                logger.Error(ex, "תקלה בפיצול תיקיות - ",
+                    new Dictionary<string, string>
+                    {
+                        {"destDir", destDir},
+                        {"destFile", destFile},
+                        {"curdir", curdir},
+                        {"curFile", sFile}
+                    }
+                );
             }
 
 
@@ -1277,7 +1306,6 @@ namespace FileManager
         {
             try
             {
-                
                 progressBar1.Value = 0;
                 lblProgressMessage.Text = "סופר קבצים";
                 lblProgressMessage.Visible = true;
@@ -1306,6 +1334,7 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("CountFiles Error :\r" + ex.Message);
+                logger.Error ( ex, "CountFiles Error");
             }
         }
 
@@ -1314,6 +1343,7 @@ namespace FileManager
             try
             {
                 string [] availDirs, allAvailDirs;
+                string curdir = null;
                 progressBar1.Visible = true;
                 progressBar1.Value = 0;
                 var isError = false;
@@ -1355,9 +1385,9 @@ namespace FileManager
                     if (availDirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (var curdir in availDirs)
+                        foreach (var cd in availDirs)
                         {
-                            
+                            curdir = cd;
                             var checkdir = Path.GetFileName(curdir);
                             if (checkdir == null || checkdir.Length > 2)
                             {
@@ -1398,6 +1428,13 @@ namespace FileManager
                             }
                             catch (System.Exception ex) {
                                 txtLog.AppendText ( "בעיה נמצאה בקריאת קבצי המקור, " + ex.Message);
+                                logger.Error(ex, "בעיה נמצאה בקריאת קבצי המקור",
+                                    new Dictionary<string, string>
+                                    {
+                                        {"fileName", sourceName},
+                                        {"curdir", curdir}
+                                    }
+                                );
                                 Application.DoEvents ();
                                 isError = true;
                                 continue;
@@ -1412,8 +1449,11 @@ namespace FileManager
                             txtLog.AppendText ( "מתחיל בבדיקת קבצי היעד לתקיית - " + sourceName + Environment.NewLine );
                             Application.DoEvents ();
                             Thread.Sleep ( 100 );
+                            string destFile = "";
                             try {
-                                foreach (var destFile in destFiles) {
+                                foreach (var df in destFiles)
+                                {
+                                    destFile = df;
                                     int num;
                                     var destParts = getParts ( destFile );
                                     if (int.TryParse ( destParts [destParts.Length - 1], out num )) {
@@ -1429,6 +1469,12 @@ namespace FileManager
                             catch (System.Exception ex) {
                                
                                 txtLog.AppendText ( "בעיה נמצאה בבדיקת קבצי היעד, " + ex.Message );
+                                logger.Error ( ex, "בעיה נמצאה בקריאת קבצי היעד",
+                                    new Dictionary<string, string>
+                                    {
+                                        {"fileName", destFile}
+                                    }
+                                );
                                 Application.DoEvents ();
                                 isError = true;
                                 continue;
@@ -1440,14 +1486,16 @@ namespace FileManager
                             txtLog.AppendText ( Environment.NewLine );
                             txtLog.AppendText ( "מתחיל בהעברת הקבצים בתקיית - " + sourceName + Environment.NewLine );
                             Application.DoEvents ();
-
+                            string grpFile=null, newFile=null;
                             try {
                                 foreach (var grp in grouper) {
-                                    foreach (var grpFile in grp.files) {
+                                    foreach (var gf in grp.files)
+                                    {
+                                        grpFile = gf;
                                         var ext = grpFile.Split ( '.' ) [1];
                                         var grpParts = getParts ( grpFile );
                                         grpParts [grpParts.Length - 1] = max.ToString ( "D3" );
-                                        var newFile = string.Empty;
+                                        newFile = string.Empty;
                                         foreach (var grpPart in grpParts) {
                                             newFile += grpPart + "-";
                                         }
@@ -1462,6 +1510,13 @@ namespace FileManager
                             }
                             catch (System.Exception ex) {
                                 txtLog.AppendText ( "בעיה בהעברת הקובץ, " + ex.Message );
+                                logger.Error ( ex, "בעיה בהעברת הקובץ",
+                                    new Dictionary<string, string>
+                                    {
+                                        {"fileName", grpFile},
+                                        {"destFile", newFile}
+                                    }
+                                );
                                 Application.DoEvents ();
                                 isError = true;
                             }
@@ -1488,10 +1543,12 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show ( "Report names Error :\r" + ex.Message );
+                logger.Error ( ex, "Report names Error");
             }
         }
         private void FixDuplicates()
         {
+            string curdir = null, fileName=null,newName=null;
             try
             {
                 string[] availDirs, allAvailDirs;
@@ -1524,61 +1581,66 @@ namespace FileManager
                     if (availDirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (var curdir in availDirs)
-                        {
-                            var checkdir = Path.GetFileName ( curdir );
-                            if (checkdir == null || checkdir.Length > 2) {
-                                continue;
-                            }
-                            if (!Directory.Exists ( curdir )) {
-                                continue;
-                            }
-                            var folder = Path.GetFileName(curdir);
-                            if (folder == counter.ToString())
+                        try {
+                            foreach (var cd in availDirs)
                             {
-                                // if it is the first folder (dir/1) rename all files 
-                                // from fileName.xxx to fileName_1.xxx
-                                if (counter == 1)
-                                {
-                                    var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
-                                         .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
-                                    var files = lfiles as IList<string> ?? lfiles.ToList();
-                                    if (files.Any())
-                                    {
-                                        if (CheckFolderIfNotFirstDuplication(files, curdir))
-                                        {
-                                            allFilesPath = curdir;
-                                            break;
-                                        }
-                                        foreach (var file in files)
-                                        {
-                                           
-                                            var fileName = Path.GetFileName(file);
-                                            
-                                            if (fileName == null || IsThumbsInPath(file))
-                                            {
-                                                continue;
-                                            }
-                                            var newName = GetNewFileName(fileName, 1);
-                                            if (String.IsNullOrEmpty(newName))
-                                            {
-                                                continue;
-                                            }
-                                            // if it is the first duplication of the file first rename the file in the
-                                            // base folder (dir/1) from fileName.xxx to fileName_1.xxx
-                                           if(!File.Exists(Path.Combine(curdir, newName)))
-                                           {
-                                               move(Path.Combine(curdir, fileName),
-                                                   Path.Combine(curdir, newName));
-                                           }
-                                            
-                                        }
-                                    }
-                                    allFilesPath = curdir;
-                                    break;
+                                curdir = cd;
+                                var checkdir = Path.GetFileName ( curdir );
+                                if (checkdir == null || checkdir.Length > 2) {
+                                    continue;
                                 }
+                                if (!Directory.Exists ( curdir )) {
+                                    continue;
+                                }
+                                var folder = Path.GetFileName ( curdir );
+                                if (folder == counter.ToString ()) {
+                                    // if it is the first folder (dir/1) rename all files 
+                                    // from fileName.xxx to fileName_1.xxx
+                                    if (counter == 1) {
+                                        var lfiles = Directory.GetFiles ( curdir, "*.*", SearchOption.TopDirectoryOnly )
+                                             .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
+                                        var files = lfiles as IList<string> ?? lfiles.ToList ();
+                                        if (files.Any ()) {
+                                            if (CheckFolderIfNotFirstDuplication ( files, curdir )) {
+                                                allFilesPath = curdir;
+                                                break;
+                                            }
+                                            foreach (var file in files) {
 
+                                                fileName = Path.GetFileName ( file );
+
+                                                if (fileName == null || IsThumbsInPath ( file )) {
+                                                    continue;
+                                                }
+                                                newName = GetNewFileName ( fileName, 1 );
+                                                if (String.IsNullOrEmpty ( newName )) {
+                                                    continue;
+                                                }
+                                                // if it is the first duplication of the file first rename the file in the
+                                                // base folder (dir/1) from fileName.xxx to fileName_1.xxx
+                                                if (!File.Exists ( Path.Combine ( curdir, newName ) )) {
+                                                    move ( Path.Combine ( curdir, fileName ),
+                                                        Path.Combine ( curdir, newName ) );
+                                                }
+
+                                            }
+                                        }
+                                        allFilesPath = curdir;
+                                        break;
+                                    }
+
+                                }
                             }
+                        }
+                        catch (System.Exception ex) {
+                            logger.Error ( ex, "בעיה בשינוי שם הקובץ",
+                                    new Dictionary<string, string>
+                                    {
+                                        {"method", "FixDuplicates"},
+                                        {"fileName", fileName},
+                                        {"destFile", newName}
+                                    }
+                                );
                         }
                         // if the folder does not contain dir/1 folder continue.
                         if (String.IsNullOrEmpty(allFilesPath))
@@ -1611,45 +1673,51 @@ namespace FileManager
                             if (ffiles.Any())
                             {
                                 //run over the files in the duplicated folder (dir/2...)
-                                foreach (var xfile in ffiles)
-                                {
-                                    var fileName = Path.GetFileName(xfile);
-                                    if (fileName == null || IsThumbsInPath(xfile))
-                                    {
-                                        continue;
-                                    }
-
-                                    var newName = GetNewFileName(fileName, 1);
-                                    if (string.IsNullOrEmpty(newName))
-                                    {
-                                        continue;
-                                    }
-                                    if (File.Exists(Path.Combine(allFilesPath, newName)))
-                                    {
-                                        var miniCounter = 2;
-                                        var isCopy = false;
-                                        while (!isCopy)
-                                        {
-                                            var copyName = GetNewFileName(fileName, miniCounter);
-                                            if (File.Exists(Path.Combine(allFilesPath, copyName)))
-                                            {
-                                                miniCounter++;
-                                            }
-                                            else
-                                            {
-                                                isCopy = true;
-                                                _numOfDuplicates++;
-                                                CopyFiles(xfile,
-                                                Path.Combine(allFilesPath, copyName));
-                                            }
+                                try {
+                                    foreach (var xfile in ffiles) {
+                                        fileName = Path.GetFileName ( xfile );
+                                        if (fileName == null || IsThumbsInPath ( xfile )) {
+                                            continue;
                                         }
 
+                                        newName = GetNewFileName ( fileName, 1 );
+                                        if (string.IsNullOrEmpty ( newName )) {
+                                            continue;
+                                        }
+                                        if (File.Exists ( Path.Combine ( allFilesPath, newName ) )) {
+                                            var miniCounter = 2;
+                                            var isCopy = false;
+                                            while (!isCopy) {
+                                                var copyName = GetNewFileName ( fileName, miniCounter );
+                                                if (File.Exists ( Path.Combine ( allFilesPath, copyName ) )) {
+                                                    miniCounter++;
+                                                }
+                                                else {
+                                                    isCopy = true;
+                                                    _numOfDuplicates++;
+                                                    CopyFiles ( xfile,
+                                                    Path.Combine ( allFilesPath, copyName ) );
+                                                }
+                                            }
+
+                                        }
+                                        else {
+                                            MessageBox.Show ( "file name : \r" + fileName + "\r" +
+                                                            "exist in duplicated folder but not in base folder" );
+                                            logger.Info ( "file name : \r" + fileName + "\r" +
+                                                            "exist in duplicated folder but not in base folder" );
+                                        }
                                     }
-                                    else
+                                }
+                                catch (System.Exception ex) {
+                                    logger.Error ( ex, "בעיה בהעתקת הקובץ",
+                                    new Dictionary<string, string>
                                     {
-                                        MessageBox.Show("file name : \r" + fileName + "\r" +
-                                                        "exist in duplicated folder but not in base folder");
+                                        {"method", "FixDuplicates"},
+                                        {"fileName", fileName},
+                                        {"destFile", newName}
                                     }
+                                );
                                 }
                             }
                             counter++;
@@ -1758,51 +1826,52 @@ namespace FileManager
                     //availDirs = Directory.GetDirectories(basePath);
                     if (availDirs.Length > 1)
                     {
-                        for (var i = 0; i < availDirs.Length; i++)
-                        {
-                            if (!Directory.Exists ( availDirs[i] )) {
-                                continue;
-                            }
-                            var fileName = Path.GetFileName(availDirs[i]);
-                            if (fileName == "1" || fileName.Length > 2)
-                            {
-                                continue;
-                            }
-                            // delete all remaining files so get all files not only tif and pdf
-                            var lfiles = Directory.GetFiles(availDirs[i], "*.*", SearchOption.TopDirectoryOnly);
-                            var files = lfiles as IList<string> ?? lfiles.ToList();
-                            if (!files.Any())
-                            {
-                                try
-                                {
-                                    Directory.Delete(availDirs[i]);
+                        try {
+                            for (var i = 0; i < availDirs.Length; i++) {
+                                if (!Directory.Exists ( availDirs [i] )) {
+                                    continue;
                                 }
-                                catch (IOException)
-                                {
-                                    Directory.Delete(availDirs[i], true);
+                                fileName = Path.GetFileName ( availDirs [i] );
+                                if (fileName == "1" || fileName.Length > 2) {
+                                    continue;
                                 }
-                                catch (UnauthorizedAccessException)
-                                {
-                                    Directory.Delete(availDirs[i], true);
+                                // delete all remaining files so get all files not only tif and pdf
+                                var lfiles = Directory.GetFiles ( availDirs [i], "*.*", SearchOption.TopDirectoryOnly );
+                                var files = lfiles as IList<string> ?? lfiles.ToList ();
+                                if (!files.Any ()) {
+                                    try {
+                                        Directory.Delete ( availDirs [i] );
+                                    }
+                                    catch (IOException) {
+                                        Directory.Delete ( availDirs [i], true );
+                                    }
+                                    catch (UnauthorizedAccessException) {
+                                        Directory.Delete ( availDirs [i], true );
+                                    }
                                 }
-                            }
-                            else if (files.Count == 1 && IsThumbsInPath(files[0]))
-                            {
-                                try
-                                {
-                                    File.SetAttributes(files[0], FileAttributes.Normal);
-                                    File.Delete(files[0]);
-                                    Directory.Delete(availDirs[i]);
-                                }
-                                catch (IOException)
-                                {
-                                    Directory.Delete(availDirs[i], true);
-                                }
-                                catch (UnauthorizedAccessException)
-                                {
-                                    Directory.Delete(availDirs[i], true);
+                                else if (files.Count == 1 && IsThumbsInPath ( files [0] )) {
+                                    try {
+                                        File.SetAttributes ( files [0], FileAttributes.Normal );
+                                        File.Delete ( files [0] );
+                                        Directory.Delete ( availDirs [i] );
+                                    }
+                                    catch (IOException) {
+                                        Directory.Delete ( availDirs [i], true );
+                                    }
+                                    catch (UnauthorizedAccessException) {
+                                        Directory.Delete ( availDirs [i], true );
+                                    }
                                 }
                             }
+                        }
+                        catch (System.Exception ex) {
+                            logger.Error ( ex, "בעיה במחיקת הקובץ",
+                                   new Dictionary<string, string>
+                                   {
+                                        {"method", "FixDuplicates"},
+                                        {"fileName", fileName}
+                                   }
+                               );
                         }
                     }
                     progressBar1.Value = 100;
@@ -1818,12 +1887,14 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("FixDuplicates Error :\r" + ex.Message);
+                logger.Error(ex, "FixDuplicates Error");
             }
 
         }
 
         private void FixFileNames(bool isMigdal)
         {
+            string curdir = null, fileName=null,newName=null, copyName=null;
             try
             {
                 progressBar1.Visible = true;
@@ -1851,8 +1922,9 @@ namespace FileManager
                     if (dirs.Length > 0)
                     {
                         // run over the array to get the dir/1 folder path where all the files are
-                        foreach (var curdir in dirs)
+                        foreach (var cd in dirs)
                         {
+                            curdir = cd;
                             if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
@@ -1868,7 +1940,7 @@ namespace FileManager
 
                             foreach (var file in files)
                             {
-                                var fileName = Path.GetFileName(file);
+                                fileName = Path.GetFileName(file);
                                 
 
                                 if (fileName == null || fileName.Contains("-"))
@@ -1881,7 +1953,7 @@ namespace FileManager
                                 {
                                     continue;
                                 }
-                                var newName = String.Empty;
+                                newName = String.Empty;
                                 if (splits[1] == "9999999999")
                                 {
                                     for (var i = 0; i < splits.Length; i++)
@@ -1913,7 +1985,7 @@ namespace FileManager
                                     var based = Directory.GetParent ( curdir ).FullName;
                                     var newdir = Path.Combine ( based, miniCounter.ToString() );
                                     
-                                    var copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
+                                    copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
                                     if (File.Exists ( copyName )) {
                                         miniCounter++;
                                     }
@@ -1939,6 +2011,14 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("FixFileNames Error :\r" + ex.Message);
+                logger.Error(ex, "FixFileNames Error",
+                    new Dictionary<string, string>
+                    {
+                        {"method", "FixFileNames"},
+                        {"fileName", fileName},
+                        {"destFile", copyName}
+                    }
+                );
             }
         }
 
@@ -2264,98 +2344,101 @@ namespace FileManager
 
         private void SetExcelNames ()
         {
-            var checkedItems = dirList.CheckedItems;
-            if (checkedItems.Count == 0) {
-                return;
-            }
-            var arr = GetExcelValues ();
-            progressBar1.Visible = true;
-            progressBar1.Value = 0;
-            lblProgressMessage.Text = "מתקן שמות מאקסל";
-            lblProgressMessage.Visible = true;
-            Application.DoEvents ();
-
-            SetSelectedExcelFolders(checkedItems);
-
-            var itemCount = checkedItems.Count;
-            var itemParts = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
-            var progress = 0;
-            var index = 0;
-            foreach (var checkedItem in checkedItems) {
-                var basePath = Path.Combine ( _path, checkedItem.ToString () );
-                if (!Directory.Exists ( basePath )) {
-                    continue;
+            string curFile = null, newFilePath = null;
+            try {
+                var checkedItems = dirList.CheckedItems;
+                if (checkedItems.Count == 0) {
+                    return;
                 }
-                var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
-                           .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
-                
+                var arr = GetExcelValues ();
+                progressBar1.Visible = true;
+                progressBar1.Value = 0;
+                lblProgressMessage.Text = "מתקן שמות מאקסל";
+                lblProgressMessage.Visible = true;
+                Application.DoEvents ();
 
+                SetSelectedExcelFolders ( checkedItems );
 
-                var files = lfiles as IList<string> ?? lfiles.ToList ();
-                var percent = files.Count == 0 ? 100 : itemParts / files.Count;
-
-                foreach (var file in files) {
-                    
-                    var fileName = Path.GetFileName ( file );
-
-                    if (fileName == null) {
+                var itemCount = checkedItems.Count;
+                var itemParts = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
+                var progress = 0;
+                var index = 0;
+                foreach (var checkedItem in checkedItems) {
+                    var basePath = Path.Combine ( _path, checkedItem.ToString () );
+                    if (!Directory.Exists ( basePath )) {
                         continue;
                     }
-                   
-                    var extSplits = fileName.Split ( '.' );
-                    if(extSplits.Length == 0)
-                    {
-                        continue;
-                    }
-                    var hyphenSplits = extSplits [0].Split ( '-' );
-                    
-                    
-                    var parts = new List<string>();
-                    foreach (var split in hyphenSplits)
-                    {
-                        var splits = split.Split ( '_' );
-                        foreach (var s in splits)
-                        {
-                            parts.Add (s);
-                        }
-                        
-                    }
+                    var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
+                               .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
 
-                    foreach (var part in parts) {
-                        
-                        var result = CheckExcelForItems (arr, part );
-                        
-                        if (!string.IsNullOrEmpty ( result ))
-                        {
-                            string newFileName;
-                            if (Regex.IsMatch(fileName, @"[\p{IsHebrew}]+"))
-                            {
-                                newFileName = SetExcelFileName(parts, part, result) + "." + extSplits[1];
-                            }
-                            else
-                            {
-                                newFileName = SetExcelFileName2 ( parts, part, result ) + "." + extSplits [1];
-                            }
-                            var ndir = Path.GetDirectoryName(file);
-                            if (ndir != null)
-                            {
-                                var newFilePath = Path.Combine ( ndir, newFileName );
-                                File.Move ( file, newFilePath );
-                            }
-                           
-                            break;
-                        }
-                    }
-                    progress += ( index * itemParts ) + percent;
-                    if (progress > 100) progress = 100;
-                    progressBar1.Value = progress;
-                   
 
+
+                    var files = lfiles as IList<string> ?? lfiles.ToList ();
+                    var percent = files.Count == 0 ? 100 : itemParts / files.Count;
+
+                    foreach (var file in files)
+                    {
+                        curFile = file;
+                        var fileName = Path.GetFileName ( file );
+
+                        if (fileName == null) {
+                            continue;
+                        }
+
+                        var extSplits = fileName.Split ( '.' );
+                        if (extSplits.Length == 0) {
+                            continue;
+                        }
+                        var hyphenSplits = extSplits [0].Split ( '-' );
+
+
+                        var parts = new List<string> ();
+                        foreach (var split in hyphenSplits) {
+                            var splits = split.Split ( '_' );
+                            foreach (var s in splits) {
+                                parts.Add ( s );
+                            }
+
+                        }
+
+                        foreach (var part in parts) {
+
+                            var result = CheckExcelForItems ( arr, part );
+
+                            if (!string.IsNullOrEmpty ( result )) {
+                                string newFileName;
+                                if (Regex.IsMatch ( fileName, @"[\p{IsHebrew}]+" )) {
+                                    newFileName = SetExcelFileName ( parts, part, result ) + "." + extSplits [1];
+                                }
+                                else {
+                                    newFileName = SetExcelFileName2 ( parts, part, result ) + "." + extSplits [1];
+                                }
+                                var ndir = Path.GetDirectoryName ( file );
+                                if (ndir != null) {
+                                    newFilePath = Path.Combine ( ndir, newFileName );
+                                    File.Move ( file, newFilePath );
+                                }
+
+                                break;
+                            }
+                        }
+                        progress += ( index * itemParts ) + percent;
+                        if (progress > 100) progress = 100;
+                        progressBar1.Value = progress;
+
+
+                    }
+                    index++;
                 }
-                index++;
+                progressBar1.Value = 100;
+                MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
             }
-            progressBar1.Value = 100;
-            MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
+            catch (System.Exception ex)
+            {
+
+                logger.Error(ex, "SetExcelNames Error",
+                    new Dictionary<string, string> {{"file", curFile}, {"destFile", newFilePath}});
+            }
         }
 
         private string SetExcelFileName(List<string> parts, string part, string result)
@@ -2468,6 +2551,7 @@ namespace FileManager
 
         private void DelteFiles ()
         {
+            string delFile = null;
             try
             {
                 progressBar1.Visible = true;
@@ -2511,7 +2595,7 @@ namespace FileManager
                             {
                                 continue;
                             }
-                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly)
+                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.AllDirectories)
                                 .Where(s =>
                                         s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") ||
                                         s.ToLower().EndsWith(".pdf"));
@@ -2520,7 +2604,8 @@ namespace FileManager
                             {
                                 foreach (var file in files)
                                 {
-                                    var creatineDate = File.GetLastWriteTime ( file);
+                                    delFile = file;
+                                       var creatineDate = File.GetLastWriteTime ( file);
                                     if (creatineDate >= dtDeleteFiles)
                                     {
                                         continue;
@@ -2562,7 +2647,7 @@ namespace FileManager
                             if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
-                            var lfiles = Directory.GetFiles ( curdir, "*.*", SearchOption.TopDirectoryOnly )
+                            var lfiles = Directory.GetFiles ( curdir, "*.*", SearchOption.AllDirectories )
                                 .Where ( s =>
                                       s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) ||
                                       s.ToLower ().EndsWith ( ".pdf" ) );
@@ -2594,6 +2679,7 @@ namespace FileManager
             }
             catch (System.Exception ex) {
                 MessageBox.Show ( "DeleteFiles Error :\r" + ex.Message );
+                logger.Error(ex, "DeleteFiles Error", new Dictionary<string, string> { { "file", delFile} });
             }
         }
         private string [] getParts ( string file )
