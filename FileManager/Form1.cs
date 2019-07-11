@@ -14,6 +14,7 @@ using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
 using System.Threading;
+using NLog;
 
 namespace FileManager
 {
@@ -34,6 +35,7 @@ namespace FileManager
         private readonly List<string> gfoldersList = new List<string>();
         private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר" };
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger ();
+        private bool hasErrors = false;
 
         public Form1()
         {
@@ -74,7 +76,12 @@ namespace FileManager
                 {
                     MessageBox.Show("Path in config file does not exist, or you do not have permission to query it.");
 
-                    logger.Info("Path in config file does not exist, or you do not have permission to query it." );
+                    LogEventInfo eventInfo = new LogEventInfo
+                    {
+                        Level = LogLevel.Info,
+                        Message = "Path in config file does not exist, or you do not have permission to query it."
+                    };
+                    logger.Log ( eventInfo );
                     return;
                 }
 
@@ -297,7 +304,13 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("Error : " + ex.Message);
-                logger.Error(ex);
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "Main method Error"
+                };
+                logger.Log ( eventInfo );
             }
         }
 
@@ -322,6 +335,14 @@ namespace FileManager
             SetExcelNames ();
             SetReportsNames ();
             btnMail.Enabled = true;
+            if (hasErrors)
+            {
+                MessageBox.Show("הפעולה הסתיימה עם בעיותץ בדוק קובץ לוג");
+            }
+            else
+            {
+                MessageBox.Show("הפעולה הסתיימה בהצלחה");
+            }
         }
 
         //private void bMigdal_Click(object sender, EventArgs e)
@@ -1239,7 +1260,14 @@ namespace FileManager
                                         if (File.Exists(destFile))
                                         {
                                             MessageBox.Show("פיצול תיקיות - שם קובץ כפול - " + destFile);
-                                            logger.Info("פיצול תיקיות - שם קובץ כפול - " + destFile);
+                                            LogEventInfo eventInfo = new LogEventInfo
+                                            {
+                                                Level = LogLevel.Info,
+                                                
+                                                Message = "פיצול תיקיות - שם קובץ כפול - " + destFile
+                                            };
+                                            logger.Log ( eventInfo );
+                                            hasErrors = true;
                                             continue;
                                         }
                                         File.Move(sFile, destFile);
@@ -1251,14 +1279,26 @@ namespace FileManager
                                     {
                                         txtLog.AppendText("נכשל בהעברת קובץ " + sFile + "----" + e.Message +
                                                           Environment.NewLine);
-                                        logger.Error(e, "נכשל בהעברת קובץ", new Dictionary<string, string>
+
+                                        var props =
+                                            new
+                                            {
+                                                method = "SplitFolders",
+                                                destDir = destDir,
+                                                destFile = destFile,
+                                                curdir = curdir,
+                                                curFile = sFile
+                                            };
+                                        LogEventInfo eventInfo = new LogEventInfo
                                         {
-                                            {"method", "SplitFolders" },
-                                            {"destDir", destDir},
-                                            {"destFile", destFile},
-                                            {"curdir", curdir},
-                                            {"curFile", sFile}
-                                        });
+                                            Level = LogLevel.Error,
+                                            Exception = e,
+                                            Message = "נכשל בהעברת קובץ",
+                                            Properties = { { "Files", props } }
+                                        };
+                                        logger.Log ( eventInfo );
+                                        hasErrors = true;
+
                                     }
 
                                 }
@@ -1289,15 +1329,24 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("תקלה בפיצול תיקיות - " + ex.Message);
-                logger.Error(ex, "תקלה בפיצול תיקיות - ",
-                    new Dictionary<string, string>
+
+                var props =
+                    new
                     {
-                        {"destDir", destDir},
-                        {"destFile", destFile},
-                        {"curdir", curdir},
-                        {"curFile", sFile}
-                    }
-                );
+                        destDir = destDir,
+                        destFile = destFile,
+                        curdir = curdir,
+                        curFile = sFile
+                    };
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "תקלה בפיצול תיקיות",
+                    Properties = { { "Files", props } }
+                };
+                logger.Log ( eventInfo );
+                hasErrors = true;
             }
 
 
@@ -1333,8 +1382,15 @@ namespace FileManager
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show("CountFiles Error :\r" + ex.Message);
-                logger.Error ( ex, "CountFiles Error");
+                MessageBox.Show(" Error :\r" + ex.Message);
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "CountFiles Error"
+                };
+                logger.Log ( eventInfo );
+                hasErrors = true;
             }
         }
 
@@ -1428,15 +1484,26 @@ namespace FileManager
                             }
                             catch (System.Exception ex) {
                                 txtLog.AppendText ( "בעיה נמצאה בקריאת קבצי המקור, " + ex.Message);
-                                logger.Error(ex, "בעיה נמצאה בקריאת קבצי המקור",
-                                    new Dictionary<string, string>
+
+                                var props =
+                                    new
                                     {
-                                        {"fileName", sourceName},
-                                        {"curdir", curdir}
-                                    }
-                                );
+                                        fileName = sourceName,
+                                        curdir = curdir
+                                    };
+                                LogEventInfo eventInfo = new LogEventInfo
+                                {
+                                    Level = LogLevel.Error,
+                                    Exception = ex,
+                                    Message = "בעיה נמצאה בקריאת קבצי המקור",
+                                    Properties = { { "Files", props } }
+                                };
+                                logger.Log ( eventInfo );
+
+                                
                                 Application.DoEvents ();
                                 isError = true;
+                                hasErrors = true;
                                 continue;
                             }
 
@@ -1469,14 +1536,25 @@ namespace FileManager
                             catch (System.Exception ex) {
                                
                                 txtLog.AppendText ( "בעיה נמצאה בבדיקת קבצי היעד, " + ex.Message );
-                                logger.Error ( ex, "בעיה נמצאה בקריאת קבצי היעד",
-                                    new Dictionary<string, string>
-                                    {
-                                        {"fileName", destFile}
-                                    }
-                                );
+
+                                var props =
+                                    new {
+                                        fileName = destFile,
+                                        curdir = curdir
+                                    };
+                                LogEventInfo eventInfo = new LogEventInfo
+                                {
+                                    Level = LogLevel.Error,
+                                    Exception = ex,
+                                    Message = "בעיה נמצאה בקריאת קבצי היעד",
+                                    Properties = { { "Files", props } }
+                                };
+                                logger.Log ( eventInfo );
+
+                                
                                 Application.DoEvents ();
                                 isError = true;
+                                hasErrors = true;
                                 continue;
                             }
 
@@ -1510,14 +1588,22 @@ namespace FileManager
                             }
                             catch (System.Exception ex) {
                                 txtLog.AppendText ( "בעיה בהעברת הקובץ, " + ex.Message );
-                                logger.Error ( ex, "בעיה בהעברת הקובץ",
-                                    new Dictionary<string, string>
-                                    {
-                                        {"fileName", grpFile},
-                                        {"destFile", newFile}
-                                    }
-                                );
+                                var props =
+                                    new {
+                                        fileName = grpFile,
+                                        destFile = newFile
+                                    };
+                                LogEventInfo eventInfo = new LogEventInfo
+                                {
+                                    Level = LogLevel.Error,
+                                    Exception = ex,
+                                    Message = "בעיה בהעברת הקובץ",
+                                    Properties = { { "Files", props } }
+                                };
+                                logger.Log ( eventInfo );
+                                
                                 Application.DoEvents ();
+                                hasErrors = true;
                                 isError = true;
                             }
                             var msg = isError ? "הפעולה הסתיימה עם בעיות" : "הפעולה הסתיימה בהצלחה";
@@ -1543,7 +1629,14 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show ( "Report names Error :\r" + ex.Message );
-                logger.Error ( ex, "Report names Error");
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "Report names Error"
+                };
+                logger.Log ( eventInfo );
+                hasErrors = true;
             }
         }
         private void FixDuplicates()
@@ -1633,14 +1726,21 @@ namespace FileManager
                             }
                         }
                         catch (System.Exception ex) {
-                            logger.Error ( ex, "בעיה בשינוי שם הקובץ",
-                                    new Dictionary<string, string>
-                                    {
-                                        {"method", "FixDuplicates"},
-                                        {"fileName", fileName},
-                                        {"destFile", newName}
-                                    }
-                                );
+                            var props =
+                                    new {
+                                        method = "FixDuplicates",
+                                        fileName = fileName,
+                                        destFile = newName
+                                    };
+                            LogEventInfo eventInfo = new LogEventInfo
+                            {
+                                Level = LogLevel.Error,
+                                Exception = ex,
+                                Message = "בעיה בשינוי שם הקובץ",
+                                Properties = { { "Files", props } }
+                            };
+                            logger.Log ( eventInfo );
+                            hasErrors = true;
                         }
                         // if the folder does not contain dir/1 folder continue.
                         if (String.IsNullOrEmpty(allFilesPath))
@@ -1704,20 +1804,35 @@ namespace FileManager
                                         else {
                                             MessageBox.Show ( "file name : \r" + fileName + "\r" +
                                                             "exist in duplicated folder but not in base folder" );
-                                            logger.Info ( "file name : \r" + fileName + "\r" +
-                                                            "exist in duplicated folder but not in base folder" );
+                                            LogEventInfo eventInfo = new LogEventInfo
+                                            {
+                                                Level = LogLevel.Info,
+                                                Message = "file name : \r" + fileName + "\r" +
+                                                            "exist in duplicated folder but not in base folder"
+                                            };
+                                            logger.Log ( eventInfo );
+                                            hasErrors = true;
+
                                         }
                                     }
                                 }
                                 catch (System.Exception ex) {
-                                    logger.Error ( ex, "בעיה בהעתקת הקובץ",
-                                    new Dictionary<string, string>
+                                    var props =
+                                    new {
+                                        method = "FixDuplicates",
+                                        fileName = fileName,
+                                        destFile = newName
+                                    };
+                                    LogEventInfo eventInfo = new LogEventInfo
                                     {
-                                        {"method", "FixDuplicates"},
-                                        {"fileName", fileName},
-                                        {"destFile", newName}
-                                    }
-                                );
+                                        Level = LogLevel.Error,
+                                        Exception = ex,
+                                        Message = "בעיה בהעתקת הקובץ",
+                                        Properties = { { "Files", props } }
+                                    };
+                                    logger.Log ( eventInfo );
+                                    hasErrors = true;
+
                                 }
                             }
                             counter++;
@@ -1865,13 +1980,21 @@ namespace FileManager
                             }
                         }
                         catch (System.Exception ex) {
-                            logger.Error ( ex, "בעיה במחיקת הקובץ",
-                                   new Dictionary<string, string>
-                                   {
-                                        {"method", "FixDuplicates"},
-                                        {"fileName", fileName}
-                                   }
-                               );
+                            var props =
+                                    new {
+                                        method = "FixDuplicates",
+                                        fileName = fileName
+                                    };
+                            LogEventInfo eventInfo = new LogEventInfo
+                            {
+                                Level = LogLevel.Error,
+                                Exception = ex,
+                                Message = "בעיה במחיקת הקובץ",
+                                Properties = { { "Files", props } }
+                            };
+                            logger.Log ( eventInfo );
+                            hasErrors = true;
+
                         }
                     }
                     progressBar1.Value = 100;
@@ -1887,7 +2010,14 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("FixDuplicates Error :\r" + ex.Message);
-                logger.Error(ex, "FixDuplicates Error");
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "FixDuplicates Error"
+                };
+                logger.Log ( eventInfo );
+                hasErrors = true;
             }
 
         }
@@ -2003,6 +2133,7 @@ namespace FileManager
                             
                         }
                     }
+                   
                     progress += percent;
                     progressBar1.Value = progress;
                 }
@@ -2011,14 +2142,23 @@ namespace FileManager
             catch (System.Exception ex)
             {
                 MessageBox.Show("FixFileNames Error :\r" + ex.Message);
-                logger.Error(ex, "FixFileNames Error",
-                    new Dictionary<string, string>
+                var props =
+                    new
                     {
-                        {"method", "FixFileNames"},
-                        {"fileName", fileName},
-                        {"destFile", copyName}
-                    }
-                );
+                        method = "FixFileNames",
+                        fileName = fileName,
+                        destFile = copyName
+                    };
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "FixFileNames Error",
+                    Properties = { { "Files", props } }
+                };
+                logger.Log ( eventInfo );
+                hasErrors = true;
+
             }
         }
 
@@ -2402,7 +2542,7 @@ namespace FileManager
                         }
 
                         foreach (var part in parts) {
-
+                           
                             var result = CheckExcelForItems ( arr, part );
 
                             if (!string.IsNullOrEmpty ( result )) {
@@ -2418,10 +2558,11 @@ namespace FileManager
                                     newFilePath = Path.Combine ( ndir, newFileName );
                                     File.Move ( file, newFilePath );
                                 }
-
+                                
                                 break;
                             }
                         }
+                        
                         progress += ( index * itemParts ) + percent;
                         if (progress > 100) progress = 100;
                         progressBar1.Value = progress;
@@ -2431,13 +2572,20 @@ namespace FileManager
                     index++;
                 }
                 progressBar1.Value = 100;
-                MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
+                //MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
             }
             catch (System.Exception ex)
             {
-
-                logger.Error(ex, "SetExcelNames Error",
-                    new Dictionary<string, string> {{"file", curFile}, {"destFile", newFilePath}});
+                var props = new {file = curFile, destFile = newFilePath};
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "SetExcelNames Error",
+                    Properties = { { "Files", props } }
+                };
+                logger.Log(eventInfo);
+                hasErrors = true;
             }
         }
 
@@ -2679,7 +2827,16 @@ namespace FileManager
             }
             catch (System.Exception ex) {
                 MessageBox.Show ( "DeleteFiles Error :\r" + ex.Message );
-                logger.Error(ex, "DeleteFiles Error", new Dictionary<string, string> { { "file", delFile} });
+                var props = new { file = delFile };
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "DeleteFiles Error",
+                    Properties = { { "Files", props } }
+                };
+                logger.Log ( eventInfo );
+                hasErrors = true;
             }
         }
         private string [] getParts ( string file )
