@@ -48,4 +48,11 @@ namespace FileManager
         public string id { get; set; }
         public List<string> files { get; set; }
     }
+
+    public class ArchiveSettings
+    {
+        public string dir { get; set; }
+        public string dest { get; set; }
+        public string parent { get; set; }
+    }
 }

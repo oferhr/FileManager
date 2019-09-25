@@ -65,6 +65,11 @@
             this.chbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.cdir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dest = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.tabArchive = new System.Windows.Forms.TabPage();
+            this.btnBrowse = new System.Windows.Forms.Button();
+            this.txtFolderArchiveParent = new System.Windows.Forms.TextBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.grdArchive = new System.Windows.Forms.DataGridView();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
@@ -75,6 +80,10 @@
             this.grpDatesDelete = new System.Windows.Forms.GroupBox();
             this.nDaysToDelete = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
+            this.adir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.parent = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.adest = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnArchive = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -88,6 +97,8 @@
             this.tabReports.SuspendLayout();
             this.tabSplit.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.grdFolderSplit)).BeginInit();
+            this.tabArchive.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.grdArchive)).BeginInit();
             this.boxSummary.SuspendLayout();
             this.grpDatesDelete.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).BeginInit();
@@ -192,6 +203,7 @@
             this.tabsMain.Controls.Add(this.tabPage2);
             this.tabsMain.Controls.Add(this.tabReports);
             this.tabsMain.Controls.Add(this.tabSplit);
+            this.tabsMain.Controls.Add(this.tabArchive);
             this.tabsMain.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.tabsMain.Location = new System.Drawing.Point(12, 12);
             this.tabsMain.Name = "tabsMain";
@@ -543,6 +555,68 @@
             this.dest.Name = "dest";
             this.dest.ReadOnly = true;
             // 
+            // tabArchive
+            // 
+            this.tabArchive.Controls.Add(this.btnBrowse);
+            this.tabArchive.Controls.Add(this.txtFolderArchiveParent);
+            this.tabArchive.Controls.Add(this.label4);
+            this.tabArchive.Controls.Add(this.grdArchive);
+            this.tabArchive.Location = new System.Drawing.Point(4, 24);
+            this.tabArchive.Name = "tabArchive";
+            this.tabArchive.Size = new System.Drawing.Size(826, 693);
+            this.tabArchive.TabIndex = 8;
+            this.tabArchive.Text = "ארכיון";
+            this.tabArchive.UseVisualStyleBackColor = true;
+            // 
+            // btnBrowse
+            // 
+            this.btnBrowse.Location = new System.Drawing.Point(550, 17);
+            this.btnBrowse.Name = "btnBrowse";
+            this.btnBrowse.Size = new System.Drawing.Size(75, 23);
+            this.btnBrowse.TabIndex = 4;
+            this.btnBrowse.Text = "חפש";
+            this.btnBrowse.UseVisualStyleBackColor = true;
+            this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
+            // 
+            // txtFolderArchiveParent
+            // 
+            this.txtFolderArchiveParent.Location = new System.Drawing.Point(31, 17);
+            this.txtFolderArchiveParent.Name = "txtFolderArchiveParent";
+            this.txtFolderArchiveParent.Size = new System.Drawing.Size(495, 23);
+            this.txtFolderArchiveParent.TabIndex = 3;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.label4.Location = new System.Drawing.Point(645, 17);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(83, 19);
+            this.label4.TabIndex = 2;
+            this.label4.Text = "תקיית מקור";
+            // 
+            // grdArchive
+            // 
+            this.grdArchive.AllowUserToAddRows = false;
+            this.grdArchive.AllowUserToDeleteRows = false;
+            this.grdArchive.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.grdArchive.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.grdArchive.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.adir,
+            this.parent,
+            this.adest});
+            this.grdArchive.Location = new System.Drawing.Point(-4, 46);
+            this.grdArchive.Name = "grdArchive";
+            this.grdArchive.ReadOnly = true;
+            this.grdArchive.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.grdArchive.RowHeadersVisible = false;
+            this.grdArchive.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
+            this.grdArchive.Size = new System.Drawing.Size(826, 644);
+            this.grdArchive.TabIndex = 1;
+            this.grdArchive.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellClick);
+            // 
             // lblProgressMessage
             // 
             this.lblProgressMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -689,10 +763,52 @@
             this.label3.Text = "מספר ימים";
             this.label3.Visible = false;
             // 
+            // adir
+            // 
+            this.adir.DataPropertyName = "dir";
+            this.adir.HeaderText = "תיקיות";
+            this.adir.Name = "adir";
+            this.adir.ReadOnly = true;
+            this.adir.Width = 110;
+            // 
+            // parent
+            // 
+            this.parent.DataPropertyName = "parent";
+            this.parent.HeaderText = "p";
+            this.parent.Name = "parent";
+            this.parent.ReadOnly = true;
+            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.parent.Visible = false;
+            this.parent.Width = 5;
+            // 
+            // adest
+            // 
+            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.adest.DataPropertyName = "dest";
+            this.adest.HeaderText = "תיקיית יעד";
+            this.adest.Name = "adest";
+            this.adest.ReadOnly = true;
+            // 
+            // btnArchive
+            // 
+            this.btnArchive.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnArchive.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.btnArchive.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnArchive.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnArchive.ForeColor = System.Drawing.Color.DarkBlue;
+            this.btnArchive.Location = new System.Drawing.Point(952, 140);
+            this.btnArchive.Name = "btnArchive";
+            this.btnArchive.Size = new System.Drawing.Size(129, 23);
+            this.btnArchive.TabIndex = 17;
+            this.btnArchive.Text = "ארכיון";
+            this.btnArchive.UseVisualStyleBackColor = false;
+            this.btnArchive.Click += new System.EventHandler(this.btnArchive_Click);
+            // 
             // Form1
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1107, 745);
+            this.Controls.Add(this.btnArchive);
             this.Controls.Add(this.grpDatesDelete);
             this.Controls.Add(this.btnDel);
             this.Controls.Add(this.btnMail);
@@ -727,6 +843,9 @@
             this.tabReports.PerformLayout();
             this.tabSplit.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.grdFolderSplit)).EndInit();
+            this.tabArchive.ResumeLayout(false);
+            this.tabArchive.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.grdArchive)).EndInit();
             this.boxSummary.ResumeLayout(false);
             this.boxSummary.PerformLayout();
             this.grpDatesDelete.ResumeLayout(false);
@@ -786,6 +905,15 @@
         private System.Windows.Forms.DataGridViewCheckBoxColumn chbdirs;
         private System.Windows.Forms.DataGridViewTextBoxColumn cdir;
         private System.Windows.Forms.DataGridViewTextBoxColumn dest;
+        private System.Windows.Forms.TabPage tabArchive;
+        private System.Windows.Forms.Button btnBrowse;
+        private System.Windows.Forms.TextBox txtFolderArchiveParent;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.DataGridView grdArchive;
+        private System.Windows.Forms.DataGridViewTextBoxColumn adir;
+        private System.Windows.Forms.DataGridViewTextBoxColumn parent;
+        private System.Windows.Forms.DataGridViewTextBoxColumn adest;
+        private System.Windows.Forms.Button btnArchive;
     }
 }
 

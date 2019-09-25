@@ -839,6 +839,34 @@ namespace FileManager
                 
             }
         }
+        private void grdArchive_CellClick ( object sender, DataGridViewCellEventArgs e )
+        {
+            var dialog = new FolderBrowserDialog ();
+            if (dialog.ShowDialog () == DialogResult.OK) {
+                grdArchive [e.ColumnIndex, e.RowIndex].Value = dialog.SelectedPath;
+               // var check = (bool)grdFolderSplit.Rows [e.RowIndex].Cells ["chbdirs"].Value;
+                var ddir = grdArchive.Rows [e.RowIndex].Cells ["adir"].Value == null ? string.Empty : grdArchive.Rows [e.RowIndex].Cells ["adir"].Value.ToString ();
+                var dest = grdArchive.Rows [e.RowIndex].Cells ["adest"].Value == null ? string.Empty : grdArchive.Rows [e.RowIndex].Cells ["adest"].Value.ToString ();
+                var dirSettings = GetArchiveSettings();
+                var dirObj = dirSettings.Find ( f => f.dir == ddir && f.parent == txtFolderArchiveParent.Text );
+                if (dirObj != null) {
+                    dirObj.dest = dest;
+                }
+                else {
+                    dirSettings.Add ( new ArchiveSettings
+                    {
+
+                        dir = ddir,
+                        dest = dest,
+                        parent = txtFolderArchiveParent.Text
+                    } );
+                }
+                setArchiveSettings ( dirSettings );
+            }
+        }
+
+       
+
         private void grdCount_CellContentClick ( object sender, DataGridViewCellEventArgs e )
         {
             grdCount.CommitEdit ( DataGridViewDataErrorContexts.Commit );
@@ -937,6 +965,93 @@ namespace FileManager
             setMailSettings(emailConfigList);
         }
 
+        private void btnBrowse_Click ( object sender, EventArgs e )
+        {
+            var dialog = new FolderBrowserDialog ();
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtFolderArchiveParent.Text = dialog.SelectedPath;
+                string [] dirs;
+                try {
+                    dirs = Directory.GetDirectories ( txtFolderArchiveParent.Text );
+                }
+                catch {
+                    MessageBox.Show ( "Path does not exist, or you do not have permission to query it." );
+
+                    LogEventInfo eventInfo = new LogEventInfo
+                    {
+                        Level = LogLevel.Info,
+                        Message = "Path does not exist, or you do not have permission to query it."
+                    };
+                    logger.Log ( eventInfo );
+                    return;
+                }
+
+                //adding files to checkbox list
+                var fols = new List<string>();
+                foreach (var path in dirs) {
+                    var folder = Path.GetFileName ( path );
+                    if (folder != null) {
+                        fols.Add ( folder );
+                    }
+                }
+
+                var archiveConfigSettings = GetArchiveSettings ();
+                var archiveDS = new List<ArchiveSettings> ();
+                var parentFolder = txtFolderArchiveParent.Text;
+                foreach (var fol in fols) {
+                    var curdir = archiveConfigSettings.Find ( f => f.dir == fol && f.parent == parentFolder );
+                    if (curdir != null) {
+                        archiveDS.Add ( new ArchiveSettings
+                        {
+                            dir = fol,
+                            dest = curdir.dest
+                        } );
+                    }
+                    else {
+                        archiveDS.Add ( new ArchiveSettings
+                        {
+                            dir = fol,
+                            dest = null
+                        } );
+                    }
+                }
+
+
+
+                //  grdFolderSplit.AutoGenerateColumns = true;
+                grdArchive.DataSource = archiveDS;
+            }
+
+        }
+        private void btnArchive_Click ( object sender, EventArgs e )
+        {
+            var parentPath = txtFolderArchiveParent.Text;
+            if (string.IsNullOrEmpty( parentPath ))
+            {
+                MessageBox.Show ( "יש לבחור תקיית מקור" );
+                return;
+            }
+           
+            var archiveSettings = GetArchiveSettings();
+            var currentSettings = archiveSettings.Where(f => f.parent == parentPath );
+            foreach (var asettings in currentSettings)
+            {
+                if (!string.IsNullOrEmpty ( asettings.dest))
+                {
+                    var dirs = Directory.GetDirectories(Path.Combine(parentPath, asettings.dir));
+                    foreach (var dirPath in dirs)
+                    {
+                        var dir = Path.GetFileName(dirPath);
+                        if (dir.Length > 2 && Regex.IsMatch(dir, @"\d"))
+                        {
+                            var dirDest = Path.Combine(asettings.dest, dir);
+                            Directory.Move(dirPath, dirDest );
+                        }
+                    }
+                }
+            }
+        }
         private void SetSelectedDeletedFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
             var items = String.Empty;
@@ -2419,6 +2534,16 @@ namespace FileManager
                 File.WriteAllText ( configPath, sjson );
             }
         }
+        private void setArchiveSettings ( List<ArchiveSettings> folSettings )
+        {
+            var configPath = Path.Combine ( _config, "fileManager_archiveConfig.json" );
+
+            lock (LockObject) {
+                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
+                File.WriteAllText ( configPath, sjson );
+            }
+        }
+        
 
         private void setMailSettings ( List<EmailDirSettings> folSettings )
         {
@@ -2460,6 +2585,23 @@ namespace FileManager
             }
             else {
                 folderSettings = new List<SplitSettings> ();
+            }
+
+            return folderSettings;
+        }
+        private List<ArchiveSettings> GetArchiveSettings ()
+        {
+            var configPath = Path.Combine ( _config, "fileManager_archiveConfig.json" );
+            List<ArchiveSettings> folderSettings;
+            if (File.Exists ( configPath )) {
+
+                using (var r = new StreamReader ( configPath )) {
+                    var json = r.ReadToEnd ();
+                    folderSettings = JsonConvert.DeserializeObject<List<ArchiveSettings>> ( json );
+                }
+            }
+            else {
+                folderSettings = new List<ArchiveSettings> ();
             }
 
             return folderSettings;
@@ -2847,6 +2989,11 @@ namespace FileManager
         }
 
         
+
+
+
+
+
 
 
 
