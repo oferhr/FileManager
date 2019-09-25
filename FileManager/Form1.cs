@@ -192,7 +192,12 @@ namespace FileManager
                 dataGridView1.AutoGenerateColumns = false;
                 dataGridView1.DataSource = emailsDs;
 
-
+                if (!string.IsNullOrEmpty ( Properties.Settings.Default.ArchiveDestName )) {
+                    txtFolderArchiveDest.Text = Properties.Settings.Default.ArchiveDestName;
+                }
+                if (!string.IsNullOrEmpty ( Properties.Settings.Default.ArchiveSourceName )) {
+                    txtFolderArchiveParent.Text = Properties.Settings.Default.ArchiveSourceName;
+                }
 
                 var folderSettings = GetFolderSettings ();
 
@@ -839,29 +844,66 @@ namespace FileManager
                 
             }
         }
-        private void grdArchive_CellClick ( object sender, DataGridViewCellEventArgs e )
+        private void grdArchive_CellContentClick ( object sender, DataGridViewCellEventArgs e )
         {
-            var dialog = new FolderBrowserDialog ();
-            if (dialog.ShowDialog () == DialogResult.OK) {
-                grdArchive [e.ColumnIndex, e.RowIndex].Value = dialog.SelectedPath;
-               // var check = (bool)grdFolderSplit.Rows [e.RowIndex].Cells ["chbdirs"].Value;
+            if (grdArchive.Columns [e.ColumnIndex].Name == "achbdirs") {
+                grdArchive.Rows [e.RowIndex].Cells [3].Value = Convert.ToBoolean ( grdArchive.Rows [e.RowIndex].Cells [3].EditedFormattedValue ) != true;
+                var vcheck = (bool)grdArchive.Rows [e.RowIndex].Cells ["achbdirs"].Value;
                 var ddir = grdArchive.Rows [e.RowIndex].Cells ["adir"].Value == null ? string.Empty : grdArchive.Rows [e.RowIndex].Cells ["adir"].Value.ToString ();
-                var dest = grdArchive.Rows [e.RowIndex].Cells ["adest"].Value == null ? string.Empty : grdArchive.Rows [e.RowIndex].Cells ["adest"].Value.ToString ();
+                var vdest = grdArchive.Rows [e.RowIndex].Cells ["adest"].Value == null ? string.Empty : grdArchive.Rows [e.RowIndex].Cells ["adest"].Value.ToString ();
                 var dirSettings = GetArchiveSettings();
-                var dirObj = dirSettings.Find ( f => f.dir == ddir && f.parent == txtFolderArchiveParent.Text );
+                var dirObj = dirSettings.Find ( f => f.dir == ddir );
                 if (dirObj != null) {
-                    dirObj.dest = dest;
+                    dirObj.check = vcheck;
                 }
                 else {
                     dirSettings.Add ( new ArchiveSettings
                     {
 
                         dir = ddir,
-                        dest = dest,
-                        parent = txtFolderArchiveParent.Text
+                        dest = vdest,
+                        check = vcheck,
+                        sourceDir = txtFolderArchiveParent.Text
                     } );
                 }
-                setArchiveSettings ( dirSettings );
+                setArchiveSettings( dirSettings );
+            }
+        }
+        private void grdArchive_CellClick ( object sender, DataGridViewCellEventArgs e )
+        {
+            if (grdArchive.Columns[e.ColumnIndex].Name != "achbdirs")
+            {
+                var dialog = new FolderBrowserDialog();
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    var selectedFolder = Path.GetFileName(dialog.SelectedPath);
+                    grdArchive[e.ColumnIndex, e.RowIndex].Value = selectedFolder;
+                    var check = (bool) grdArchive.Rows[e.RowIndex].Cells["achbdirs"].Value;
+                    var ddir = grdArchive.Rows[e.RowIndex].Cells["adir"].Value == null
+                        ? string.Empty
+                        : grdArchive.Rows[e.RowIndex].Cells["adir"].Value.ToString();
+                    var dest = grdArchive.Rows[e.RowIndex].Cells["adest"].Value == null
+                        ? string.Empty
+                        : grdArchive.Rows[e.RowIndex].Cells["adest"].Value.ToString();
+                    var dirSettings = GetArchiveSettings();
+                    var dirObj = dirSettings.Find(f => f.dir == ddir && f.sourceDir == txtFolderArchiveParent.Text);
+                    if (dirObj != null)
+                    {
+                        dirObj.dest = dest;
+                    }
+                    else
+                    {
+                        dirSettings.Add(new ArchiveSettings
+                        {
+
+                            dir = ddir,
+                            dest = dest,
+                            sourceDir = txtFolderArchiveParent.Text,
+                            check = check
+                        });
+                    }
+                    setArchiveSettings(dirSettings);
+                }
             }
         }
 
@@ -965,92 +1007,152 @@ namespace FileManager
             setMailSettings(emailConfigList);
         }
 
+        private void btnBrowsDest_Click ( object sender, EventArgs e )
+        {
+            var dialog = new FolderBrowserDialog ();
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtFolderArchiveDest.Text = dialog.SelectedPath;
+                Properties.Settings.Default.ArchiveDestName = txtFolderArchiveDest.Text;
+                Properties.Settings.Default.Save ();
+            }
+        }
+
         private void btnBrowse_Click ( object sender, EventArgs e )
         {
             var dialog = new FolderBrowserDialog ();
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 txtFolderArchiveParent.Text = dialog.SelectedPath;
-                string [] dirs;
-                try {
-                    dirs = Directory.GetDirectories ( txtFolderArchiveParent.Text );
-                }
-                catch {
-                    MessageBox.Show ( "Path does not exist, or you do not have permission to query it." );
-
-                    LogEventInfo eventInfo = new LogEventInfo
-                    {
-                        Level = LogLevel.Info,
-                        Message = "Path does not exist, or you do not have permission to query it."
-                    };
-                    logger.Log ( eventInfo );
-                    return;
-                }
-
-                //adding files to checkbox list
-                var fols = new List<string>();
-                foreach (var path in dirs) {
-                    var folder = Path.GetFileName ( path );
-                    if (folder != null) {
-                        fols.Add ( folder );
-                    }
-                }
-
-                var archiveConfigSettings = GetArchiveSettings ();
-                var archiveDS = new List<ArchiveSettings> ();
-                var parentFolder = txtFolderArchiveParent.Text;
-                foreach (var fol in fols) {
-                    var curdir = archiveConfigSettings.Find ( f => f.dir == fol && f.parent == parentFolder );
-                    if (curdir != null) {
-                        archiveDS.Add ( new ArchiveSettings
-                        {
-                            dir = fol,
-                            dest = curdir.dest
-                        } );
-                    }
-                    else {
-                        archiveDS.Add ( new ArchiveSettings
-                        {
-                            dir = fol,
-                            dest = null
-                        } );
-                    }
-                }
-
-
-
-                //  grdFolderSplit.AutoGenerateColumns = true;
-                grdArchive.DataSource = archiveDS;
+                Properties.Settings.Default.ArchiveSourceName = txtFolderArchiveParent.Text;
+                Properties.Settings.Default.Save ();
             }
 
         }
-        private void btnArchive_Click ( object sender, EventArgs e )
+        private void btnArchiveStart_Click ( object sender, EventArgs e )
         {
-            var parentPath = txtFolderArchiveParent.Text;
-            if (string.IsNullOrEmpty( parentPath ))
+            SetArchive ();
+        }
+        private void SetArchive()
+        {
+           
+            string [] dirs;
+            if (string.IsNullOrEmpty(txtFolderArchiveParent.Text) || string.IsNullOrEmpty(txtFolderArchiveDest.Text))
             {
-                MessageBox.Show ( "יש לבחור תקיית מקור" );
+                MessageBox.Show("יש להכניס  תקיית המקור ותקיית היעד");
+            }
+            try
+            {
+                dirs = Directory.GetDirectories(txtFolderArchiveParent.Text);
+            }
+            catch
+            {
+                MessageBox.Show("Path does not exist, or you do not have permission to query it.");
+
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Info,
+                    Message = "Path does not exist, or you do not have permission to query it."
+                };
+                logger.Log(eventInfo);
                 return;
             }
-           
-            var archiveSettings = GetArchiveSettings();
-            var currentSettings = archiveSettings.Where(f => f.parent == parentPath );
-            foreach (var asettings in currentSettings)
+
+            //adding files to checkbox list
+            var fols = new List<string>();
+            foreach (var path in dirs)
             {
-                if (!string.IsNullOrEmpty ( asettings.dest))
+                var folder = Path.GetFileName(path);
+                if (folder != null)
                 {
-                    var dirs = Directory.GetDirectories(Path.Combine(parentPath, asettings.dir));
-                    foreach (var dirPath in dirs)
+                    fols.Add(folder);
+                }
+            }
+
+            var archiveConfigSettings = GetArchiveSettings();
+            var archiveDS = new List<ArchiveSettings>();
+            var parentFolder = txtFolderArchiveParent.Text;
+            
+            foreach (var fol in fols)
+            {
+                var curdir = archiveConfigSettings.Find(f => f.dir == fol && f.sourceDir == parentFolder);
+                if (curdir != null)
+                {
+                    archiveDS.Add(new ArchiveSettings
                     {
-                        var dir = Path.GetFileName(dirPath);
-                        if (dir.Length > 2 && Regex.IsMatch(dir, @"\d"))
-                        {
-                            var dirDest = Path.Combine(asettings.dest, dir);
-                            Directory.Move(dirPath, dirDest );
+                        dir = fol,
+                        dest = curdir.dest,
+                        check = curdir.check
+                    });
+                }
+                else
+                {
+                    archiveDS.Add(new ArchiveSettings
+                    {
+                        dir = fol,
+                        dest = null,
+                        check = false
+                    });
+                }
+            }
+
+
+            //  grdFolderSplit.AutoGenerateColumns = true;
+            grdArchive.DataSource = archiveDS;
+        }
+
+        private void btnArchive_Click ( object sender, EventArgs e )
+        {
+
+            try {
+                var parentPath = txtFolderArchiveParent.Text;
+                var destPath = txtFolderArchiveDest.Text;
+                if (string.IsNullOrEmpty ( parentPath ) || string.IsNullOrEmpty ( destPath )) {
+                    MessageBox.Show ( "יש להכניס תקיית מקור ותקיית יעד" );
+                    return;
+                }
+                progressBar1.Visible = true;
+                progressBar1.Value = 0;
+                lblProgressMessage.Text = "מעביר לארכיון";
+                lblProgressMessage.Visible = true;
+                Application.DoEvents ();
+                var archiveSettings = GetArchiveSettings ();
+                var currentSettings = archiveSettings.Where ( f => f.sourceDir == parentPath && f.check );
+                var index = 0;
+                foreach (var asettings in currentSettings) {
+                    index++;
+                    var pbIncrement = !currentSettings.Any () ? 100 : index / currentSettings.Count ();
+                    var dVal = progressBar1.Value + pbIncrement;
+                    var val = Convert.ToInt32 ( dVal );
+                    if (val > 100) {
+                        val = 100;
+                    }
+                    progressBar1.Value = val;
+                    Application.DoEvents ();
+                    if (!string.IsNullOrEmpty ( asettings.dest )) {
+                        var dirs = Directory.GetDirectories ( Path.Combine ( parentPath, asettings.dir ) );
+                        foreach (var dirPath in dirs) {
+                            var dir = Path.GetFileName ( dirPath );
+                            if (dir.Length > 2 && Regex.IsMatch ( dir, @"\d" )) {
+                                var midPath = Path.Combine ( destPath, asettings.dest );
+                                if (!Directory.Exists ( midPath )) {
+                                    Directory.CreateDirectory ( midPath );
+                                }
+                                var dirDest = Path.Combine ( midPath, dir );
+                                Directory.Move ( dirPath, dirDest );
+                            }
                         }
                     }
                 }
+                progressBar1.Value = 100;
+                Application.DoEvents ();
+                MessageBox.Show ( "העברת תקיות לארכיון התבצעה בהצלחה" );
             }
+            catch (System.Exception ex) {
+
+                MessageBox.Show ( "העברת תקיות לארכיון נכשלה - " + " " + ex.Message );
+            }
+
         }
         private void SetSelectedDeletedFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
@@ -2989,6 +3091,12 @@ namespace FileManager
         }
 
         
+
+
+
+
+
+
 
 
 

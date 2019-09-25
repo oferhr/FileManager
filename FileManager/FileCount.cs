@@ -53,6 +53,7 @@ namespace FileManager
     {
         public string dir { get; set; }
         public string dest { get; set; }
-        public string parent { get; set; }
+        public string sourceDir { get; set; }
+        public bool check { get; set; }
     }
 }

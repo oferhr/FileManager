@@ -66,6 +66,9 @@
             this.cdir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dest = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabArchive = new System.Windows.Forms.TabPage();
+            this.label5 = new System.Windows.Forms.Label();
+            this.btnBrowsDest = new System.Windows.Forms.Button();
+            this.txtFolderArchiveDest = new System.Windows.Forms.TextBox();
             this.btnBrowse = new System.Windows.Forms.Button();
             this.txtFolderArchiveParent = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
@@ -80,10 +83,12 @@
             this.grpDatesDelete = new System.Windows.Forms.GroupBox();
             this.nDaysToDelete = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
+            this.btnArchive = new System.Windows.Forms.Button();
+            this.btnArchiveStart = new System.Windows.Forms.Button();
+            this.achbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.adir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.parent = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.adest = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.btnArchive = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -557,6 +562,10 @@
             // 
             // tabArchive
             // 
+            this.tabArchive.Controls.Add(this.btnArchiveStart);
+            this.tabArchive.Controls.Add(this.label5);
+            this.tabArchive.Controls.Add(this.btnBrowsDest);
+            this.tabArchive.Controls.Add(this.txtFolderArchiveDest);
             this.tabArchive.Controls.Add(this.btnBrowse);
             this.tabArchive.Controls.Add(this.txtFolderArchiveParent);
             this.tabArchive.Controls.Add(this.label4);
@@ -568,9 +577,36 @@
             this.tabArchive.Text = "ארכיון";
             this.tabArchive.UseVisualStyleBackColor = true;
             // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.label5.Location = new System.Drawing.Point(736, 62);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(74, 19);
+            this.label5.TabIndex = 7;
+            this.label5.Text = "תקיית יעד";
+            // 
+            // btnBrowsDest
+            // 
+            this.btnBrowsDest.Location = new System.Drawing.Point(644, 59);
+            this.btnBrowsDest.Name = "btnBrowsDest";
+            this.btnBrowsDest.Size = new System.Drawing.Size(75, 23);
+            this.btnBrowsDest.TabIndex = 6;
+            this.btnBrowsDest.Text = "חפש";
+            this.btnBrowsDest.UseVisualStyleBackColor = true;
+            this.btnBrowsDest.Click += new System.EventHandler(this.btnBrowsDest_Click);
+            // 
+            // txtFolderArchiveDest
+            // 
+            this.txtFolderArchiveDest.Location = new System.Drawing.Point(126, 59);
+            this.txtFolderArchiveDest.Name = "txtFolderArchiveDest";
+            this.txtFolderArchiveDest.Size = new System.Drawing.Size(495, 23);
+            this.txtFolderArchiveDest.TabIndex = 5;
+            // 
             // btnBrowse
             // 
-            this.btnBrowse.Location = new System.Drawing.Point(550, 17);
+            this.btnBrowse.Location = new System.Drawing.Point(644, 18);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(75, 23);
             this.btnBrowse.TabIndex = 4;
@@ -580,7 +616,7 @@
             // 
             // txtFolderArchiveParent
             // 
-            this.txtFolderArchiveParent.Location = new System.Drawing.Point(31, 17);
+            this.txtFolderArchiveParent.Location = new System.Drawing.Point(126, 18);
             this.txtFolderArchiveParent.Name = "txtFolderArchiveParent";
             this.txtFolderArchiveParent.Size = new System.Drawing.Size(495, 23);
             this.txtFolderArchiveParent.TabIndex = 3;
@@ -589,7 +625,7 @@
             // 
             this.label4.AutoSize = true;
             this.label4.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.label4.Location = new System.Drawing.Point(645, 17);
+            this.label4.Location = new System.Drawing.Point(727, 21);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(83, 19);
             this.label4.TabIndex = 2;
@@ -604,18 +640,20 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.grdArchive.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.grdArchive.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.achbdirs,
             this.adir,
             this.parent,
             this.adest});
-            this.grdArchive.Location = new System.Drawing.Point(-4, 46);
+            this.grdArchive.Location = new System.Drawing.Point(-4, 104);
             this.grdArchive.Name = "grdArchive";
             this.grdArchive.ReadOnly = true;
             this.grdArchive.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.grdArchive.RowHeadersVisible = false;
             this.grdArchive.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
-            this.grdArchive.Size = new System.Drawing.Size(826, 644);
+            this.grdArchive.Size = new System.Drawing.Size(826, 586);
             this.grdArchive.TabIndex = 1;
             this.grdArchive.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellClick);
+            this.grdArchive.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellContentClick);
             // 
             // lblProgressMessage
             // 
@@ -763,32 +801,6 @@
             this.label3.Text = "מספר ימים";
             this.label3.Visible = false;
             // 
-            // adir
-            // 
-            this.adir.DataPropertyName = "dir";
-            this.adir.HeaderText = "תיקיות";
-            this.adir.Name = "adir";
-            this.adir.ReadOnly = true;
-            this.adir.Width = 110;
-            // 
-            // parent
-            // 
-            this.parent.DataPropertyName = "parent";
-            this.parent.HeaderText = "p";
-            this.parent.Name = "parent";
-            this.parent.ReadOnly = true;
-            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.parent.Visible = false;
-            this.parent.Width = 5;
-            // 
-            // adest
-            // 
-            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.adest.DataPropertyName = "dest";
-            this.adest.HeaderText = "תיקיית יעד";
-            this.adest.Name = "adest";
-            this.adest.ReadOnly = true;
-            // 
             // btnArchive
             // 
             this.btnArchive.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -803,6 +815,52 @@
             this.btnArchive.Text = "ארכיון";
             this.btnArchive.UseVisualStyleBackColor = false;
             this.btnArchive.Click += new System.EventHandler(this.btnArchive_Click);
+            // 
+            // btnArchiveStart
+            // 
+            this.btnArchiveStart.Location = new System.Drawing.Point(17, 33);
+            this.btnArchiveStart.Name = "btnArchiveStart";
+            this.btnArchiveStart.Size = new System.Drawing.Size(75, 23);
+            this.btnArchiveStart.TabIndex = 8;
+            this.btnArchiveStart.Text = "הצג תקיות";
+            this.btnArchiveStart.UseVisualStyleBackColor = true;
+            this.btnArchiveStart.Click += new System.EventHandler(this.btnArchiveStart_Click);
+            // 
+            // achbdirs
+            // 
+            this.achbdirs.DataPropertyName = "check";
+            this.achbdirs.HeaderText = "c";
+            this.achbdirs.Name = "achbdirs";
+            this.achbdirs.ReadOnly = true;
+            this.achbdirs.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.achbdirs.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.achbdirs.Width = 30;
+            // 
+            // adir
+            // 
+            this.adir.DataPropertyName = "dir";
+            this.adir.HeaderText = "תיקיות";
+            this.adir.Name = "adir";
+            this.adir.ReadOnly = true;
+            this.adir.Width = 110;
+            // 
+            // parent
+            // 
+            this.parent.DataPropertyName = "sourceDir";
+            this.parent.HeaderText = "p";
+            this.parent.Name = "parent";
+            this.parent.ReadOnly = true;
+            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.parent.Visible = false;
+            this.parent.Width = 5;
+            // 
+            // adest
+            // 
+            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.adest.DataPropertyName = "dest";
+            this.adest.HeaderText = "תיקיית יעד";
+            this.adest.Name = "adest";
+            this.adest.ReadOnly = true;
             // 
             // Form1
             // 
@@ -910,10 +968,15 @@
         private System.Windows.Forms.TextBox txtFolderArchiveParent;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.DataGridView grdArchive;
+        private System.Windows.Forms.Button btnArchive;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Button btnBrowsDest;
+        private System.Windows.Forms.TextBox txtFolderArchiveDest;
+        private System.Windows.Forms.Button btnArchiveStart;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn achbdirs;
         private System.Windows.Forms.DataGridViewTextBoxColumn adir;
         private System.Windows.Forms.DataGridViewTextBoxColumn parent;
         private System.Windows.Forms.DataGridViewTextBoxColumn adest;
-        private System.Windows.Forms.Button btnArchive;
     }
 }
 

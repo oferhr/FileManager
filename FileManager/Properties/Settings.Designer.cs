@@ -94,5 +94,29 @@ namespace FileManager.Properties {
                 this["DaysToDelete"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ArchiveDestName {
+            get {
+                return ((string)(this["ArchiveDestName"]));
+            }
+            set {
+                this["ArchiveDestName"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ArchiveSourceName {
+            get {
+                return ((string)(this["ArchiveSourceName"]));
+            }
+            set {
+                this["ArchiveSourceName"] = value;
+            }
+        }
     }
 }
