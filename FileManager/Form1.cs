@@ -1139,7 +1139,19 @@ namespace FileManager
                                     Directory.CreateDirectory ( midPath );
                                 }
                                 var dirDest = Path.Combine ( midPath, dir );
-                                Directory.Move ( dirPath, dirDest );
+                                if (!Directory.Exists(dirDest))
+                                {
+                                    Directory.CreateDirectory(dirDest);
+                                }
+                                //Directory.Move ( dirPath, dirDest );
+                                foreach (string ddir in Directory.GetDirectories ( dirPath, "*", SearchOption.AllDirectories )) {
+                                    Directory.CreateDirectory ( Path.Combine ( dirDest, ddir.Substring ( dirPath.Length + 1 ) ) );
+                                }
+
+                                foreach (string file_name in Directory.GetFiles ( dirPath, "*", SearchOption.AllDirectories )) {
+                                    File.Move ( file_name, Path.Combine ( dirDest, file_name.Substring ( dirPath.Length + 1 ) ) );
+                                }
+                                Directory.Delete ( dirPath, true );
                             }
                         }
                     }
