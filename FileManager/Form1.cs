@@ -1474,8 +1474,8 @@ namespace FileManager
                                     continue;
                                 }
 
-                                if (fname.Contains("999-888") || fname.Contains("999_888") || fname.Contains("888-999") ||
-                                    fname.Contains("888_999"))
+                                if (fname.Contains("-888-") || fname.Contains("_888_") || fname.Contains("_888-") ||
+                                    fname.Contains("-888_"))
                                 {
                                     try
                                     {
@@ -1547,6 +1547,23 @@ namespace FileManager
                                 progressBar1.Value = val;
                                 Application.DoEvents();
 
+                            }
+                            var destFiles = Directory.GetFiles(destDir, "*.*", SearchOption.TopDirectoryOnly);
+                            foreach (var df in destFiles)
+                            {
+                                var dname = Path.GetFileNameWithoutExtension(df);
+                                var dext = Path.GetExtension(df);
+                                string dnewName = string.Empty;
+                                if (dname.Contains("888-"))
+                                {
+                                    dnewName = dname.Replace("888-", "");
+                                }
+                                else if (dname.Contains("888_"))
+                                {
+                                    dnewName = dname.Replace("888_", "");
+                                }
+                                var dnewPath = Path.Combine(df, Path.Combine(destDir, dnewName + "." + dext));
+                                File.Move(df, dnewPath);
                             }
 
                         }
