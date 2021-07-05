@@ -1553,7 +1553,7 @@ namespace FileManager
                             {
                                 var dname = Path.GetFileNameWithoutExtension(df);
                                 var dext = Path.GetExtension(df);
-                                string dnewName = string.Empty;
+                                string dnewName = dname;
                                 if (dname.Contains("888-"))
                                 {
                                     dnewName = dname.Replace("888-", "");
