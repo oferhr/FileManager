@@ -1457,7 +1457,11 @@ namespace FileManager
                             {
                                 continue;
                             }
-
+                            destDir = Path.Combine(destPath, checkdir);
+                            if (!Directory.Exists(destDir))
+                            {
+                                Directory.CreateDirectory(destDir);
+                            }
                             var files = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly);
                             if (!files.Any())
                             {
@@ -1479,11 +1483,6 @@ namespace FileManager
                                 {
                                     try
                                     {
-                                        destDir = Path.Combine(destPath, checkdir);
-                                        if (!Directory.Exists(destDir))
-                                        {
-                                            Directory.CreateDirectory(destDir);
-                                        }
                                         destFile = Path.Combine(destDir, fname);
                                         sFile = Path.Combine(curdir, fname);
                                         if (File.Exists(destFile))
@@ -1551,9 +1550,12 @@ namespace FileManager
                             var destFiles = Directory.GetFiles(destDir, "*.*", SearchOption.TopDirectoryOnly);
                             foreach (var df in destFiles)
                             {
+                                sFile = df;
+                                curdir = Path.GetDirectoryName(df);
                                 var dname = Path.GetFileNameWithoutExtension(df);
                                 var dext = Path.GetExtension(df);
                                 string dnewName = Path.GetFileName(df);
+                                
                                 if (dname.Contains("888-"))
                                 {
                                     dnewName = dname.Replace("888-", "");
@@ -1562,8 +1564,9 @@ namespace FileManager
                                 {
                                     dnewName = dname.Replace("888_", "");
                                 }
-                                var dnewPath = Path.Combine(df, Path.Combine(destDir, dnewName + "." + dext));
-                                File.Move(df, dnewPath);
+                                destFile = Path.Combine(destDir, dnewName + "." + dext);
+                                //var dnewPath = Path.Combine(df, destFile);
+                                File.Move(df, destFile);
                             }
 
                         }
