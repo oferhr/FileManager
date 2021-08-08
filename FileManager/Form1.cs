@@ -1478,8 +1478,7 @@ namespace FileManager
                                     continue;
                                 }
 
-                                if (fname.Contains("-888-") || fname.Contains("_888_") || fname.Contains("_888-") ||
-                                    fname.Contains("-888_"))
+                                if (IsContain888(fname))
                                 {
                                     try
                                     {
@@ -1555,18 +1554,21 @@ namespace FileManager
                                 var dname = Path.GetFileNameWithoutExtension(df);
                                 var dext = Path.GetExtension(df);
                                 string dnewName = Path.GetFileName(df);
-                                
-                                if (dname.Contains("888-"))
+                                if (IsContain888(dnewName))
                                 {
-                                    dnewName = dname.Replace("888-", "");
+                                    if (dname.Contains("888-"))
+                                    {
+                                        dnewName = dname.Replace("888-", "");
+                                    }
+                                    else if (dname.Contains("888_"))
+                                    {
+                                        dnewName = dname.Replace("888_", "");
+                                    }
+                                    destFile = Path.Combine(destDir, dnewName  + dext);
+                                    //var dnewPath = Path.Combine(df, destFile);
+                                    File.Move(df, destFile);
                                 }
-                                else if (dname.Contains("888_"))
-                                {
-                                    dnewName = dname.Replace("888_", "");
-                                }
-                                destFile = Path.Combine(destDir, dnewName + "." + dext);
-                                //var dnewPath = Path.Combine(df, destFile);
-                                File.Move(df, destFile);
+                               
                             }
 
                         }
@@ -1599,6 +1601,16 @@ namespace FileManager
             }
 
 
+        }
+        private bool IsContain888(string fname)
+        {
+            if (fname.Contains("-888-") || fname.Contains("_888_") || fname.Contains("_888-") ||
+                fname.Contains("-888_") || fname.Contains("888_") || fname.Contains("_888") ||
+                fname.Contains("-888") || fname.Contains("888-"))
+            {
+                return true;
+            }
+            return false;
         }
         private void CountFiles()
         {
