@@ -33,7 +33,7 @@ namespace FileManager
         private string CopiedFilesDirectory = "9876789";
         private  DateTime dtDeleteFiles;
         private readonly List<string> gfoldersList = new List<string>();
-        private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר" };
+        private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי" };
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger ();
         private bool hasErrors = false;
 
@@ -172,7 +172,7 @@ namespace FileManager
                         {
                             dir = fol,
                             email = curdir.email,
-                            check = curdir.icheck == 0  ? mailCheck[0] : curdir.icheck == 1 ? mailCheck [1] : mailCheck [2],
+                            check = curdir.icheck == 0  ? mailCheck[0] : curdir.icheck == 1 ? mailCheck [1] : curdir.icheck == 2 ? mailCheck [2] : mailCheck[3],
                             method = curdir.method
                         });
                     }
@@ -513,7 +513,7 @@ namespace FileManager
                                 newFile = Path.Combine(copiedPath, newFileName);
                                 File.Copy(file, newFile, true);
                             }
-                            lCopiedNames.Add(GetMailFileName(newFileName, dirSetting.icheck));
+                            lCopiedNames.Add(GetMailFileName(fileName, dirSetting.icheck));
                             if (!dnames.ContainsKey(newFileName))
                             {
                                 dnames.Add(newFileName, GetMailFileName(fileName, dirSetting.icheck).Split('.')[0]);
@@ -531,7 +531,12 @@ namespace FileManager
                             // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
                             foreach (var duplicateKey in enumerable)
                             {
-                                var ll = from ln in lpaths where ln.Contains(duplicateKey.Split('.')[0]) select ln;
+                                var xduplicateKey = duplicateKey.Split('.')[0];
+                                if (dirSetting.icheck == 3)
+                                {
+                                    xduplicateKey = duplicateKey.Replace(" ", "_");
+                                }
+                                var ll = from ln in lpaths where ln.Contains(xduplicateKey) select ln;
                                 arfiles.Add(new List<string>(ll.ToList()));
                             }
                         }
@@ -2611,6 +2616,10 @@ namespace FileManager
                 
                 var name = string.Join(sep, newName);
                 return ext.Length == 1 ? name : name + "." + ext[1];
+            }
+            else if(isCheck == 3)
+            {
+                return splits[0];
             }
             else
             {

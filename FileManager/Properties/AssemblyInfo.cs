@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("FileManager")]
 [assembly: AssemblyDescription("count files, change names, delete files, send mails, etc..")]
 [assembly: AssemblyConfiguration("Set base path in config file.")]
-[assembly: AssemblyCompany("Private - Ofer Harari. offa23@hotmail.com")]
+[assembly: AssemblyCompany("Private - Ofer Harari. offa23@gmail.com")]
 [assembly: AssemblyProduct("FileManager")]
 [assembly: AssemblyCopyright("Copyright ©  2017")]
 [assembly: AssemblyTrademark("")]
@@ -33,4 +33,4 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.2.32.0")]
+[assembly: AssemblyFileVersion("1.2.33.0")]
