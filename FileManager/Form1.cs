@@ -2619,6 +2619,14 @@ namespace FileManager
             }
             else if(isCheck == 3)
             {
+                for (int i = 0; i < splits.Length; i++)
+                {
+                    var sp = splits[i];
+                    if(sp.Split(' ').Length > 1)
+                    {
+                        return sp;
+                    }
+                }
                 return splits[0];
             }
             else
