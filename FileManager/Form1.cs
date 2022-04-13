@@ -520,6 +520,10 @@ namespace FileManager
                             }
                             lpaths.Add(newFile);
                         }
+                        using (var w = File.AppendText("log.txt"))
+                        {
+                            Log("222222222222222222---------------" + string.Join(",", lCopiedNames.ToArray()), w);
+                        }
                         // group file names 
                         var duplicateKeys = lCopiedNames.GroupBy(x => x)
                             .Select(group => group.Key);
@@ -537,10 +541,14 @@ namespace FileManager
                                     xduplicateKey = duplicateKey.Replace(" ", "_");
                                 }
                                 var ll = from ln in lpaths where ln.Contains(xduplicateKey) select ln;
+                                using (var w = File.AppendText("log.txt"))
+                                {
+                                    Log("11111111111---------------" + string.Join(",", ll.ToArray()), w);
+                                }
                                 arfiles.Add(new List<string>(ll.ToList()));
                             }
                         }
-
+                        
 
                         //for each group open a email from outlook and set the group name as subject, and all files as attachment
                         foreach (var arfile in arfiles)
@@ -551,7 +559,24 @@ namespace FileManager
                             var oApp = new OutlookApp();
                             var oMsg = (MailItem) oApp.CreateItem(OlItemType.olMailItem);
                             oMsg.To = dirSetting.email;
-                            var fileName = Path.GetFileName(arfile[0]);
+                            using (var w = File.AppendText("log.txt"))
+                            {
+                                Log("*****-------*********" + string.Join(",", arfile.ToArray()), w);
+                            }
+                            string fileName = "";
+                            try
+                            {
+                                fileName = Path.GetFileName(arfile[0]);
+                            }
+                            catch(System.Exception ex)
+                            {
+                                using (var w = File.AppendText("log.txt"))
+                                {
+                                    Log("---ERRORRRRRR---" + arfile.Count(), w);
+                                    Log("---ERRORRRRRR---" + string.Join(",", arfile.ToArray()), w);
+                                }
+                                continue;
+                            } 
                             // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
                             var subject = string.Empty;
                             if (fileName != null)
