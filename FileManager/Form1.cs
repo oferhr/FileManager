@@ -71,6 +71,8 @@ namespace FileManager
                 try
                 {
                     dirs = Directory.GetDirectories(_path);
+                    
+                    
                 }
                 catch 
                 {
@@ -88,8 +90,11 @@ namespace FileManager
                 //adding files to checkbox list
 
                 foreach (var path in dirs) {
+                    
                     var folder = Path.GetFileName ( path );
+                   
                     if (folder != null) {
+                       
                         DuplicateFolders.Items.Add ( folder );
                         reportFolders.Items.Add ( folder );
                         filenames.Items.Add ( folder );
@@ -99,7 +104,7 @@ namespace FileManager
                         DelList.Items.Add ( folder );
                     }
                 }
-
+                
 
                 var countsConfigSettings = GetCountSettings ();
                 var countDs = new List<CountSettings> ();
@@ -320,7 +325,18 @@ namespace FileManager
         }
 
         
-
+        private bool checkFolder(string folder)
+        {
+            int n;
+            if (int.TryParse(folder, out n))
+            {
+                if (n < 100)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
         private void bClose_Click(object sender, EventArgs e)
         {
             Close();
@@ -427,9 +443,11 @@ namespace FileManager
                 {
                     dirSettings = new List<EmailDirSettings>();
                 }
+                var isGoodDirectory = false;
                 var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
                 var counts = validDirs.Count();
                 double pbPart = counts == 0 ? 100 : 100 / counts;
+                var fOK = false;
                 //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
                 foreach (var dirSetting in dirSettings)
                 {
@@ -462,7 +480,7 @@ namespace FileManager
                         foreach (var file in files)
                         {
                             // good directory is only with the name "1" of a date in format dd.mm.yy like 24.02.17
-                            var isGoodDirectory = false;
+                            isGoodDirectory = false;
                             var currentDir = Path.GetFileName(Path.GetDirectoryName(file));
                             if (currentDir == "1")
                             {
@@ -500,6 +518,10 @@ namespace FileManager
                             {
                                 continue;
                             }
+                            using (var w = File.AppendText("log.txt"))
+                            {
+                                Log("000000000000---------------" + fileName, w);
+                            }
                             var newFileName = fileName;
                             var newFile = file;
                             if (fileName.Trim().Contains(" "))
@@ -520,25 +542,45 @@ namespace FileManager
                             }
                             lpaths.Add(newFile);
                         }
+                        if (!isGoodDirectory)
+                        {
+                            continue;
+                        }
                         using (var w = File.AppendText("log.txt"))
                         {
                             Log("222222222222222222---------------" + string.Join(",", lCopiedNames.ToArray()), w);
                         }
+                        using (var w = File.AppendText("log.txt"))
+                        {
+                            Log("333333333333333---------------" + string.Join(",", lpaths.ToArray()), w);
+                        }
                         // group file names 
                         var duplicateKeys = lCopiedNames.GroupBy(x => x)
                             .Select(group => group.Key);
-
+                        using (var w = File.AppendText("log.txt"))
+                        {
+                            Log("5555555555555---------------" + string.Join(",", duplicateKeys.ToArray()), w);
+                        }
                         var enumerable = duplicateKeys as string[] ?? duplicateKeys.ToArray();
                         if (enumerable.Any())
                         {
+                            using (var w = File.AppendText("log.txt"))
+                            {
+                                Log("6666666666------INNN enumerable - " + enumerable.Count(), w);
+                            }
                             // create a list of lists - for every group name, get all the files that match it
                             // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
                             foreach (var duplicateKey in enumerable)
                             {
                                 var xduplicateKey = duplicateKey.Split('.')[0];
-                                if (dirSetting.icheck == 3)
+                                xduplicateKey = duplicateKey.Replace(" ", "_");
+                                //if (dirSetting.icheck == 3)
+                                //{
+                                //    xduplicateKey = duplicateKey.Replace(" ", "_");
+                                //}
+                                using (var w = File.AppendText("log.txt"))
                                 {
-                                    xduplicateKey = duplicateKey.Replace(" ", "_");
+                                    Log("777777777------" + xduplicateKey, w);
                                 }
                                 var ll = from ln in lpaths where ln.Contains(xduplicateKey) select ln;
                                 using (var w = File.AppendText("log.txt"))
@@ -548,7 +590,18 @@ namespace FileManager
                                 arfiles.Add(new List<string>(ll.ToList()));
                             }
                         }
-                        
+                        using (var w = File.AppendText("log.txt"))
+                        {
+                            if(arfiles.Count > 0)
+                            {
+                                Log("4444444444---------------" + string.Join(",", arfiles[0].ToArray()), w);
+                            }
+                            else
+                            {
+                                Log("4444444444---------------Log files empty", w);
+                            }
+                            
+                        }
 
                         //for each group open a email from outlook and set the group name as subject, and all files as attachment
                         foreach (var arfile in arfiles)
@@ -557,7 +610,7 @@ namespace FileManager
 
                             var pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
                             var oApp = new OutlookApp();
-                            var oMsg = (MailItem) oApp.CreateItem(OlItemType.olMailItem);
+                            var oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
                             oMsg.To = dirSetting.email;
                             using (var w = File.AppendText("log.txt"))
                             {
@@ -568,7 +621,7 @@ namespace FileManager
                             {
                                 fileName = Path.GetFileName(arfile[0]);
                             }
-                            catch(System.Exception ex)
+                            catch (System.Exception ex)
                             {
                                 using (var w = File.AppendText("log.txt"))
                                 {
@@ -576,12 +629,12 @@ namespace FileManager
                                     Log("---ERRORRRRRR---" + string.Join(",", arfile.ToArray()), w);
                                 }
                                 continue;
-                            } 
+                            }
                             // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
                             var subject = string.Empty;
                             if (fileName != null)
                             {
-                                subject = dirSetting.icheck == 2 ? GetMailFileName( dnames [fileName], dirSetting.icheck, true) : dnames[fileName];
+                                subject = dirSetting.icheck == 2 ? GetMailFileName(dnames[fileName], dirSetting.icheck, true) : dnames[fileName];
                             }
                             oMsg.Subject = subject;
                             foreach (var curFile in arfile)
@@ -591,7 +644,7 @@ namespace FileManager
                                 //}
                                 oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
                             }
-                            oMsg.GetInspector.Activate ();
+                            oMsg.GetInspector.Activate();
                             var signature = oMsg.HTMLBody;
                             oMsg.HTMLBody = string.Empty + signature;
 
@@ -604,7 +657,7 @@ namespace FileManager
                             //{
                             //    oMsg.SaveSentMessageFolder = sentFolder;
                             //}
-                            
+
                             oMsg.Send();
 
                             oMsg = null;
@@ -669,7 +722,7 @@ namespace FileManager
                         {
                             try
                             {
-                                Directory.Delete(newDir);
+                                Directory.Delete(newDir, true);
                             }
                             catch
                             {
@@ -687,16 +740,34 @@ namespace FileManager
                             {
                                 continue;
                             }
-                            Directory.Delete(checkedPath);
+                            try
+                            {
+                                Directory.Delete(checkedPath);
+                            }
+                            catch (IOException)
+                            {
+                                Directory.Delete(checkedPath, true);
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                Directory.Delete(checkedPath, true);
+                            }
 
                         }
 
 
 
                     }
+                    fOK = true;
                 }
-
-                MessageBox.Show("המיילים נשלחו בהצלחה");
+                if (fOK)
+                {
+                    MessageBox.Show("המיילים נשלחו בהצלחה");
+                }
+                else
+                {
+                    MessageBox.Show("המיילים לא נשלחו בהצלחה");
+                }
                 btnMail.Enabled = false;
             }
             catch (System.Exception ex)
@@ -2886,6 +2957,10 @@ namespace FileManager
                                 var ndir = Path.GetDirectoryName ( file );
                                 if (ndir != null) {
                                     newFilePath = Path.Combine ( ndir, newFileName );
+                                    if (File.Exists(newFilePath))
+                                    {
+                                        File.Delete(newFilePath);
+                                    }
                                     File.Move ( file, newFilePath );
                                 }
                                 
@@ -2979,31 +3054,47 @@ namespace FileManager
                 xlWorksheet = (Excel._Worksheet)xlWorkbook.Sheets [1];
                 xlRange = xlWorksheet.UsedRange;
 
-                return (object[,])xlRange.Cells.Value2;
+                var vals = (object[,])xlRange.Cells.Value2;
+                xlWorkbook.Close();
+                xlApp.Quit();
+                return vals;
             }
             catch(System.Exception ex) {
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "GetExcelValues Error",
+                    Properties = { { "Files", "" } }
+                };
+                logger.Log(eventInfo);
+                xlWorkbook.Close();
+                xlApp.Quit();
 
                 return new object [0,0];
+
             }
             finally {
-                GC.Collect ();
-                GC.WaitForPendingFinalizers ();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
 
-                //rule of thumb for releasing com objects:
-                //  never use two dots, all COM objects must be referenced and released individually
-                //  ex: [somthing].[something].[something] is bad
-
-                //release com objects to fully kill excel process from running in the background
-                Marshal.ReleaseComObject ( xlRange );
-                Marshal.ReleaseComObject ( xlWorksheet );
-
+                if (xlWorksheet != null)
+                {
+                    Marshal.ReleaseComObject(xlWorksheet);
+                }
                 //close and release
-                xlWorkbook.Close ();
-                Marshal.ReleaseComObject ( xlWorkbook );
+                if (xlWorkbook != null)
+                {
+                    Marshal.ReleaseComObject(xlWorkbook);
+                }
 
-                //quit and release
-                xlApp.Quit ();
-                Marshal.ReleaseComObject ( xlApp );
+                if (xlApp != null)
+                {
+                    //quit and release
+
+                    Marshal.ReleaseComObject(xlApp);
+                }
+                
             }
             
         }
