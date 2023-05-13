@@ -538,7 +538,9 @@ namespace FileManager
                             lCopiedNames.Add(GetMailFileName(fileName, dirSetting.icheck));
                             if (!dnames.ContainsKey(newFileName))
                             {
-                                dnames.Add(newFileName, GetMailFileName(fileName, dirSetting.icheck).Split('.')[0]);
+                                var mailfile = GetMailFileName(fileName, dirSetting.icheck);
+                                var mailfileNoExt = Path.GetFileNameWithoutExtension(mailfile);
+                                dnames.Add(newFileName, mailfileNoExt);
                             }
                             lpaths.Add(newFile);
                         }
@@ -572,7 +574,8 @@ namespace FileManager
                             // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
                             foreach (var duplicateKey in enumerable)
                             {
-                                var xduplicateKey = duplicateKey.Split('.')[0];
+                                //var xduplicateKey = duplicateKey.Split('.')[0];
+                                var xduplicateKey = Path.GetFileNameWithoutExtension(duplicateKey);
                                 xduplicateKey = duplicateKey.Replace(" ", "_");
                                 //if (dirSetting.icheck == 3)
                                 //{
@@ -1932,14 +1935,15 @@ namespace FileManager
                                     foreach (var gf in grp.files)
                                     {
                                         grpFile = gf;
-                                        var ext = grpFile.Split ( '.' ) [1];
+                                        //var ext = grpFile.Split ( '.' ) [1];
+                                        var ext = Path.GetExtension(grpFile);
                                         var grpParts = getParts ( grpFile );
                                         grpParts [grpParts.Length - 1] = max.ToString ( "D3" );
                                         newFile = string.Empty;
                                         foreach (var grpPart in grpParts) {
                                             newFile += grpPart + "-";
                                         }
-                                        newFile = newFile.TrimEnd ( '-' ) + "." + ext;
+                                        newFile = newFile.TrimEnd ( '-' )  + ext;
                                         Thread.Sleep ( 50 );
                                         txtLog.AppendText ( "מעביר קובץ " + Path.GetFileName ( grpFile ) + Environment.NewLine );
                                         Application.DoEvents ();
@@ -2439,8 +2443,10 @@ namespace FileManager
                                 {
                                     continue;
                                 }
-                                var extSplits = fileName.Split('.');
-                                var splits = extSplits[0].Split('_');
+                                //var extSplits = fileName.Split('.');
+                                var fnwe = Path.GetFileNameWithoutExtension (fileName);
+                                var ext = Path.GetExtension (fileName);
+                                var splits = fnwe.Split('_');
                                 if (splits.Length != 3)
                                 {
                                     continue;
@@ -2477,7 +2483,7 @@ namespace FileManager
                                     var based = Directory.GetParent ( curdir ).FullName;
                                     var newdir = Path.Combine ( based, miniCounter.ToString() );
                                     
-                                    copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + "." + extSplits [1] ) ;
+                                    copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + ext) ;
                                     if (File.Exists ( copyName )) {
                                         miniCounter++;
                                     }
@@ -2641,24 +2647,41 @@ namespace FileManager
 
         private string GetNewFileName(string name, int num)
         {
-            var splits = name.Split('.');
-            if (splits.Length == 2)
+            var fnwe = Path.GetFileNameWithoutExtension(name);
+            var ext = Path.GetExtension(name);
+            if (!string.IsNullOrEmpty(ext))
             {
                 var re = new Regex(@"\d+");
                 var m = re.Match(name);
 
                 if (m.Success)
                 {
-                    return splits[0] + "_" + num + "." + splits[1];
+                    return fnwe + "_" + num + ext;
                 }
-                
-                
-                var newname= splits[0] + LtrMark + " " + num + "." + splits[1];
+
+
+                var newname = fnwe + LtrMark + " " + num + ext;
                 return newname;
-                
             }
             
-            
+            //var splits = name.Split('.');
+            //if (splits.Length == 2)
+            //{
+            //    var re = new Regex(@"\d+");
+            //    var m = re.Match(name);
+
+            //    if (m.Success)
+            //    {
+            //        return splits[0] + "_" + num + "." + splits[1];
+            //    }
+
+
+            //    var newname= splits[0] + LtrMark + " " + num + "." + splits[1];
+            //    return newname;
+
+            //}
+
+
             return null;
         }
         
@@ -2677,8 +2700,10 @@ namespace FileManager
             // try to plit with _, -, space
             //var isCheck = ischeck;
             var type = 1;
-            var ext = fileName.Split ( '.' );
-            var splits = ext[0].Split('_');
+            var fne = Path.GetFileNameWithoutExtension( fileName );
+            var ext = Path.GetExtension( fileName );
+           // var ext = fileName.Split ( '.' );
+            var splits = fne.Split('_');
             if (splits.Length == 1)
             {
                 type = 2;
@@ -2711,7 +2736,7 @@ namespace FileManager
                 }
                 
                 var name = string.Join(sep, newName);
-                return ext.Length == 1 ? name : name + "." + ext[1];
+                return ext.Length == 1 ? name : name  + ext;
             }
             else if(isCheck == 3)
             {
@@ -2926,11 +2951,16 @@ namespace FileManager
                             continue;
                         }
 
-                        var extSplits = fileName.Split ( '.' );
-                        if (extSplits.Length == 0) {
+                        //var extSplits = fileName.Split ( '.' );
+                        var ext = Path.GetExtension(fileName);
+                        if (string.IsNullOrEmpty(ext))
+                        {
                             continue;
                         }
-                        var hyphenSplits = extSplits [0].Split ( '-' );
+                        //if (extSplits.Length == 0) {
+                        //    continue;
+                        //}
+                        var hyphenSplits = Path.GetFileNameWithoutExtension(fileName).Split ( '-' );
 
 
                         var parts = new List<string> ();
@@ -2949,10 +2979,10 @@ namespace FileManager
                             if (!string.IsNullOrEmpty ( result )) {
                                 string newFileName;
                                 if (Regex.IsMatch ( fileName, @"[\p{IsHebrew}]+" )) {
-                                    newFileName = SetExcelFileName ( parts, part, result ) + "." + extSplits [1];
+                                    newFileName = SetExcelFileName ( parts, part, result ) + ext;
                                 }
                                 else {
-                                    newFileName = SetExcelFileName2 ( parts, part, result ) + "." + extSplits [1];
+                                    newFileName = SetExcelFileName2 ( parts, part, result ) + ext;
                                 }
                                 var ndir = Path.GetDirectoryName ( file );
                                 if (ndir != null) {
@@ -3262,9 +3292,9 @@ namespace FileManager
         }
         private string [] getParts ( string file )
         {
-            var names = file.Split ( '.' );
-            var name = names [0];
-            return name.Split ( '-' );
+            //var names = file.Split ( '.' );
+            //var name = names [0];
+            return Path.GetFileNameWithoutExtension(file).Split ( '-' );
         }
 
         
