@@ -496,6 +496,10 @@ namespace FileManager
                                 var m = Regex.Match(currentDir, regex);
                                 if (m.Success)
                                 {
+                                    isGoodDirectory = false;
+                                }
+                                else
+                                {
                                     if (!ardirs.Contains(currentDir))
                                     {
                                         ardirs.Add(currentDir);
@@ -503,11 +507,25 @@ namespace FileManager
 
                                     isGoodDirectory = true;
                                 }
-                                else
-                                {
-                                    isGoodDirectory = false;
-                                }
                             }
+                            //else
+                            //{
+                            //    var regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
+                            //    var m = Regex.Match(currentDir, regex);
+                            //    if (m.Success)
+                            //    {
+                            //        if (!ardirs.Contains(currentDir))
+                            //        {
+                            //            ardirs.Add(currentDir);
+                            //        }
+
+                            //        isGoodDirectory = true;
+                            //    }
+                            //    else
+                            //    {
+                            //        isGoodDirectory = false;
+                            //    }
+                            //}
                             if (!isGoodDirectory)
                             {
                                 continue;
@@ -652,7 +670,7 @@ namespace FileManager
                             oMsg.HTMLBody = string.Empty + signature;
 
                             // oMsg.Display ( true );
-                            //add this to add signiture to mail body
+                            //add this to add signature to mail body
                             //oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
                             //oMsg.DeleteAfterSubmit = false;
                             //Outlook.Folder sentFolder = (Outlook.Folder)oApp.Session.GetDefaultFolder ( Outlook.OlDefaultFolders.olFolderSentMail );
