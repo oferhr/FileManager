@@ -1850,16 +1850,15 @@ namespace FileManager
                             try {
                                 foreach (var file in reportFiles) {
                                     var parts = getParts ( file );
-                                    var id = parts [1];
-                                    var report = parts [parts.Length - 1];
-                                    var concatId = string.Concat ( id, report );
-                                    if (grouper.Exists ( f => f.id == concatId )) {
-                                        grouper.Find ( f => f.id == concatId ).files.Add ( file );
+                                    var id = parts[parts.Length - 2];
+                                   
+                                    if (grouper.Exists ( f => f.id == id)) {
+                                        grouper.Find ( f => f.id == id).files.Add ( file );
                                     }
                                     else {
                                         grouper.Add ( new Grouper
                                         {
-                                            id = concatId,
+                                            id = id,
                                             files = new List<string> { file }
                                         } );
                                     }
@@ -1950,13 +1949,19 @@ namespace FileManager
                             string grpFile=null, newFile=null;
                             try {
                                 foreach (var grp in grouper) {
+                                    var grpId = grp.id;
                                     foreach (var gf in grp.files)
                                     {
                                         grpFile = gf;
+                                        
                                         //var ext = grpFile.Split ( '.' ) [1];
                                         var ext = Path.GetExtension(grpFile);
                                         var grpParts = getParts ( grpFile );
                                         grpParts [grpParts.Length - 1] = max.ToString ( "D3" );
+                                        if(grpId == "00000000")
+                                        {
+                                            max++;
+                                        }
                                         newFile = string.Empty;
                                         foreach (var grpPart in grpParts) {
                                             newFile += grpPart + "-";
@@ -1967,7 +1972,10 @@ namespace FileManager
                                         Application.DoEvents ();
                                         File.Move ( grpFile, Path.Combine ( dest, Path.GetFileName ( newFile ) ) );
                                     }
-                                    max++;
+                                    if (grpId != "00000000")
+                                    {
+                                        max++;
+                                    }
                                 }
                             }
                             catch (System.Exception ex) {
