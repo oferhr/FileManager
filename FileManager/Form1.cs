@@ -492,21 +492,22 @@ namespace FileManager
                             }
                             else
                             {
-                                var regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
-                                var m = Regex.Match(currentDir, regex);
-                                if (m.Success)
-                                {
-                                    isGoodDirectory = false;
-                                }
-                                else
-                                {
-                                    if (!ardirs.Contains(currentDir))
-                                    {
-                                        ardirs.Add(currentDir);
-                                    }
+                                isGoodDirectory = false;
+                                //var regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
+                                //var m = Regex.Match(currentDir, regex);
+                                //if (m.Success)
+                                //{
+                                //    isGoodDirectory = false;
+                                //}
+                                //else
+                                //{
+                                //    if (!ardirs.Contains(currentDir))
+                                //    {
+                                //        ardirs.Add(currentDir);
+                                //    }
 
-                                    isGoodDirectory = true;
-                                }
+                                //    isGoodDirectory = true;
+                                //}
                             }
                             //else
                             //{
@@ -545,14 +546,17 @@ namespace FileManager
                             if (fileName.Trim().Contains(" "))
                             {
                                 newFileName = fileName.Replace(" ", "_");
-                                var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
-                                if (!Directory.Exists(copiedPath))
-                                {
-                                    Directory.CreateDirectory(copiedPath);
-                                }
-                                newFile = Path.Combine(copiedPath, newFileName);
-                                File.Copy(file, newFile, true);
+                                
                             }
+
+                            var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
+                            if (!Directory.Exists(copiedPath))
+                            {
+                                Directory.CreateDirectory(copiedPath);
+                            }
+                            newFile = Path.Combine(copiedPath, newFileName);
+                            File.Copy(file, newFile, true);
+
                             lCopiedNames.Add(GetMailFileName(fileName, dirSetting.icheck));
                             if (!dnames.ContainsKey(newFileName))
                             {
@@ -1165,6 +1169,10 @@ namespace FileManager
             }
             try
             {
+                Properties.Settings.Default.ArchiveSourceName = txtFolderArchiveParent.Text;
+                Properties.Settings.Default.ArchiveDestName = txtFolderArchiveDest.Text;
+                Properties.Settings.Default.Save();
+
                 dirs = Directory.GetDirectories(txtFolderArchiveParent.Text);
             }
             catch
