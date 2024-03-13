@@ -43,6 +43,13 @@ namespace FileManager
         public string dest { get; set; }
         public bool check { get; set; }
     }
+    public class CopySettings
+    {
+        public string dir { get; set; }
+        public string dest { get; set; }
+        public bool check { get; set; }
+        public string str { get; set; }
+    }
     public class Grouper
     {
         public string id { get; set; }

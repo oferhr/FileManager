@@ -46,6 +46,10 @@
             this.filenames = new System.Windows.Forms.CheckedListBox();
             this.tabEEmail = new System.Windows.Forms.TabPage();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.dir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.check = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.email = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.method = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.dirList = new System.Windows.Forms.CheckedListBox();
             this.tabPage2 = new System.Windows.Forms.TabPage();
@@ -85,10 +89,12 @@
             this.nDaysToDelete = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
             this.btnArchive = new System.Windows.Forms.Button();
-            this.dir = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.check = new System.Windows.Forms.DataGridViewComboBoxColumn();
-            this.email = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.method = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.tabCopy = new System.Windows.Forms.TabPage();
+            this.gridCopy = new System.Windows.Forms.DataGridView();
+            this.chbCopy = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.copyDirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.copyDest = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.copyStr = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -107,6 +113,8 @@
             this.boxSummary.SuspendLayout();
             this.grpDatesDelete.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).BeginInit();
+            this.tabCopy.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.gridCopy)).BeginInit();
             this.SuspendLayout();
             // 
             // bClose
@@ -114,7 +122,7 @@
             this.bClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.bClose.BackColor = System.Drawing.Color.WhiteSmoke;
             this.bClose.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.bClose.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.bClose.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.bClose.ForeColor = System.Drawing.Color.DarkBlue;
             this.bClose.Location = new System.Drawing.Point(1010, 710);
             this.bClose.Name = "bClose";
@@ -129,7 +137,7 @@
             this.bStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.bStart.BackColor = System.Drawing.Color.WhiteSmoke;
             this.bStart.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.bStart.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.bStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.bStart.ForeColor = System.Drawing.Color.DarkBlue;
             this.bStart.Location = new System.Drawing.Point(952, 53);
             this.bStart.Name = "bStart";
@@ -186,7 +194,7 @@
             this.groupBox1.Controls.Add(this.rMove);
             this.groupBox1.Controls.Add(this.rCopy);
             this.groupBox1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.groupBox1.Font = new System.Drawing.Font("Guttman Frank", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.groupBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.groupBox1.ForeColor = System.Drawing.Color.Navy;
             this.groupBox1.Location = new System.Drawing.Point(881, 272);
             this.groupBox1.Name = "groupBox1";
@@ -208,8 +216,9 @@
             this.tabsMain.Controls.Add(this.tabPage2);
             this.tabsMain.Controls.Add(this.tabReports);
             this.tabsMain.Controls.Add(this.tabSplit);
+            this.tabsMain.Controls.Add(this.tabCopy);
             this.tabsMain.Controls.Add(this.tabArchive);
-            this.tabsMain.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.tabsMain.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.tabsMain.Location = new System.Drawing.Point(12, 12);
             this.tabsMain.Name = "tabsMain";
             this.tabsMain.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
@@ -353,6 +362,43 @@
             this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
             this.dataGridView1.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellValueChanged);
             // 
+            // dir
+            // 
+            this.dir.DataPropertyName = "dir";
+            this.dir.HeaderText = "תיקייה";
+            this.dir.Name = "dir";
+            this.dir.ReadOnly = true;
+            this.dir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            this.dir.Width = 90;
+            // 
+            // check
+            // 
+            this.check.DataPropertyName = "check";
+            this.check.HeaderText = "איחוד קבצים";
+            this.check.Items.AddRange(new object[] {
+            "איחוד-קצר",
+            "בודד-זהה",
+            "בודד-קצר",
+            "איחוד שמי",
+            "איחוד לפי דוח"});
+            this.check.Name = "check";
+            this.check.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.check.Width = 85;
+            // 
+            // email
+            // 
+            this.email.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.email.DataPropertyName = "email";
+            this.email.HeaderText = "מייל";
+            this.email.Name = "email";
+            // 
+            // method
+            // 
+            this.method.DataPropertyName = "method";
+            this.method.HeaderText = "אופן שליחה";
+            this.method.Name = "method";
+            this.method.Width = 120;
+            // 
             // tabPage1
             // 
             this.tabPage1.Controls.Add(this.dirList);
@@ -418,22 +464,22 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Guttman Frank", 9F);
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
             this.label2.ForeColor = System.Drawing.Color.DarkBlue;
             this.label2.Location = new System.Drawing.Point(733, 73);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(75, 15);
+            this.label2.Size = new System.Drawing.Size(76, 15);
             this.label2.TabIndex = 16;
             this.label2.Text = "פירוט התהליך";
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Guttman Frank", 9F);
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
             this.label1.ForeColor = System.Drawing.Color.DarkBlue;
             this.label1.Location = new System.Drawing.Point(733, 37);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(78, 15);
+            this.label1.Size = new System.Drawing.Size(75, 15);
             this.label1.TabIndex = 15;
             this.label1.Text = "שם תקיית יעד";
             // 
@@ -576,7 +622,7 @@
             // 
             this.txtFolderArchiveDest.Location = new System.Drawing.Point(126, 59);
             this.txtFolderArchiveDest.Name = "txtFolderArchiveDest";
-            this.txtFolderArchiveDest.Size = new System.Drawing.Size(495, 23);
+            this.txtFolderArchiveDest.Size = new System.Drawing.Size(495, 21);
             this.txtFolderArchiveDest.TabIndex = 5;
             // 
             // btnBrowse
@@ -593,7 +639,7 @@
             // 
             this.txtFolderArchiveParent.Location = new System.Drawing.Point(126, 18);
             this.txtFolderArchiveParent.Name = "txtFolderArchiveParent";
-            this.txtFolderArchiveParent.Size = new System.Drawing.Size(495, 23);
+            this.txtFolderArchiveParent.Size = new System.Drawing.Size(495, 21);
             this.txtFolderArchiveParent.TabIndex = 3;
             // 
             // label4
@@ -671,7 +717,7 @@
             this.lblProgressMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblProgressMessage.AutoSize = true;
             this.lblProgressMessage.BackColor = System.Drawing.Color.Transparent;
-            this.lblProgressMessage.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.lblProgressMessage.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.lblProgressMessage.ForeColor = System.Drawing.Color.DarkBlue;
             this.lblProgressMessage.Location = new System.Drawing.Point(1003, 205);
             this.lblProgressMessage.Name = "lblProgressMessage";
@@ -688,7 +734,7 @@
             this.boxSummary.Controls.Add(this.lblDuplicateNum);
             this.boxSummary.Controls.Add(this.lbl1);
             this.boxSummary.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.boxSummary.Font = new System.Drawing.Font("Guttman Frank", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.boxSummary.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.boxSummary.ForeColor = System.Drawing.Color.Navy;
             this.boxSummary.Location = new System.Drawing.Point(881, 381);
             this.boxSummary.Name = "boxSummary";
@@ -703,11 +749,11 @@
             // 
             this.lbl2.AutoSize = true;
             this.lbl2.BackColor = System.Drawing.Color.Transparent;
-            this.lbl2.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.lbl2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.lbl2.ForeColor = System.Drawing.Color.DarkBlue;
             this.lbl2.Location = new System.Drawing.Point(19, 37);
             this.lbl2.Name = "lbl2";
-            this.lbl2.Size = new System.Drawing.Size(73, 15);
+            this.lbl2.Size = new System.Drawing.Size(77, 15);
             this.lbl2.TabIndex = 15;
             this.lbl2.Text = "קבצים כפולים";
             this.lbl2.Visible = false;
@@ -716,11 +762,11 @@
             // 
             this.lblDuplicateNum.AutoSize = true;
             this.lblDuplicateNum.BackColor = System.Drawing.Color.Transparent;
-            this.lblDuplicateNum.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.lblDuplicateNum.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.lblDuplicateNum.ForeColor = System.Drawing.Color.DarkBlue;
             this.lblDuplicateNum.Location = new System.Drawing.Point(96, 37);
             this.lblDuplicateNum.Name = "lblDuplicateNum";
-            this.lblDuplicateNum.Size = new System.Drawing.Size(27, 15);
+            this.lblDuplicateNum.Size = new System.Drawing.Size(35, 15);
             this.lblDuplicateNum.TabIndex = 14;
             this.lblDuplicateNum.Text = "1000";
             this.lblDuplicateNum.Visible = false;
@@ -729,11 +775,11 @@
             // 
             this.lbl1.AutoSize = true;
             this.lbl1.BackColor = System.Drawing.Color.Transparent;
-            this.lbl1.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.lbl1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.lbl1.ForeColor = System.Drawing.Color.DarkBlue;
             this.lbl1.Location = new System.Drawing.Point(129, 37);
             this.lbl1.Name = "lbl1";
-            this.lbl1.Size = new System.Drawing.Size(62, 15);
+            this.lbl1.Size = new System.Drawing.Size(61, 15);
             this.lbl1.TabIndex = 13;
             this.lbl1.Text = "סה\"כ תוקנו";
             this.lbl1.Visible = false;
@@ -743,7 +789,7 @@
             this.btnMail.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnMail.BackColor = System.Drawing.Color.WhiteSmoke;
             this.btnMail.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnMail.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnMail.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.btnMail.ForeColor = System.Drawing.Color.DarkBlue;
             this.btnMail.Location = new System.Drawing.Point(952, 82);
             this.btnMail.Name = "btnMail";
@@ -758,7 +804,7 @@
             this.btnDel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnDel.BackColor = System.Drawing.Color.WhiteSmoke;
             this.btnDel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnDel.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnDel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.btnDel.ForeColor = System.Drawing.Color.DarkBlue;
             this.btnDel.Location = new System.Drawing.Point(952, 111);
             this.btnDel.Name = "btnDel";
@@ -775,7 +821,7 @@
             this.grpDatesDelete.Controls.Add(this.nDaysToDelete);
             this.grpDatesDelete.Controls.Add(this.label3);
             this.grpDatesDelete.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.grpDatesDelete.Font = new System.Drawing.Font("Guttman Frank", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.grpDatesDelete.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.grpDatesDelete.ForeColor = System.Drawing.Color.Navy;
             this.grpDatesDelete.Location = new System.Drawing.Point(881, 497);
             this.grpDatesDelete.Name = "grpDatesDelete";
@@ -803,7 +849,7 @@
             // 
             this.label3.AutoSize = true;
             this.label3.BackColor = System.Drawing.Color.Transparent;
-            this.label3.Font = new System.Drawing.Font("Guttman Frank", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.label3.ForeColor = System.Drawing.Color.DarkBlue;
             this.label3.Location = new System.Drawing.Point(132, 42);
             this.label3.Name = "label3";
@@ -817,7 +863,7 @@
             this.btnArchive.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnArchive.BackColor = System.Drawing.Color.WhiteSmoke;
             this.btnArchive.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnArchive.Font = new System.Drawing.Font("Guttman Frank", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnArchive.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
             this.btnArchive.ForeColor = System.Drawing.Color.DarkBlue;
             this.btnArchive.Location = new System.Drawing.Point(952, 140);
             this.btnArchive.Name = "btnArchive";
@@ -827,41 +873,73 @@
             this.btnArchive.UseVisualStyleBackColor = false;
             this.btnArchive.Click += new System.EventHandler(this.btnArchive_Click);
             // 
-            // dir
+            // tabCopy
             // 
-            this.dir.DataPropertyName = "dir";
-            this.dir.HeaderText = "תיקייה";
-            this.dir.Name = "dir";
-            this.dir.ReadOnly = true;
-            this.dir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
-            this.dir.Width = 90;
+            this.tabCopy.Controls.Add(this.gridCopy);
+            this.tabCopy.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.tabCopy.Location = new System.Drawing.Point(4, 24);
+            this.tabCopy.Name = "tabCopy";
+            this.tabCopy.Padding = new System.Windows.Forms.Padding(3);
+            this.tabCopy.Size = new System.Drawing.Size(826, 693);
+            this.tabCopy.TabIndex = 9;
+            this.tabCopy.Text = "שכפול קבצים";
+            this.tabCopy.UseVisualStyleBackColor = true;
             // 
-            // check
+            // gridCopy
             // 
-            this.check.DataPropertyName = "check";
-            this.check.HeaderText = "איחוד קבצים";
-            this.check.Items.AddRange(new object[] {
-            "איחוד-קצר",
-            "בודד-זהה",
-            "בודד-קצר",
-            "איחוד שמי"});
-            this.check.Name = "check";
-            this.check.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.check.Width = 85;
+            this.gridCopy.AllowUserToAddRows = false;
+            this.gridCopy.AllowUserToDeleteRows = false;
+            this.gridCopy.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.gridCopy.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.chbCopy,
+            this.copyDirs,
+            this.copyDest,
+            this.copyStr});
+            this.gridCopy.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.gridCopy.Location = new System.Drawing.Point(3, 3);
+            this.gridCopy.Name = "gridCopy";
+            this.gridCopy.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.gridCopy.RowHeadersVisible = false;
+            this.gridCopy.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
+            this.gridCopy.Size = new System.Drawing.Size(820, 687);
+            this.gridCopy.TabIndex = 1;
+            this.gridCopy.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellClick);
+            this.gridCopy.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellContentClick);
+            this.gridCopy.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellEndEdit);
             // 
-            // email
+            // chbCopy
             // 
-            this.email.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.email.DataPropertyName = "email";
-            this.email.HeaderText = "מייל";
-            this.email.Name = "email";
+            this.chbCopy.DataPropertyName = "check";
+            this.chbCopy.HeaderText = "";
+            this.chbCopy.Name = "chbCopy";
+            this.chbCopy.ReadOnly = true;
+            this.chbCopy.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.chbCopy.Width = 30;
             // 
-            // method
+            // copyDirs
             // 
-            this.method.DataPropertyName = "method";
-            this.method.HeaderText = "אופן שליחה";
-            this.method.Name = "method";
-            this.method.Width = 120;
+            this.copyDirs.DataPropertyName = "dir";
+            this.copyDirs.HeaderText = "תיקיות";
+            this.copyDirs.Name = "copyDirs";
+            this.copyDirs.ReadOnly = true;
+            this.copyDirs.Width = 110;
+            // 
+            // copyDest
+            // 
+            this.copyDest.DataPropertyName = "dest";
+            this.copyDest.HeaderText = "תיקיית יעד";
+            this.copyDest.Name = "copyDest";
+            this.copyDest.ReadOnly = true;
+            this.copyDest.Width = 400;
+            // 
+            // copyStr
+            // 
+            this.copyStr.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.copyStr.DataPropertyName = "str";
+            this.copyStr.HeaderText = "מחרוזת";
+            this.copyStr.MinimumWidth = 150;
+            this.copyStr.Name = "copyStr";
+            this.copyStr.ReadOnly = true;
             // 
             // Form1
             // 
@@ -910,6 +988,8 @@
             this.grpDatesDelete.ResumeLayout(false);
             this.grpDatesDelete.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).EndInit();
+            this.tabCopy.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.gridCopy)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -978,6 +1058,12 @@
         private System.Windows.Forms.DataGridViewComboBoxColumn check;
         private System.Windows.Forms.DataGridViewTextBoxColumn email;
         private System.Windows.Forms.DataGridViewTextBoxColumn method;
+        private System.Windows.Forms.TabPage tabCopy;
+        private System.Windows.Forms.DataGridView gridCopy;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn chbCopy;
+        private System.Windows.Forms.DataGridViewTextBoxColumn copyDirs;
+        private System.Windows.Forms.DataGridViewTextBoxColumn copyDest;
+        private System.Windows.Forms.DataGridViewTextBoxColumn copyStr;
     }
 }
 

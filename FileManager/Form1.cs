@@ -33,7 +33,7 @@ namespace FileManager
         private string CopiedFilesDirectory = "9876789";
         private  DateTime dtDeleteFiles;
         private readonly List<string> gfoldersList = new List<string>();
-        private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי" };
+        private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger ();
         private bool hasErrors = false;
 
@@ -164,7 +164,36 @@ namespace FileManager
                 grdFolderSplit.DataSource = splitDs;
 
 
-                
+                var CopyConfigSettings = GetCopySettings();
+                var copyDs = new List<CopySettings>();
+
+                foreach (var fol in gfoldersList)
+                {
+                    var curdir = CopyConfigSettings.Find(f => f.dir == fol);
+                    if (curdir != null)
+                    {
+                        copyDs.Add(new CopySettings
+                        {
+                            dir = fol,
+                            dest = curdir.dest,
+                            check = curdir.check,
+                            str = curdir.str
+                        });
+                    }
+                    else
+                    {
+                        copyDs.Add(new CopySettings
+                        {
+                            dir = fol,
+                            dest = null,
+                            check = false,
+                            str = null
+                        });
+                    }
+                }
+
+                gridCopy.DataSource = copyDs;
+
 
                 var emailConfigList = GetEmailDirSettings ();
                 var emailsDs = new List<EmailDirSettings>();
@@ -350,6 +379,7 @@ namespace FileManager
             }
             boxSummary.Visible = false;
             Application.DoEvents();
+            CopyFiles();
             SplitFolders();
             FixFileNames ( true );
             CountFiles ();
@@ -970,6 +1000,134 @@ namespace FileManager
                 
             }
         }
+        private void gridCopy_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (gridCopy.Columns[e.ColumnIndex].Name == "copyDest")
+            {
+                var dialog = new FolderBrowserDialog();
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    gridCopy[e.ColumnIndex, e.RowIndex].Value = dialog.SelectedPath;
+                    var check = (bool)gridCopy.Rows[e.RowIndex].Cells["chbCopy"].Value;
+                    var ddir = gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value.ToString();
+                    var dest = gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value.ToString();
+                    var str = gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value.ToString();
+                    var dirSettings = GetCopySettings();
+                    var dirObj = dirSettings.Find(f => f.dir == ddir);
+                    if (dirObj != null)
+                    {
+                        dirObj.dest = dest;
+                        dirObj.str = str;
+                    }
+                    else
+                    {
+                        dirSettings.Add(new CopySettings
+                        {
+
+                            dir = ddir,
+                            dest = dest,
+                            check = check,
+                            str = str
+                        });
+                    }
+                    setCopySettings(dirSettings);
+                }
+
+            }
+            else if (gridCopy.Columns[e.ColumnIndex].Name == "copyStr")
+            {
+                
+                gridCopy.CurrentCell = gridCopy.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                gridCopy.CurrentCell.ReadOnly = false;
+                gridCopy.BeginEdit(true);
+                //var dialog = new OpenFileDialog();
+                //if (dialog.ShowDialog() == DialogResult.OK)
+                //{
+                //    gridCopy[e.ColumnIndex, e.RowIndex].Value = dialog.FileName;
+                //    var check = (bool)gridCopy.Rows[e.RowIndex].Cells["chbCopy"].Value;
+                //    var ddir = gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value.ToString();
+                //    var dest = gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value.ToString();
+                //    var str = gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value.ToString();
+                //    var dirSettings = GetCopySettings();
+                //    var dirObj = dirSettings.Find(f => f.dir == ddir);
+                //    if (dirObj != null)
+                //    {
+                //        dirObj.dest = dest;
+                //        dirObj.str = str;
+                //    }
+                //    else
+                //    {
+                //        dirSettings.Add(new CopySettings
+                //        {
+
+                //            dir = ddir,
+                //            dest = dest,
+                //            check = check,
+                //            str = str
+                //        });
+                //    }
+                //    setCopySettings(dirSettings);
+                //}
+            }
+        }
+        private void gridCopy_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (gridCopy.Columns[e.ColumnIndex].Name == "copyStr")
+            {
+                var check = (bool)gridCopy.Rows[e.RowIndex].Cells["chbCopy"].Value;
+                var ddir = gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value.ToString();
+                var dest = gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value.ToString();
+                var str = gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value.ToString();
+                var dirSettings = GetCopySettings();
+                var dirObj = dirSettings.Find(f => f.dir == ddir);
+                if (dirObj != null)
+                {
+                    dirObj.dest = dest;
+                    dirObj.str = str;
+                }
+                else
+                {
+                    dirSettings.Add(new CopySettings
+                    {
+
+                        dir = ddir,
+                        dest = dest,
+                        check = check,
+                        str = str
+                    });
+                }
+                setCopySettings(dirSettings);
+            }
+        }
+        private void gridCopy_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (gridCopy.Columns[e.ColumnIndex].Name == "chbCopy")
+            {
+                gridCopy.Rows[e.RowIndex].Cells[2].Value = Convert.ToBoolean(gridCopy.Rows[e.RowIndex].Cells[2].EditedFormattedValue) != true;
+                var check = (bool)gridCopy.Rows[e.RowIndex].Cells["chbCopy"].Value;
+                var ddir = gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDirs"].Value.ToString();
+                var dest = gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyDest"].Value.ToString();
+                var str = gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value == null ? string.Empty : gridCopy.Rows[e.RowIndex].Cells["copyStr"].Value.ToString();
+                var dirSettings = GetCopySettings();
+                var dirObj = dirSettings.Find(f => f.dir == ddir);
+                if (dirObj != null)
+                {
+                    dirObj.check = check;
+                }
+                else
+                {
+                    dirSettings.Add(new CopySettings
+                    {
+
+                        dir = ddir,
+                        dest = dest,
+                        check = check,
+                        str = str
+                    });
+                }
+                setCopySettings(dirSettings);
+            }
+        }
         private void grdArchive_CellContentClick ( object sender, DataGridViewCellEventArgs e )
         {
             if (grdArchive.Columns [e.ColumnIndex].Name == "achbdirs") {
@@ -1543,7 +1701,164 @@ namespace FileManager
                 return true;
             return false;
         }
+        private void CopyFiles()
+        {
+            progressBar1.Value = 0;
+            lblProgressMessage.Text = "משכפל קבצים";
+            lblProgressMessage.Visible = true;
+            Application.DoEvents();
 
+            string destDir = null, destFile = null, curdir = null, sFile = null;
+
+            var copySettings = GetCopySettings();
+
+            var checkedItems = copySettings.FindAll(f => f.check);
+
+
+            if (checkedItems.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                foreach (var checkedItem in checkedItems)
+                {
+                    // get the base path of each folder
+                    var basePath = Path.Combine(_path, checkedItem.dir);
+                    var destPath = checkedItem.dest;
+                    var str = checkedItem.str;
+                    var availDirs = Directory.GetDirectories(basePath);
+
+                    if (availDirs.Length > 0)
+                    {
+
+                        // run over the array to get the dir/1 folder path where all the files are
+                        foreach (var cd in availDirs)
+                        {
+                            curdir = cd;
+                            txtLog.AppendText("בודק תיקיה - " + curdir + Environment.NewLine);
+                            var checkdir = Path.GetFileName(curdir);
+                            if (checkdir == null || checkdir.Length > 2)
+                            {
+                                continue;
+                            }
+                            if (!Directory.Exists(curdir))
+                            {
+                                continue;
+                            }
+                            destDir = Path.Combine(destPath, checkdir);
+                            if (!Directory.Exists(destDir))
+                            {
+                                Directory.CreateDirectory(destDir);
+                            }
+                            var files = Directory.GetFiles(curdir, "*.*", SearchOption.TopDirectoryOnly);
+                            if (!files.Any())
+                            {
+                                continue;
+                            }
+                            var counter = 1;
+                            foreach (var file in files)
+                            {
+                                counter++;
+                                var fname = Path.GetFileName(file);
+                                sFile = null;
+                                if (fname == null)
+                                {
+                                    continue;
+                                }
+                                if(fname.Contains(str))
+                                {
+                                    try
+                                    {
+                                        destFile = Path.Combine(destDir, fname);
+                                        sFile = Path.Combine(curdir, fname);
+
+                                        if (File.Exists(destFile))
+                                        {
+                                            MessageBox.Show("שיכפול קבצים - שם קובץ כפול - " + destFile);
+                                            LogEventInfo eventInfo = new LogEventInfo
+                                            {
+                                                Level = LogLevel.Info,
+
+                                                Message = "שיכפול קבצים - שם קובץ כפול - " + destFile
+                                            };
+                                            logger.Log(eventInfo);
+                                            hasErrors = true;
+                                            continue;
+                                        }
+                                        File.Copy(sFile, destFile);
+                                        txtLog.AppendText("מעביר קובץ - " + sFile + Environment.NewLine);
+                                        Application.DoEvents();
+                                        Thread.Sleep(100);
+                                    }
+                                    catch (System.Exception e)
+                                    {
+                                        txtLog.AppendText("נכשל בהעברת קובץ " + sFile + "----" + e.Message +
+                                                          Environment.NewLine);
+
+                                        var props =
+                                            new
+                                            {
+                                                method = "CopyFiles",
+                                                destDir = destDir,
+                                                destFile = destFile,
+                                                curdir = curdir,
+                                                curFile = sFile,
+                                                str = str
+                                            };
+                                        LogEventInfo eventInfo = new LogEventInfo
+                                        {
+                                            Level = LogLevel.Error,
+                                            Exception = e,
+                                            Message = "נכשל בהעברת קובץ",
+                                            Properties = { { "Files", props } }
+                                        };
+                                        logger.Log(eventInfo);
+                                        hasErrors = true;
+
+                                    }
+
+                                    var val = progressBar1.Value + (counter / files.Length) * 100;
+                                    if (val > 100)
+                                    {
+                                        val = 100;
+                                    }
+                                    progressBar1.Value = val;
+                                    Application.DoEvents();
+                                }
+
+                            }
+
+                        }
+                        progressBar1.Value = 100;
+                        Application.DoEvents();
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show("תקלה בשיכפול קבצים - " + ex.Message);
+
+                var props =
+                    new
+                    {
+                        destDir = destDir,
+                        destFile = destFile,
+                        curdir = curdir,
+                        curFile = sFile
+                    };
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Exception = ex,
+                    Message = "תקלה בשיכפול קבצים",
+                    Properties = { { "Files", props } }
+                };
+                logger.Log(eventInfo);
+                hasErrors = true;
+            }
+        }
         private void SplitFolders()
         {
             progressBar1.Value = 0;
@@ -2741,11 +3056,11 @@ namespace FileManager
             if (splits.Length == 1)
             {
                 type = 2;
-                splits = fileName.Split('-');
+                splits = fne.Split('-');
                 if (splits.Length == 1)
                 {
                     type = 3;
-                    splits = fileName.Split(' ');
+                    splits = fne.Split(' ');
                 }
             }
             // if checkbox is checked remove the last part of the splits
@@ -2758,7 +3073,7 @@ namespace FileManager
                 //check if the first split is diget only
                 if (!first.Any(ch => ch < '0' || ch > '9'))
                 {
-                    newName = splits.Skip(1).Take ( splits.Count () ).ToArray ();
+                    newName = splits.Skip(1).Take(splits.Count()).ToArray();
                 }
                 else if (!last.Any(ch => ch < '0' || ch > '9'))
                 {
@@ -2768,21 +3083,33 @@ namespace FileManager
                 {
                     newName = splits;
                 }
-                
+
                 var name = string.Join(sep, newName);
-                return ext.Length == 1 ? name : name  + ext;
+                return ext.Length == 1 ? name : name + ext;
             }
-            else if(isCheck == 3)
+            else if (isCheck == 3)
             {
                 for (int i = 0; i < splits.Length; i++)
                 {
                     var sp = splits[i];
-                    if(sp.Split(' ').Length > 1)
+                    if (sp.Split(' ').Length > 1)
                     {
                         return sp;
                     }
                 }
                 return splits[0];
+            }
+            else if (isCheck == 4)
+            {
+                var sep = type == 1 ? "_" : type == 2 ? "-" : " ";
+                if (splits.Length == 4)
+                {
+                    return splits[0] + sep + splits[1] + sep + splits[3];
+                }
+                else
+                {
+                    return splits[0] + sep + splits[1] + sep + splits[2];
+                }
             }
             else
             {
@@ -2852,6 +3179,16 @@ namespace FileManager
                 File.WriteAllText ( configPath, sjson );
             }
         }
+        private void setCopySettings(List<CopySettings> folSettings)
+        {
+            var configPath = Path.Combine(_config, "fileManager_CopyConfig.json");
+
+            lock (LockObject)
+            {
+                var sjson = JsonConvert.SerializeObject(folSettings.ToArray());
+                File.WriteAllText(configPath, sjson);
+            }
+        }
         private void setArchiveSettings ( List<ArchiveSettings> folSettings )
         {
             var configPath = Path.Combine ( _config, "fileManager_archiveConfig.json" );
@@ -2903,6 +3240,26 @@ namespace FileManager
             }
             else {
                 folderSettings = new List<SplitSettings> ();
+            }
+
+            return folderSettings;
+        }
+        private List<CopySettings> GetCopySettings()
+        {
+            var configPath = Path.Combine(_config, "fileManager_copyConfig.json");
+            List<CopySettings> folderSettings;
+            if (File.Exists(configPath))
+            {
+
+                using (var r = new StreamReader(configPath))
+                {
+                    var json = r.ReadToEnd();
+                    folderSettings = JsonConvert.DeserializeObject<List<CopySettings>>(json);
+                }
+            }
+            else
+            {
+                folderSettings = new List<CopySettings>();
             }
 
             return folderSettings;
@@ -3331,7 +3688,11 @@ namespace FileManager
             return Path.GetFileNameWithoutExtension(file).Split ( '-' );
         }
 
-        
+       
+
+
+
+
 
 
 
