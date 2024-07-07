@@ -1738,7 +1738,7 @@ namespace FileManager
                         {
                             curdir = cd;
                             txtLog.AppendText("בודק תיקיה - " + curdir + Environment.NewLine);
-                            var checkdir = Path.GetFileName(curdir);
+                            var checkdir = Path.GetFileNameWithoutExtension(curdir);
                             if (checkdir == null || checkdir.Length > 2)
                             {
                                 continue;
@@ -1893,7 +1893,7 @@ namespace FileManager
                         {
                             curdir = cd;
                             txtLog.AppendText("בודק תיקיה - " + curdir + Environment.NewLine);
-                            var checkdir = Path.GetFileName(curdir);
+                            var checkdir = Path.GetFileNameWithoutExtension(curdir);
                             if (checkdir == null || checkdir.Length > 2)
                             {
                                 continue;
@@ -2150,7 +2150,7 @@ namespace FileManager
                         foreach (var cd in availDirs)
                         {
                             curdir = cd;
-                            var checkdir = Path.GetFileName(curdir);
+                            var checkdir = Path.GetFileNameWithoutExtension(curdir);
                             if (checkdir == null || checkdir.Length > 2)
                             {
                                 continue;
@@ -2769,11 +2769,12 @@ namespace FileManager
                         // run over the array to get the dir/1 folder path where all the files are
                         foreach (var cd in dirs)
                         {
+                           
                             curdir = cd;
                             if (!Directory.Exists ( curdir )) {
                                 continue;
                             }
-                            var checkdir = Path.GetFileName ( curdir );
+                            var checkdir = Path.GetFileNameWithoutExtension ( curdir );
                             if (checkdir == null || checkdir.Length > 2) {
                                 continue;
                             }
