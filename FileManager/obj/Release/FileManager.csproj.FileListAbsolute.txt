@@ -17,3 +17,5 @@ C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileManager.csproj.Fody.Cop
 C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileMana.0F99248D.Up2Date
 C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileManager.exe
 C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileManager.pdb
+C:\Projects\Ofer\FileManager\FileManager\bin\Release\Costura.dll
+C:\Projects\Ofer\FileManager\FileManager\bin\Release\Costura.xml
