@@ -1,20 +1,21 @@
-﻿using System;
+﻿using Microsoft.Office.Interop.Outlook;
+using Newtonsoft.Json;
+using NLog;
+using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
-using System.Configuration;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Windows.Forms;
-using Microsoft.Office.Interop.Outlook;
-using Newtonsoft.Json;
-using Application = System.Windows.Forms.Application;
-using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
-using Excel = Microsoft.Office.Interop.Excel;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
-using NLog;
+using System.Windows.Forms;
+using Application = System.Windows.Forms.Application;
+using Excel = Microsoft.Office.Interop.Excel;
+using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 
 namespace FileManager
 {
@@ -216,7 +217,7 @@ namespace FileManager
                         {
                             dir = fol,
                             email = null,
-                            check = mailCheck [0],
+                            check = mailCheck [1],
                             icheck = 0,
                             method = null
                         } );
@@ -225,6 +226,61 @@ namespace FileManager
 
                 dataGridView1.AutoGenerateColumns = false;
                 dataGridView1.DataSource = emailsDs;
+
+                // Initialize grdArchive from JSON configuration file
+                var archiveConfigSettings = GetArchiveSettings();
+                var archiveDs = new List<ArchiveSettings>();
+                
+                // If archive source and destination are already set, populate the grid
+                if (!string.IsNullOrEmpty(Properties.Settings.Default.ArchiveSourceName) && 
+                    !string.IsNullOrEmpty(Properties.Settings.Default.ArchiveDestName))
+                {
+                    try
+                    {
+                        var ArchDirs = Directory.GetDirectories(Properties.Settings.Default.ArchiveSourceName);
+                        var fols = new List<string>();
+                        foreach (var path in ArchDirs)
+                        {
+                            var folder = Path.GetFileName(path);
+                            if (folder != null)
+                            {
+                                fols.Add(folder);
+                            }
+                        }
+                        
+                        var parentFolder = Properties.Settings.Default.ArchiveSourceName;
+                        foreach (var fol in fols)
+                        {
+                            var curdir = archiveConfigSettings.Find(f => f.dir == fol && f.sourceDir == parentFolder);
+                            if (curdir != null)
+                            {
+                                archiveDs.Add(new ArchiveSettings
+                                {
+                                    dir = fol,
+                                    dest = curdir.dest,
+                                    check = curdir.check,
+                                    sourceDir = parentFolder
+                                });
+                            }
+                            else
+                            {
+                                archiveDs.Add(new ArchiveSettings
+                                {
+                                    dir = fol,
+                                    dest = null,
+                                    check = false,
+                                    sourceDir = parentFolder
+                                });
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // If directory access fails, just continue with empty grid
+                    }
+                }
+                
+                grdArchive.DataSource = archiveDs;
 
                 if (!string.IsNullOrEmpty ( Properties.Settings.Default.ArchiveDestName )) {
                     txtFolderArchiveDest.Text = Properties.Settings.Default.ArchiveDestName;
@@ -354,18 +410,18 @@ namespace FileManager
         }
 
         
-        private bool checkFolder(string folder)
-        {
-            int n;
-            if (int.TryParse(folder, out n))
-            {
-                if (n < 100)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
+        //private bool checkFolder(string folder)
+        //{
+        //    int n;
+        //    if (int.TryParse(folder, out n))
+        //    {
+        //        if (n < 100)
+        //        {
+        //            return true;
+        //        }
+        //    }
+        //    return false;
+        //}
         private void bClose_Click(object sender, EventArgs e)
         {
             Close();
@@ -1151,6 +1207,9 @@ namespace FileManager
                     } );
                 }
                 setArchiveSettings( dirSettings );
+                
+                // Refresh the grid to ensure UI consistency
+                RefreshGrdArchive();
             }
         }
         private void grdArchive_CellClick ( object sender, DataGridViewCellEventArgs e )
@@ -1187,6 +1246,9 @@ namespace FileManager
                         });
                     }
                     setArchiveSettings(dirSettings);
+                    
+                    // Refresh the grid to ensure UI consistency
+                    RefreshGrdArchive();
                 }
             }
         }
@@ -1203,30 +1265,146 @@ namespace FileManager
             if (e.RowIndex == -1)
                 return;
 
-            if (grdCount.Columns [e.ColumnIndex].Name != "chb") {
+            // Handle checkbox column changes
+            if (grdCount.Columns [e.ColumnIndex].Name == "chb") {
+                var check = (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
+                var dirSettings = GetCountSettings ();
+                var ddir = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
+                var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
+                var dirObj = dirSettings.Find ( f => f.dir == ddir );
+                if (dirObj != null) {
+                    dirObj.check = check;
+                }
+                else {
+                    dirSettings.Add ( new CountSettings
+                    {
+                        dir = ddir,
+                        method = method,
+                        check = check
+                    } );
+                }
+                setCountSettings ( dirSettings );
+            }
+            // Handle methods column changes
+            else if (grdCount.Columns [e.ColumnIndex].Name == "methods") {
+                var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
+                var fol = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
+                
+                // Update email settings
+                var emailConfigList = GetEmailDirSettings ();
+                var curMailDir = emailConfigList.Find ( f => f.dir == fol );
+                if (curMailDir != null) {
+                    curMailDir.method = string.IsNullOrEmpty ( method ) ? null : method;
+                }
+                else {
+                    if (!string.IsNullOrEmpty ( method )) {
+                        emailConfigList.Add ( new EmailDirSettings
+                        {
+                            dir = fol,
+                            method = method,
+                            check = mailCheck [0],
+                            icheck = 0,
+                            email = null
+                        } );
+                    }
+                }
+                setMailSettings(emailConfigList);
+                
+                // Refresh dataGridView1 to reflect the method changes
+                RefreshDataGridView1();
+            }
+        }
+
+        private void RefreshDataGridView1()
+        {
+            var emailConfigList = GetEmailDirSettings();
+            var emailsDs = new List<EmailDirSettings>();
+            foreach (var fol in gfoldersList)
+            {
+                var curdir = emailConfigList.Find(f => f.dir == fol);
+                if (curdir != null)
+                {
+                    emailsDs.Add(new EmailDirSettings
+                    {
+                        dir = fol,
+                        email = curdir.email,
+                        check = curdir.icheck == 0 ? mailCheck[0] : curdir.icheck == 1 ? mailCheck[1] : curdir.icheck == 2 ? mailCheck[2] : mailCheck[3],
+                        method = curdir.method
+                    });
+                }
+                else
+                {
+                    emailsDs.Add(new EmailDirSettings
+                    {
+                        dir = fol,
+                        email = null,
+                        check = mailCheck[1],
+                        icheck = 0,
+                        method = null
+                    });
+                }
+            }
+
+            dataGridView1.DataSource = null;
+            dataGridView1.DataSource = emailsDs;
+        }
+
+        private void RefreshGrdArchive()
+        {
+            if (string.IsNullOrEmpty(txtFolderArchiveParent.Text) || string.IsNullOrEmpty(txtFolderArchiveDest.Text))
+            {
                 return;
             }
-            var check = (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
-            var dirSettings = GetCountSettings ();
-            var ddir = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
-            var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
-            var dirObj = dirSettings.Find ( f => f.dir == ddir );
-            if (dirObj != null) {
-                dirObj.check = check;
-            }
-            else {
-                dirSettings.Add ( new CountSettings
+
+            try
+            {
+                var dirs = Directory.GetDirectories(txtFolderArchiveParent.Text);
+                var fols = new List<string>();
+                foreach (var path in dirs)
                 {
+                    var folder = Path.GetFileName(path);
+                    if (folder != null)
+                    {
+                        fols.Add(folder);
+                    }
+                }
 
-                    dir = ddir,
-                    method = method,
-                    check = check
-                } );
+                var archiveConfigSettings = GetArchiveSettings();
+                var archiveDs = new List<ArchiveSettings>();
+                var parentFolder = txtFolderArchiveParent.Text;
+                
+                foreach (var fol in fols)
+                {
+                    var curdir = archiveConfigSettings.Find(f => f.dir == fol && f.sourceDir == parentFolder);
+                    if (curdir != null)
+                    {
+                        archiveDs.Add(new ArchiveSettings
+                        {
+                            dir = fol,
+                            dest = curdir.dest,
+                            check = curdir.check,
+                            sourceDir = parentFolder
+                        });
+                    }
+                    else
+                    {
+                        archiveDs.Add(new ArchiveSettings
+                        {
+                            dir = fol,
+                            dest = null,
+                            check = false,
+                            sourceDir = parentFolder
+                        });
+                    }
+                }
+
+                grdArchive.DataSource = null;
+                grdArchive.DataSource = archiveDs;
             }
-
-
-            setCountSettings ( dirSettings );
-
+            catch
+            {
+                // If directory access fails, just continue with empty grid
+            }
         }
 
         private void grdCount_CellEndEdit ( object sender, DataGridViewCellEventArgs e )
@@ -1289,6 +1467,9 @@ namespace FileManager
 
             }
             setMailSettings(emailConfigList);
+            
+            // Refresh dataGridView1 to reflect the method changes
+            RefreshDataGridView1();
         }
 
         private void btnBrowsDest_Click ( object sender, EventArgs e )
@@ -1310,6 +1491,9 @@ namespace FileManager
                 txtFolderArchiveParent.Text = dialog.SelectedPath;
                 Properties.Settings.Default.ArchiveSourceName = txtFolderArchiveParent.Text;
                 Properties.Settings.Default.Save ();
+                
+                // Refresh the archive grid when source folder changes
+                RefreshGrdArchive();
             }
 
         }
@@ -1319,19 +1503,20 @@ namespace FileManager
         }
         private void SetArchive()
         {
-           
-            string [] dirs;
             if (string.IsNullOrEmpty(txtFolderArchiveParent.Text) || string.IsNullOrEmpty(txtFolderArchiveDest.Text))
             {
                 MessageBox.Show("יש להכניס  תקיית המקור ותקיית היעד");
+                return;
             }
+            
             try
             {
                 Properties.Settings.Default.ArchiveSourceName = txtFolderArchiveParent.Text;
                 Properties.Settings.Default.ArchiveDestName = txtFolderArchiveDest.Text;
                 Properties.Settings.Default.Save();
 
-                dirs = Directory.GetDirectories(txtFolderArchiveParent.Text);
+                // Use the helper method to refresh the grid
+                RefreshGrdArchive();
             }
             catch
             {
@@ -1345,48 +1530,6 @@ namespace FileManager
                 logger.Log(eventInfo);
                 return;
             }
-
-            //adding files to checkbox list
-            var fols = new List<string>();
-            foreach (var path in dirs)
-            {
-                var folder = Path.GetFileName(path);
-                if (folder != null)
-                {
-                    fols.Add(folder);
-                }
-            }
-
-            var archiveConfigSettings = GetArchiveSettings();
-            var archiveDS = new List<ArchiveSettings>();
-            var parentFolder = txtFolderArchiveParent.Text;
-            
-            foreach (var fol in fols)
-            {
-                var curdir = archiveConfigSettings.Find(f => f.dir == fol && f.sourceDir == parentFolder);
-                if (curdir != null)
-                {
-                    archiveDS.Add(new ArchiveSettings
-                    {
-                        dir = fol,
-                        dest = curdir.dest,
-                        check = curdir.check
-                    });
-                }
-                else
-                {
-                    archiveDS.Add(new ArchiveSettings
-                    {
-                        dir = fol,
-                        dest = null,
-                        check = false
-                    });
-                }
-            }
-
-
-            //  grdFolderSplit.AutoGenerateColumns = true;
-            grdArchive.DataSource = archiveDS;
         }
 
         private void btnArchive_Click ( object sender, EventArgs e )
@@ -2127,7 +2270,7 @@ namespace FileManager
 
                 foreach (var checkedItem in checkedItems)
                 {
-                    var counter = 1;
+                    //var counter = 1;
                     // get the base path of each folder
                     var basePath = Path.Combine(_path, checkedItem.ToString());
                     var dest = Path.Combine ( basePath, destFolName );
@@ -3689,153 +3832,219 @@ namespace FileManager
             return Path.GetFileNameWithoutExtension(file).Split ( '-' );
         }
 
-       
+        private void btnExcel_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Create Excel application
+                Excel.Application xlApp = new Excel.Application();
+                Excel.Workbook xlWorkbook = null;
+                Excel._Worksheet xlWorksheet = null;
+
+                try
+                {
+                    // Create new workbook
+                    xlWorkbook = xlApp.Workbooks.Add();
+                    xlApp.Visible = false;
+                    string filePath = null;
+
+                    // Use SaveFileDialog to let user choose file location
+                    using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+                    {
+                        saveFileDialog.Filter = "Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*";
+                        saveFileDialog.FilterIndex = 1;
+                        saveFileDialog.FileName = $"FileManager-Export-{DateTime.Now:yyyy-MM-dd}.xlsx";
+                        saveFileDialog.Title = "שמור קובץ אקסל";
+
+                        if (saveFileDialog.ShowDialog() != DialogResult.OK)
+                        {
+                            // User cancelled the dialog
+                            xlWorkbook.Close(false);
+                            xlApp.Quit();
+                            return;
+                        }
+
+                        filePath = saveFileDialog.FileName;
+                    }
+
+                    // Export each grid/control to a separate worksheet
+                    
+                    ExportDataGridViewToExcel(xlWorkbook, grdArchive, "ארכיון");
+                    ExportDataGridViewToExcel(xlWorkbook, gridCopy, "שכפול קבצים");
+                    ExportDataGridViewToExcel(xlWorkbook, grdFolderSplit, "תקיות לפיצול");
+                    ExportCheckedListBoxToExcel(xlWorkbook, reportFolders, "שמות לדוחות");
+                    ExportCheckedListBoxToExcel(xlWorkbook, DelList, "מחיקת קבצים");
+                    ExportCheckedListBoxToExcel(xlWorkbook, dirList, "שמות לאקסל");
+                    ExportDataGridViewToExcel(xlWorkbook, dataGridView1, "יצירת מיילים");
+                    ExportCheckedListBoxToExcel(xlWorkbook, filenames, "תיקון שמות");
+                    ExportCheckedListBoxToExcel(xlWorkbook, DuplicateFolders, "תיקון כפילויות");
+                    ExportDataGridViewToExcel(xlWorkbook, grdCount, "תקיות לספירה");
 
 
+                    // Save the workbook
+                    xlWorkbook.SaveAs(filePath);
+                    xlWorkbook.Close(true);
+                    xlApp.Quit();
 
+                    MessageBox.Show($"הקובץ נשמר בהצלחה: {filePath}", "ייצוא לאקסל", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (System.Exception ex)
+                {
+                    MessageBox.Show($"שגיאה בייצוא לאקסל: {ex.Message}", "שגיאה", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    
+                    LogEventInfo eventInfo = new LogEventInfo
+                    {
+                        Level = LogLevel.Error,
+                        Message = $"Excel export error: {ex.Message}"
+                    };
+                    logger.Log(eventInfo);
+                }
+                finally
+                {
+                    // Clean up COM objects
+                    if (xlWorksheet != null)
+                    {
+                        Marshal.ReleaseComObject(xlWorksheet);
+                        xlWorksheet = null;
+                    }
+                    if (xlWorkbook != null)
+                    {
+                        Marshal.ReleaseComObject(xlWorkbook);
+                        xlWorkbook = null;
+                    }
+                    if (xlApp != null)
+                    {
+                        Marshal.ReleaseComObject(xlApp);
+                        xlApp = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"שגיאה כללית בייצוא לאקסל: {ex.Message}", "שגיאה", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Message = $"General Excel export error: {ex.Message}"
+                };
+                logger.Log(eventInfo);
+            }
+        }
 
+        private void ExportDataGridViewToExcel(Excel.Workbook workbook, DataGridView grid, string sheetName)
+        {
+            try
+            {
+                // Create new worksheet
+                Excel._Worksheet worksheet = (Excel._Worksheet)workbook.Sheets.Add();
+                worksheet.Name = sheetName;
 
+                // Export headers
+                for (int col = 0; col < grid.Columns.Count; col++)
+                {
+                    if (grid.Columns[col].Visible)
+                    {
+                        worksheet.Cells[1, col + 1] = grid.Columns[col].HeaderText;
+                        Excel.Range headerCell = worksheet.Cells[1, col + 1] as Excel.Range;
+                        if (headerCell != null)
+                        {
+                            headerCell.Font.Bold = true;
+                        }
+                       
+                    }
+                }
 
+                // Export data
+                int excelRow = 2;
+                for (int row = 0; row < grid.Rows.Count; row++)
+                {
+                    if (!grid.Rows[row].IsNewRow)
+                    {
+                        int excelCol = 1;
+                        for (int col = 0; col < grid.Columns.Count; col++)
+                        {
+                            if (grid.Columns[col].Visible)
+                            {
+                                var cellValue = grid.Rows[row].Cells[col].Value;
+                                if (cellValue != null)
+                                {
+                                    // Handle checkbox columns
+                                    if (grid.Columns[col] is DataGridViewCheckBoxColumn)
+                                    {
+                                        worksheet.Cells[excelRow, excelCol] = (bool)cellValue ? "✓" : "✗";
+                                    }
+                                    else
+                                    {
+                                        worksheet.Cells[excelRow, excelCol] = cellValue.ToString();
+                                    }
+                                }
+                                excelCol++;
+                            }
+                        }
+                        excelRow++;
+                    }
+                }
 
+                // Auto-fit columns
+                Excel.Range usedRange = worksheet.UsedRange;
+                usedRange.Columns.AutoFit();
 
+                // Release worksheet
+                Marshal.ReleaseComObject(worksheet);
+            }
+            catch (System.Exception ex)
+            {
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Message = $"Error exporting DataGridView {sheetName}: {ex.Message}"
+                };
+                logger.Log(eventInfo);
+            }
+        }
 
+        private void ExportCheckedListBoxToExcel(Excel.Workbook workbook, CheckedListBox listBox, string sheetName)
+        {
+            try
+            {
+                // Create new worksheet
+                Excel._Worksheet worksheet = (Excel._Worksheet)workbook.Sheets.Add();
+                worksheet.Name = sheetName;
 
+                // Export headers
+                worksheet.Cells[1, 1] = "פריט";
+                worksheet.Cells[1, 2] = "נבחר";
+                Excel.Range headerCell1 = worksheet.Cells[1, 1] as Excel.Range;
+                Excel.Range headerCell2 = worksheet.Cells[1, 2] as Excel.Range;
+                if (headerCell1 != null) headerCell1.Font.Bold = true;
+                if (headerCell2 != null) headerCell2.Font.Bold = true;
 
+                // Export data
+                for (int i = 0; i < listBox.Items.Count; i++)
+                {
+                    worksheet.Cells[i + 2, 1] = listBox.Items[i].ToString();
+                    worksheet.Cells[i + 2, 2] = listBox.GetItemChecked(i) ? "✓" : "✗";
+                }
 
+                // Auto-fit columns
+                Excel.Range usedRange = worksheet.UsedRange;
+                usedRange.Columns.AutoFit();
 
-
-
-
-
-
-
-
-
-        //private static void SendMail(List<string> files, string subject, string email)
-        //{
-        //    var server = ConfigurationManager.AppSettings["smptServer"];
-        //    var port = ConfigurationManager.AppSettings ["smptPort"];
-        //    var from = ConfigurationManager.AppSettings ["mailFrom"];
-        //    var user = ConfigurationManager.AppSettings ["userName"];
-        //    var pwd = ConfigurationManager.AppSettings ["password"];
-
-        //    using (MailMessage mailMsg = new MailMessage())
-        //    {
-        //        mailMsg.To.Add ( email );
-        //        // From
-        //        MailAddress mailAddress = new MailAddress ( from );
-        //        mailMsg.From = mailAddress;
-
-        //        // Subject and Body
-        //        mailMsg.Subject = subject;
-        //        mailMsg.Body = string.Empty + mailMsg.Body;
-
-        //        foreach (var file in files) {
-        //            var attach = new Attachment ( file );
-        //            mailMsg.Attachments.Add ( attach );
-        //        }
-
-
-        //        int iport = string.IsNullOrEmpty ( port ) ? 80 : int.Parse ( port );
-        //        // Init SmtpClient and send on port 587 in my case. (Usual=port25)
-        //        SmtpClient smtpClient = new SmtpClient ( server, iport );
-        //        smtpClient.EnableSsl = true;
-        //        System.Net.NetworkCredential credentials =
-        //           new System.Net.NetworkCredential ( user, pwd );
-        //        smtpClient.Credentials = credentials;
-
-        //        smtpClient.Send ( mailMsg );
-        //    }
-
-
-        //}
-
-        //private string CheckExcelForItems ( string part )
-        //{
-        //    var lst = new List<string> ();
-        //    Excel.Application xlApp = new Excel.Application ();
-        //    Excel.Workbook xlWorkbook = null;
-        //    Excel._Worksheet xlWorksheet = null;
-        //    Excel.Range xlRange = null;
-        //    try {
-
-        //        xlWorkbook = xlApp.Workbooks.Open ( _excel );
-        //        xlApp.Visible = false;
-        //        xlWorksheet = (Excel._Worksheet)xlWorkbook.Sheets [1];
-        //        xlRange = xlWorksheet.UsedRange;
-
-        //        int rowCount = xlRange.Rows.Count;
-        //        int colCount = xlRange.Columns.Count;
-
-        //        for (int t = 2; t <= rowCount; t++) {
-        //            string val = ( xlRange.Cells [t, 1] as Excel.Range ).Value2.ToString ();
-        //            if (val == part) {
-        //                for (int j = 2; j <= colCount; j++) {
-        //                    string temp = ( xlRange.Cells [t, j] as Excel.Range ).Value2?.ToString ();
-        //                    if (!string.IsNullOrEmpty ( temp )) {
-        //                        lst.Add ( temp );
-        //                    }
-        //                }
-        //                break;
-        //            }
-        //        }
-
-
-        //        if (lst.Count > 0) {
-        //            return String.Join ( " ", lst.ToArray () ).Replace ( " ", "_" );
-        //        }
-        //        return null;
-
-        //    }
-        //    catch (System.Exception ex) {
-
-        //        return null;
-        //    }
-        //    finally {
-        //        GC.Collect ();
-        //        GC.WaitForPendingFinalizers ();
-
-        //        //rule of thumb for releasing com objects:
-        //        //  never use two dots, all COM objects must be referenced and released individually
-        //        //  ex: [somthing].[something].[something] is bad
-
-        //        //release com objects to fully kill excel process from running in the background
-        //        Marshal.ReleaseComObject ( xlRange );
-        //        Marshal.ReleaseComObject ( xlWorksheet );
-
-        //        //close and release
-        //        xlWorkbook.Close ();
-        //        Marshal.ReleaseComObject ( xlWorkbook );
-
-        //        //quit and release
-        //        xlApp.Quit ();
-        //        Marshal.ReleaseComObject ( xlApp );
-
-
-
-
-        //    }
-
-        //}
-        //private string GetName(int ctr, string path, string ext)
-        //{
-        //    Dictionary<string, int> bases = new Dictionary<string, int>
-        //    {
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\AIG\1", 201300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Amitim\1", 301300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Ayalon\1", 401300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Clal\1", 501300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Hachshara\1", 601300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Harel\1", 701300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Inbal\1", 801300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Macabi\1", 901300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Migdal\1", 101300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Pool\1", 111300010},
-        //        {@"C:\Users\ofer\Documents\Visual Studio 2013\Projects\FileManager\Files\Shlomo\1", 121300010}
-        //    };
-        //    int num = bases[path];
-        //    int newName = num + ctr;
-        //    return newName + "." + ext;
-        //}
+                // Release worksheet
+                Marshal.ReleaseComObject(worksheet);
+            }
+            catch (System.Exception ex)
+            {
+                LogEventInfo eventInfo = new LogEventInfo
+                {
+                    Level = LogLevel.Error,
+                    Message = $"Error exporting CheckedListBox {sheetName}: {ex.Message}"
+                };
+                logger.Log(eventInfo);
+            }
+        }
     }
 }

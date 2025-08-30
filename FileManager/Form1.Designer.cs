@@ -37,9 +37,6 @@
             this.tabsMain = new System.Windows.Forms.TabControl();
             this.tabCounts = new System.Windows.Forms.TabPage();
             this.grdCount = new System.Windows.Forms.DataGridView();
-            this.chb = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.dirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.methods = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabDuplicates = new System.Windows.Forms.TabPage();
             this.DuplicateFolders = new System.Windows.Forms.CheckedListBox();
             this.tabNames = new System.Windows.Forms.TabPage();
@@ -65,6 +62,12 @@
             this.chbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.cdir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dest = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.tabCopy = new System.Windows.Forms.TabPage();
+            this.gridCopy = new System.Windows.Forms.DataGridView();
+            this.chbCopy = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.copyDirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.copyDest = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.copyStr = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabArchive = new System.Windows.Forms.TabPage();
             this.btnArchiveStart = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
@@ -74,10 +77,6 @@
             this.txtFolderArchiveParent = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.grdArchive = new System.Windows.Forms.DataGridView();
-            this.achbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.adir = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.parent = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.adest = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
@@ -89,12 +88,14 @@
             this.nDaysToDelete = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
             this.btnArchive = new System.Windows.Forms.Button();
-            this.tabCopy = new System.Windows.Forms.TabPage();
-            this.gridCopy = new System.Windows.Forms.DataGridView();
-            this.chbCopy = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.copyDirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.copyDest = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.copyStr = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnExcel = new System.Windows.Forms.Button();
+            this.chb = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.dirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.methods = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.achbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.adir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.parent = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.adest = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -108,13 +109,13 @@
             this.tabReports.SuspendLayout();
             this.tabSplit.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.grdFolderSplit)).BeginInit();
+            this.tabCopy.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.gridCopy)).BeginInit();
             this.tabArchive.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.grdArchive)).BeginInit();
             this.boxSummary.SuspendLayout();
             this.grpDatesDelete.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).BeginInit();
-            this.tabCopy.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.gridCopy)).BeginInit();
             this.SuspendLayout();
             // 
             // bClose
@@ -258,30 +259,6 @@
             this.grdCount.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellContentClick);
             this.grdCount.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellEndEdit);
             this.grdCount.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellValueChanged);
-            // 
-            // chb
-            // 
-            this.chb.DataPropertyName = "check";
-            this.chb.HeaderText = "";
-            this.chb.Name = "chb";
-            this.chb.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.chb.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            this.chb.Width = 30;
-            // 
-            // dirs
-            // 
-            this.dirs.DataPropertyName = "dir";
-            this.dirs.HeaderText = "תיקיות";
-            this.dirs.Name = "dirs";
-            this.dirs.ReadOnly = true;
-            this.dirs.Width = 110;
-            // 
-            // methods
-            // 
-            this.methods.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.methods.DataPropertyName = "method";
-            this.methods.HeaderText = "אופן שליחה";
-            this.methods.Name = "methods";
             // 
             // tabDuplicates
             // 
@@ -571,6 +548,74 @@
             this.dest.Name = "dest";
             this.dest.ReadOnly = true;
             // 
+            // tabCopy
+            // 
+            this.tabCopy.Controls.Add(this.gridCopy);
+            this.tabCopy.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.tabCopy.Location = new System.Drawing.Point(4, 24);
+            this.tabCopy.Name = "tabCopy";
+            this.tabCopy.Padding = new System.Windows.Forms.Padding(3);
+            this.tabCopy.Size = new System.Drawing.Size(826, 693);
+            this.tabCopy.TabIndex = 9;
+            this.tabCopy.Text = "שכפול קבצים";
+            this.tabCopy.UseVisualStyleBackColor = true;
+            // 
+            // gridCopy
+            // 
+            this.gridCopy.AllowUserToAddRows = false;
+            this.gridCopy.AllowUserToDeleteRows = false;
+            this.gridCopy.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.gridCopy.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.chbCopy,
+            this.copyDirs,
+            this.copyDest,
+            this.copyStr});
+            this.gridCopy.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.gridCopy.Location = new System.Drawing.Point(3, 3);
+            this.gridCopy.Name = "gridCopy";
+            this.gridCopy.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.gridCopy.RowHeadersVisible = false;
+            this.gridCopy.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
+            this.gridCopy.Size = new System.Drawing.Size(820, 687);
+            this.gridCopy.TabIndex = 1;
+            this.gridCopy.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellClick);
+            this.gridCopy.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellContentClick);
+            this.gridCopy.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellEndEdit);
+            // 
+            // chbCopy
+            // 
+            this.chbCopy.DataPropertyName = "check";
+            this.chbCopy.HeaderText = "";
+            this.chbCopy.Name = "chbCopy";
+            this.chbCopy.ReadOnly = true;
+            this.chbCopy.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.chbCopy.Width = 30;
+            // 
+            // copyDirs
+            // 
+            this.copyDirs.DataPropertyName = "dir";
+            this.copyDirs.HeaderText = "תיקיות";
+            this.copyDirs.Name = "copyDirs";
+            this.copyDirs.ReadOnly = true;
+            this.copyDirs.Width = 110;
+            // 
+            // copyDest
+            // 
+            this.copyDest.DataPropertyName = "dest";
+            this.copyDest.HeaderText = "תיקיית יעד";
+            this.copyDest.Name = "copyDest";
+            this.copyDest.ReadOnly = true;
+            this.copyDest.Width = 400;
+            // 
+            // copyStr
+            // 
+            this.copyStr.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.copyStr.DataPropertyName = "str";
+            this.copyStr.HeaderText = "מחרוזת";
+            this.copyStr.MinimumWidth = 150;
+            this.copyStr.Name = "copyStr";
+            this.copyStr.ReadOnly = true;
+            // 
             // tabArchive
             // 
             this.tabArchive.Controls.Add(this.btnArchiveStart);
@@ -675,42 +720,6 @@
             this.grdArchive.TabIndex = 1;
             this.grdArchive.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellClick);
             this.grdArchive.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellContentClick);
-            // 
-            // achbdirs
-            // 
-            this.achbdirs.DataPropertyName = "check";
-            this.achbdirs.HeaderText = "c";
-            this.achbdirs.Name = "achbdirs";
-            this.achbdirs.ReadOnly = true;
-            this.achbdirs.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.achbdirs.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            this.achbdirs.Width = 30;
-            // 
-            // adir
-            // 
-            this.adir.DataPropertyName = "dir";
-            this.adir.HeaderText = "תיקיות";
-            this.adir.Name = "adir";
-            this.adir.ReadOnly = true;
-            this.adir.Width = 110;
-            // 
-            // parent
-            // 
-            this.parent.DataPropertyName = "sourceDir";
-            this.parent.HeaderText = "p";
-            this.parent.Name = "parent";
-            this.parent.ReadOnly = true;
-            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.parent.Visible = false;
-            this.parent.Width = 5;
-            // 
-            // adest
-            // 
-            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.adest.DataPropertyName = "dest";
-            this.adest.HeaderText = "תיקיית יעד";
-            this.adest.Name = "adest";
-            this.adest.ReadOnly = true;
             // 
             // lblProgressMessage
             // 
@@ -873,78 +882,86 @@
             this.btnArchive.UseVisualStyleBackColor = false;
             this.btnArchive.Click += new System.EventHandler(this.btnArchive_Click);
             // 
-            // tabCopy
+            // btnExcel
             // 
-            this.tabCopy.Controls.Add(this.gridCopy);
-            this.tabCopy.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.tabCopy.Location = new System.Drawing.Point(4, 24);
-            this.tabCopy.Name = "tabCopy";
-            this.tabCopy.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCopy.Size = new System.Drawing.Size(826, 693);
-            this.tabCopy.TabIndex = 9;
-            this.tabCopy.Text = "שכפול קבצים";
-            this.tabCopy.UseVisualStyleBackColor = true;
+            this.btnExcel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnExcel.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.btnExcel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExcel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnExcel.ForeColor = System.Drawing.Color.DarkBlue;
+            this.btnExcel.Location = new System.Drawing.Point(952, 644);
+            this.btnExcel.Name = "btnExcel";
+            this.btnExcel.Size = new System.Drawing.Size(129, 23);
+            this.btnExcel.TabIndex = 18;
+            this.btnExcel.Text = "יצוא לאקסל";
+            this.btnExcel.UseVisualStyleBackColor = false;
+            this.btnExcel.Click += new System.EventHandler(this.btnExcel_Click);
             // 
-            // gridCopy
+            // chb
             // 
-            this.gridCopy.AllowUserToAddRows = false;
-            this.gridCopy.AllowUserToDeleteRows = false;
-            this.gridCopy.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.gridCopy.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.chbCopy,
-            this.copyDirs,
-            this.copyDest,
-            this.copyStr});
-            this.gridCopy.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gridCopy.Location = new System.Drawing.Point(3, 3);
-            this.gridCopy.Name = "gridCopy";
-            this.gridCopy.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-            this.gridCopy.RowHeadersVisible = false;
-            this.gridCopy.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
-            this.gridCopy.Size = new System.Drawing.Size(820, 687);
-            this.gridCopy.TabIndex = 1;
-            this.gridCopy.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellClick);
-            this.gridCopy.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellContentClick);
-            this.gridCopy.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.gridCopy_CellEndEdit);
+            this.chb.DataPropertyName = "check";
+            this.chb.HeaderText = " ";
+            this.chb.Name = "chb";
+            this.chb.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.chb.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.chb.Width = 30;
             // 
-            // chbCopy
+            // dirs
             // 
-            this.chbCopy.DataPropertyName = "check";
-            this.chbCopy.HeaderText = "";
-            this.chbCopy.Name = "chbCopy";
-            this.chbCopy.ReadOnly = true;
-            this.chbCopy.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            this.chbCopy.Width = 30;
+            this.dirs.DataPropertyName = "dir";
+            this.dirs.HeaderText = "תיקיות";
+            this.dirs.Name = "dirs";
+            this.dirs.ReadOnly = true;
+            this.dirs.Width = 110;
             // 
-            // copyDirs
+            // methods
             // 
-            this.copyDirs.DataPropertyName = "dir";
-            this.copyDirs.HeaderText = "תיקיות";
-            this.copyDirs.Name = "copyDirs";
-            this.copyDirs.ReadOnly = true;
-            this.copyDirs.Width = 110;
+            this.methods.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.methods.DataPropertyName = "method";
+            this.methods.HeaderText = "אופן שליחה";
+            this.methods.Name = "methods";
             // 
-            // copyDest
+            // achbdirs
             // 
-            this.copyDest.DataPropertyName = "dest";
-            this.copyDest.HeaderText = "תיקיית יעד";
-            this.copyDest.Name = "copyDest";
-            this.copyDest.ReadOnly = true;
-            this.copyDest.Width = 400;
+            this.achbdirs.DataPropertyName = "check";
+            this.achbdirs.HeaderText = " ";
+            this.achbdirs.Name = "achbdirs";
+            this.achbdirs.ReadOnly = true;
+            this.achbdirs.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.achbdirs.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.achbdirs.Width = 30;
             // 
-            // copyStr
+            // adir
             // 
-            this.copyStr.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.copyStr.DataPropertyName = "str";
-            this.copyStr.HeaderText = "מחרוזת";
-            this.copyStr.MinimumWidth = 150;
-            this.copyStr.Name = "copyStr";
-            this.copyStr.ReadOnly = true;
+            this.adir.DataPropertyName = "dir";
+            this.adir.HeaderText = "תיקיות";
+            this.adir.Name = "adir";
+            this.adir.ReadOnly = true;
+            this.adir.Width = 110;
+            // 
+            // parent
+            // 
+            this.parent.DataPropertyName = "sourceDir";
+            this.parent.HeaderText = " ";
+            this.parent.Name = "parent";
+            this.parent.ReadOnly = true;
+            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.parent.Visible = false;
+            this.parent.Width = 5;
+            // 
+            // adest
+            // 
+            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.adest.DataPropertyName = "dest";
+            this.adest.HeaderText = "תיקיית יעד";
+            this.adest.Name = "adest";
+            this.adest.ReadOnly = true;
             // 
             // Form1
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1107, 745);
+            this.Controls.Add(this.btnExcel);
             this.Controls.Add(this.btnArchive);
             this.Controls.Add(this.grpDatesDelete);
             this.Controls.Add(this.btnDel);
@@ -980,6 +997,8 @@
             this.tabReports.PerformLayout();
             this.tabSplit.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.grdFolderSplit)).EndInit();
+            this.tabCopy.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.gridCopy)).EndInit();
             this.tabArchive.ResumeLayout(false);
             this.tabArchive.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.grdArchive)).EndInit();
@@ -988,8 +1007,6 @@
             this.grpDatesDelete.ResumeLayout(false);
             this.grpDatesDelete.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nDaysToDelete)).EndInit();
-            this.tabCopy.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.gridCopy)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1018,9 +1035,6 @@
         private System.Windows.Forms.Button btnMail;
         private System.Windows.Forms.DataGridView dataGridView1;
         private System.Windows.Forms.DataGridView grdCount;
-        private System.Windows.Forms.DataGridViewCheckBoxColumn chb;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dirs;
-        private System.Windows.Forms.DataGridViewTextBoxColumn methods;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.CheckedListBox dirList;
         private System.Windows.Forms.Button btnDel;
@@ -1050,10 +1064,6 @@
         private System.Windows.Forms.Button btnBrowsDest;
         private System.Windows.Forms.TextBox txtFolderArchiveDest;
         private System.Windows.Forms.Button btnArchiveStart;
-        private System.Windows.Forms.DataGridViewCheckBoxColumn achbdirs;
-        private System.Windows.Forms.DataGridViewTextBoxColumn adir;
-        private System.Windows.Forms.DataGridViewTextBoxColumn parent;
-        private System.Windows.Forms.DataGridViewTextBoxColumn adest;
         private System.Windows.Forms.DataGridViewTextBoxColumn dir;
         private System.Windows.Forms.DataGridViewComboBoxColumn check;
         private System.Windows.Forms.DataGridViewTextBoxColumn email;
@@ -1064,6 +1074,14 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn copyDirs;
         private System.Windows.Forms.DataGridViewTextBoxColumn copyDest;
         private System.Windows.Forms.DataGridViewTextBoxColumn copyStr;
+        private System.Windows.Forms.Button btnExcel;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn chb;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dirs;
+        private System.Windows.Forms.DataGridViewTextBoxColumn methods;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn achbdirs;
+        private System.Windows.Forms.DataGridViewTextBoxColumn adir;
+        private System.Windows.Forms.DataGridViewTextBoxColumn parent;
+        private System.Windows.Forms.DataGridViewTextBoxColumn adest;
     }
 }
 
