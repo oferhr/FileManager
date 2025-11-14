@@ -338,36 +338,7 @@ namespace FileManager
                 gridCopy.DataSource = copyDs;
 
 
-                // Load email directory settings from configuration
-                var emailConfigList = GetEmailDirSettings ();
-                var emailsDs = new List<EmailDirSettings>();
-                foreach (var fol in gfoldersList)
-                {
-                    var curdir = emailConfigList.Find ( f => f.dir == fol );
-                    if(curdir != null)
-                    {
-                        emailsDs.Add(new EmailDirSettings
-                        {
-                            dir = fol,
-                            email = curdir.email,
-                            // Map integer check index to Hebrew mail method string
-                            check = curdir.icheck == 0  ? mailCheck[0] : curdir.icheck == 1 ? mailCheck [1] : curdir.icheck == 2 ? mailCheck [2] : mailCheck[3],
-                            method = curdir.method
-                        });
-                    }
-                    else
-                    {
-                        // Default to "בודד-זהה" (Single-Identical) method
-                        emailsDs.Add(new EmailDirSettings
-                        {
-                            dir = fol,
-                            email = null,
-                            check = mailCheck [1],
-                            icheck = 0,
-                            method = null
-                        } );
-                    }
-                }
+               
 
                 // Bind email settings to grid (manual column configuration)
                 dataGridView1.AutoGenerateColumns = false;
