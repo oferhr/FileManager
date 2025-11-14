@@ -1,0 +1,153 @@
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using System.Linq;
+
+namespace FileManager.Services
+{
+    public class FileService : IFileService
+    {
+        private readonly bool _isMove;
+        private const string LtrMark = "\u200E";
+
+        public FileService(bool isMove = true)
+        {
+            _isMove = isMove;
+        }
+
+        public bool IsThumbsInPath(string filePath)
+        {
+            return filePath.Contains("Thumbs");
+        }
+
+        public void CopyFiles(string src, string dest)
+        {
+            if (_isMove)
+            {
+                MoveFiles(src, dest);
+            }
+            else
+            {
+                try
+                {
+                    File.Copy(src, dest);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error while copying file:\r{src}\rTo:\r{dest}\rError Message:\r{ex.Message}");
+                }
+            }
+        }
+
+        public void MoveFiles(string src, string dest)
+        {
+            try
+            {
+                File.SetAttributes(src, FileAttributes.Normal);
+                File.Move(src, dest);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error while moving file:\r{src}\rTo:\r{dest}\rError Message:\r{ex.Message}");
+            }
+        }
+
+        public string GetNewFileName(string name, int num)
+        {
+            var fnwe = Path.GetFileNameWithoutExtension(name);
+            var ext = Path.GetExtension(name);
+            if (!string.IsNullOrEmpty(ext))
+            {
+                var re = new Regex(@"\d+");
+                var m = re.Match(name);
+
+                if (m.Success)
+                {
+                    return fnwe + "_" + num + ext;
+                }
+
+                var newname = fnwe + LtrMark + " " + num + ext;
+                return newname;
+            }
+
+            return null;
+        }
+
+        public string[] GetParts(string file)
+        {
+            return Path.GetFileNameWithoutExtension(file).Split('-');
+        }
+
+        public string GetMailFileName(string fileName, int isCheck, bool shortenName = false)
+        {
+            var type = 1;
+            var fne = Path.GetFileNameWithoutExtension(fileName);
+            var ext = Path.GetExtension(fileName);
+            var splits = fne.Split('_');
+            
+            if (splits.Length == 1)
+            {
+                type = 2;
+                splits = fne.Split('-');
+                if (splits.Length == 1)
+                {
+                    type = 3;
+                    splits = fne.Split(' ');
+                }
+            }
+
+            if (isCheck == 0 || shortenName)
+            {
+                var first = splits[0];
+                var last = splits[splits.Length - 1];
+                string[] newName;
+                var sep = type == 1 ? "_" : type == 2 ? "-" : " ";
+                
+                if (!first.Any(ch => ch < '0' || ch > '9'))
+                {
+                    newName = splits.Skip(1).Take(splits.Count()).ToArray();
+                }
+                else if (!last.Any(ch => ch < '0' || ch > '9'))
+                {
+                    newName = splits.Take(splits.Count() - 1).ToArray();
+                }
+                else
+                {
+                    newName = splits;
+                }
+
+                var name = string.Join(sep, newName);
+                return ext.Length == 1 ? name : name + ext;
+            }
+            else if (isCheck == 3)
+            {
+                for (int i = 0; i < splits.Length; i++)
+                {
+                    var sp = splits[i];
+                    if (sp.Split(' ').Length > 1)
+                    {
+                        return sp;
+                    }
+                }
+                return splits[0];
+            }
+            else if (isCheck == 4)
+            {
+                var sep = type == 1 ? "_" : type == 2 ? "-" : " ";
+                if (splits.Length == 4)
+                {
+                    return splits[0] + sep + splits[1] + sep + splits[3];
+                }
+                else
+                {
+                    return splits[0] + sep + splits[1] + sep + splits[2];
+                }
+            }
+            else
+            {
+                return fileName;
+            }
+        }
+    }
+}

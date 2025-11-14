@@ -19,3 +19,4 @@ C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileManager.exe
 C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileManager.pdb
 C:\Projects\Ofer\FileManager\FileManager\bin\Release\Costura.dll
 C:\Projects\Ofer\FileManager\FileManager\bin\Release\Costura.xml
+C:\Projects\Ofer\FileManager\FileManager\obj\Release\FileManager.exe.config
