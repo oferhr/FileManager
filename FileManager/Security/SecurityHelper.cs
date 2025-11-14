@@ -37,6 +37,13 @@ namespace FileManager.Security
             var fullPath = Path.GetFullPath(combined);
             var fullBasePath = Path.GetFullPath(basePath);
 
+            // Ensure fullBasePath ends with directory separator to prevent bypass
+            // This prevents "C:\base-evil\" from matching "C:\base"
+            if (!fullBasePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                fullBasePath += Path.DirectorySeparatorChar;
+            }
+
             // Ensure the result is within the base directory
             if (!fullPath.StartsWith(fullBasePath, StringComparison.OrdinalIgnoreCase))
             {
@@ -166,6 +173,9 @@ namespace FileManager.Security
             if (string.IsNullOrEmpty(filePath))
                 return false;
 
+            if (allowedExtensions == null || allowedExtensions.Length == 0)
+                return false;
+
             var extension = Path.GetExtension(filePath);
             return allowedExtensions.Any(ext =>
                 ext.Equals(extension, StringComparison.OrdinalIgnoreCase)
@@ -192,16 +202,34 @@ namespace FileManager.Security
             var fileName = Path.GetFileName(sourceFile);
             var backupPath = Path.Combine(backupDirectory, fileName);
 
-            // If backup already exists, append timestamp
+            // If backup already exists, append timestamp with milliseconds and ensure uniqueness
             if (File.Exists(backupPath))
             {
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
                 var ext = Path.GetExtension(fileName);
-                backupPath = Path.Combine(backupDirectory, $"{fileNameWithoutExt}_{timestamp}{ext}");
+
+                // Loop until we find a unique filename (prevents timestamp collisions)
+                int attempt = 0;
+                do
+                {
+                    var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                    backupPath = Path.Combine(backupDirectory, $"{fileNameWithoutExt}_{timestamp}{ext}");
+
+                    // Safety limit to prevent infinite loop
+                    if (++attempt > 1000)
+                    {
+                        throw new IOException($"Failed to create unique backup filename after {attempt} attempts");
+                    }
+
+                    // Small delay if we're looping to ensure timestamp changes
+                    if (attempt > 1)
+                    {
+                        System.Threading.Thread.Sleep(1);
+                    }
+                } while (File.Exists(backupPath));
             }
 
-            File.Copy(sourceFile, backupPath, true);
+            File.Copy(sourceFile, backupPath, false); // Don't overwrite - we ensured uniqueness above
             return backupPath;
         }
 
