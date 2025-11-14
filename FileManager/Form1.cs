@@ -19,46 +19,142 @@ using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 
 namespace FileManager
 {
-
-
+    /// <summary>
+    /// Main application form for the FileManager system.
+    /// Provides comprehensive file management capabilities including:
+    /// - File organization and duplicate detection
+    /// - Excel file processing and conversion
+    /// - PDF creation and merging
+    /// - Automated email distribution via Outlook
+    /// - Archive management
+    /// - File counting and reporting
+    /// </summary>
+    /// <remarks>
+    /// This form integrates with Microsoft Office (Excel and Outlook) for automation.
+    /// Supports Hebrew language and Right-to-Left (RTL) text rendering.
+    /// Uses NLog for comprehensive logging of operations and errors.
+    /// Configuration is loaded from App.config at startup.
+    /// </remarks>
     public partial class Form1 : Form
     {
+        #region Private Fields
+
+        /// <summary>
+        /// Base path for file operations, loaded from configuration.
+        /// </summary>
         private readonly string _path;
+
+        /// <summary>
+        /// Path to shared configuration file.
+        /// </summary>
         private readonly string _config;
+
+        /// <summary>
+        /// Path to Excel template/configuration file.
+        /// </summary>
         private readonly string _excel;
+
+        /// <summary>
+        /// Sleep duration in seconds between email operations to avoid overwhelming the mail server.
+        /// </summary>
         private readonly int _sleep;
+
+        /// <summary>
+        /// Flag indicating whether files should be moved (true) or copied (false).
+        /// </summary>
         private bool _isMove = true;
+
+        /// <summary>
+        /// Counter tracking the number of duplicate files found.
+        /// </summary>
         private int _numOfDuplicates;
+
+        /// <summary>
+        /// Left-to-Right mark Unicode character for mixed text direction handling.
+        /// </summary>
         const string LtrMark = "\u200E";
+
+        /// <summary>
+        /// Lock object for thread-safe operations.
+        /// </summary>
         private static readonly object LockObject = new object ();
+
+        /// <summary>
+        /// Temporary directory name for copied files during processing.
+        /// </summary>
         private string CopiedFilesDirectory = "9876789";
+
+        /// <summary>
+        /// Timestamp for file deletion operations.
+        /// </summary>
         private  DateTime dtDeleteFiles;
+
+        /// <summary>
+        /// Global list of folders being processed.
+        /// </summary>
         private readonly List<string> gfoldersList = new List<string>();
+
+        /// <summary>
+        /// Array of mail processing method names in Hebrew.
+        /// Defines the available email grouping and merging strategies.
+        /// </summary>
         private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
+
+        /// <summary>
+        /// NLog logger instance for this class.
+        /// </summary>
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger ();
+
+        /// <summary>
+        /// Flag indicating whether errors have occurred during processing.
+        /// </summary>
         private bool hasErrors = false;
 
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the Form1 class.
+        /// Loads configuration, initializes UI components, and populates folder lists.
+        /// </summary>
+        /// <remarks>
+        /// The constructor performs the following initialization steps:
+        /// 1. Loads configuration from App.config (paths and settings)
+        /// 2. Validates required configuration paths exist
+        /// 3. Queries the base directory for available folders
+        /// 4. Populates UI controls with folder lists
+        /// 5. Sets up default UI state (Reports tab selected, Mail button disabled)
+        /// Any errors during initialization are logged and displayed to the user.
+        /// </remarks>
         public Form1()
         {
             InitializeComponent();
+
+            // Disable mail button until folders are selected
             btnMail.Enabled = false;
+
+            // Set maximum form height to fit screen (leaving space for taskbar)
             this.MaximumSize = new Size(Size.Width, (Screen.PrimaryScreen.Bounds.Height - 50));
 
             try
             {
-                
+                // Load configuration settings from App.config
                 _path = ConfigurationManager.AppSettings["basePath"];
                 _config = ConfigurationManager.AppSettings ["ConfigPath"];
                 _excel = ConfigurationManager.AppSettings ["ExcelPath"];
                 var sleep = ConfigurationManager.AppSettings ["MailSleepSeconds"];
-                
+
+                // Parse sleep duration with fallback to 0 if invalid
                 if (!Int32.TryParse(sleep, out _sleep))
                 {
                     _sleep = 0;
                 }
 
-
+                // Default to Reports tab on startup
                 tabsMain.SelectedTab = tabReports;
+
+                // Validate required configuration paths
                 if (_config == string.Empty)
                 {
                     MessageBox.Show("נתיב לקובץ קונפיגורציה משותף אינו קיים");
@@ -68,15 +164,16 @@ namespace FileManager
                     MessageBox.Show ( "נתיב לקובץ האקסל אינו קיים" );
                     return;
                 }
+
+                // Query available directories from base path
                 string [] dirs;
                 try
                 {
                     dirs = Directory.GetDirectories(_path);
-                    
-                    
                 }
-                catch 
+                catch
                 {
+                    // Log and display error if base path is invalid or inaccessible
                     MessageBox.Show("Path in config file does not exist, or you do not have permission to query it.");
 
                     LogEventInfo eventInfo = new LogEventInfo
@@ -88,10 +185,9 @@ namespace FileManager
                     return;
                 }
 
-                //adding files to checkbox list
-
+                // Populate folder selection controls with available directories
                 foreach (var path in dirs) {
-                    
+
                     var folder = Path.GetFileName ( path );
                    
                     if (folder != null) {

@@ -81,6 +81,38 @@ The application includes Hebrew language support for UI elements and mail operat
 - איחוד שמי
 - איחוד לפי דוח
 
+## Code Documentation
+
+The codebase includes comprehensive XML documentation comments and inline explanations:
+
+### Documentation Coverage
+
+- **Program.cs**: Application entry point with XML docs explaining STAThread requirement for Office automation
+- **Settings.cs**: Settings manager with event handler documentation
+- **FileCount.cs**: All data model classes fully documented, including:
+  - FileCount: File counting results
+  - EmailDirSettings: Email directory configuration
+  - FolderSettings: Folder path management
+  - CountSettings, SplitSettings, CopySettings: Operation-specific settings
+  - Grouper: File grouping functionality
+  - ArchiveSettings: Archive operation configuration
+- **print.cs**: Complete documentation of the DataGridView printing system:
+  - RTL (Right-to-Left) support for Hebrew
+  - Page layout and pagination logic
+  - Column width calculations
+  - Header and cell rendering
+- **ResultGrid.cs**: Results display form with CSV export and print capabilities
+- **Form1.cs**: Main form with comprehensive field documentation and constructor explanation
+
+### Documentation Features
+
+- XML documentation comments for all public classes and methods
+- Inline comments explaining complex logic blocks
+- Parameter and return value descriptions
+- Code examples and usage notes where applicable
+- Explanation of Hebrew language support and RTL rendering
+- Thread safety and COM interop considerations
+
 ## Version History
 
 Recent version: 1.2.43
