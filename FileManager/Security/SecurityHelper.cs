@@ -101,7 +101,15 @@ namespace FileManager.Security
             const int MaxLength = 255;
             if (fileName.Length > MaxLength)
             {
-                fileName = fileName.Substring(0, MaxLength);
+                // Check if we're about to split a UTF-16 surrogate pair
+                // High surrogates are in range 0xD800-0xDBFF
+                int truncateAt = MaxLength;
+                if (char.IsHighSurrogate(fileName[MaxLength - 1]))
+                {
+                    // Truncate one character earlier to avoid splitting the pair
+                    truncateAt = MaxLength - 1;
+                }
+                fileName = fileName.Substring(0, truncateAt);
             }
 
             // Remove control characters (0x00-0x1F, 0x7F)
@@ -128,10 +136,24 @@ namespace FileManager.Security
             // Use default domains if none provided
             var domains = allowedDomains ?? DefaultAllowedDomains;
 
-            // Check if email ends with any allowed domain
+            // Extract the actual domain from the email (after the LAST @ symbol)
+            // This prevents bypass attacks like "attacker@evil.com@company.com"
+            var lastAtIndex = email.LastIndexOf('@');
+            if (lastAtIndex < 0 || lastAtIndex == email.Length - 1)
+            {
+                // No @ symbol or @ is at the end - invalid email
+                return false;
+            }
+
+            var actualDomain = email.Substring(lastAtIndex); // Includes the @
+
+            // Check if the actual domain matches any allowed domain
             var isAllowed = domains.Any(domain =>
-                email.EndsWith(domain, StringComparison.OrdinalIgnoreCase)
-            );
+            {
+                // Handle domains with or without @ prefix
+                var domainToCheck = domain.StartsWith("@") ? domain : "@" + domain;
+                return actualDomain.Equals(domainToCheck, StringComparison.OrdinalIgnoreCase);
+            });
 
             if (!isAllowed)
             {
