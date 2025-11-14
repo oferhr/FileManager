@@ -112,7 +112,7 @@ namespace FileManager
 
         #endregion
 
-        #region Constructor
+        #region Constructor and Initialization
 
         /// <summary>
         /// Initializes a new instance of the Form1 class.
@@ -189,24 +189,26 @@ namespace FileManager
                 foreach (var path in dirs) {
 
                     var folder = Path.GetFileName ( path );
-                   
+
+                    // Add folder to all relevant UI controls
                     if (folder != null) {
-                       
-                        DuplicateFolders.Items.Add ( folder );
-                        reportFolders.Items.Add ( folder );
-                        filenames.Items.Add ( folder );
-                        //cboDirs.Items.Add(folder);
-                        dirList.Items.Add ( folder );
-                        gfoldersList.Add ( folder );
-                        DelList.Items.Add ( folder );
+
+                        DuplicateFolders.Items.Add ( folder );  // Duplicate detection tab
+                        reportFolders.Items.Add ( folder );      // Reports tab
+                        filenames.Items.Add ( folder );          // File names tab
+                        dirList.Items.Add ( folder );            // Directory list
+                        gfoldersList.Add ( folder );             // Global folders list
+                        DelList.Items.Add ( folder );            // Delete files tab
                     }
                 }
-                
 
+
+                // Load count settings from configuration and populate count grid
                 var countsConfigSettings = GetCountSettings ();
                 var countDs = new List<CountSettings> ();
                 foreach (var fol in gfoldersList)
                 {
+                    // Find existing settings for this folder or create default
                     var curdir = countsConfigSettings.Find ( f => f.dir == fol );
                     if (curdir != null) {
                         countDs.Add ( new CountSettings
@@ -217,6 +219,7 @@ namespace FileManager
                         } );
                     }
                     else {
+                        // Default unchecked with no method
                         countDs.Add ( new CountSettings
                         {
                             dir = fol,
@@ -226,12 +229,13 @@ namespace FileManager
                     }
                 }
 
-
+                // Bind count settings to grid
                 grdCount.AutoGenerateColumns = true;
                 grdCount.DataSource = countDs;
 
 
 
+                // Load split settings from configuration and populate split grid
                 var splitConfigSettings = GetSplitSettings();
                 var splitDs = new List<SplitSettings> ();
 
@@ -255,12 +259,11 @@ namespace FileManager
                     }
                 }
 
-                
-
-              //  grdFolderSplit.AutoGenerateColumns = true;
+                // Bind split settings to grid
                 grdFolderSplit.DataSource = splitDs;
 
 
+                // Load copy settings from configuration and populate copy grid
                 var CopyConfigSettings = GetCopySettings();
                 var copyDs = new List<CopySettings>();
 
@@ -289,9 +292,11 @@ namespace FileManager
                     }
                 }
 
+                // Bind copy settings to grid
                 gridCopy.DataSource = copyDs;
 
 
+                // Load email directory settings from configuration
                 var emailConfigList = GetEmailDirSettings ();
                 var emailsDs = new List<EmailDirSettings>();
                 foreach (var fol in gfoldersList)
@@ -303,12 +308,14 @@ namespace FileManager
                         {
                             dir = fol,
                             email = curdir.email,
+                            // Map integer check index to Hebrew mail method string
                             check = curdir.icheck == 0  ? mailCheck[0] : curdir.icheck == 1 ? mailCheck [1] : curdir.icheck == 2 ? mailCheck [2] : mailCheck[3],
                             method = curdir.method
                         });
                     }
                     else
                     {
+                        // Default to "בודד-זהה" (Single-Identical) method
                         emailsDs.Add(new EmailDirSettings
                         {
                             dir = fol,
@@ -320,6 +327,7 @@ namespace FileManager
                     }
                 }
 
+                // Bind email settings to grid (manual column configuration)
                 dataGridView1.AutoGenerateColumns = false;
                 dataGridView1.DataSource = emailsDs;
 
@@ -505,39 +513,60 @@ namespace FileManager
             }
         }
 
-        
-        //private bool checkFolder(string folder)
-        //{
-        //    int n;
-        //    if (int.TryParse(folder, out n))
-        //    {
-        //        if (n < 100)
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //    return false;
-        //}
+        #endregion
+
+        #region Event Handlers
+
+        /// <summary>
+        /// Event handler for the Close button.
+        /// Closes the main application form.
+        /// </summary>
         private void bClose_Click(object sender, EventArgs e)
         {
             Close();
         }
 
+        /// <summary>
+        /// Event handler for the Start button on the Reports tab.
+        /// Executes the complete file processing workflow in sequence.
+        /// </summary>
+        /// <remarks>
+        /// Workflow sequence:
+        /// 1. Validates destination folder is set
+        /// 2. Copies files based on configuration
+        /// 3. Splits folders according to split settings
+        /// 4. Fixes file names (Migdal format)
+        /// 5. Counts files in specified directories
+        /// 6. Sets Excel file names based on content
+        /// 7. Sets report names according to rules
+        /// 8. Enables mail button for sending reports
+        ///
+        /// Any errors encountered during processing are logged and a notification is shown.
+        /// </remarks>
         private void bStart_Click(object sender, EventArgs e)
         {
+            // Validate destination folder is configured
             if (string.IsNullOrEmpty ( txtReportDest.Text )) {
                 MessageBox.Show ( "שם תיקיית היעד לשינוי שמות לדוחות לא קיים" );
                 return;
             }
+
+            // Hide summary box and prepare UI for processing
             boxSummary.Visible = false;
             Application.DoEvents();
-            CopyFiles();
-            SplitFolders();
-            FixFileNames ( true );
-            CountFiles ();
-            SetExcelNames ();
-            SetReportsNames ();
+
+            // Execute file processing workflow
+            CopyFiles();            // Copy files based on copy settings
+            SplitFolders();         // Split folders according to configuration
+            FixFileNames ( true );  // Fix file names (Migdal format)
+            CountFiles ();          // Count files in selected directories
+            SetExcelNames ();       // Set Excel file names based on content analysis
+            SetReportsNames ();     // Apply report naming conventions
+
+            // Enable mail functionality after processing
             btnMail.Enabled = true;
+
+            // Notify user of completion status
             if (hasErrors)
             {
                 MessageBox.Show("הפעולה הסתיימה עם בעיותץ בדוק קובץ לוג");
@@ -556,30 +585,44 @@ namespace FileManager
         //    btnMail.Enabled = true;
         //}
 
-        //private void btnExcelFiles_Click ( object sender, EventArgs e )
-        //{
-        //    SetExcelNames ();
-        //}
-
+        /// <summary>
+        /// Event handler for the Delete button.
+        /// Initiates the file deletion process based on age criteria.
+        /// </summary>
         private void btnDel_Click ( object sender, EventArgs e )
         {
             DelteFiles();
         }
 
+        /// <summary>
+        /// Event handler for form resize.
+        /// Invalidates the form to trigger a repaint with gradient background.
+        /// </summary>
         private void Form1_Resize ( object sender, EventArgs e )
         {
             Invalidate ();
         }
 
+        /// <summary>
+        /// Event handler for Move/Copy radio button change.
+        /// Updates the operation mode flag.
+        /// </summary>
+        /// <param name="sender">The radio button control.</param>
+        /// <param name="e">Event arguments.</param>
         private void rMove_CheckedChanged ( object sender, EventArgs e )
         {
             _isMove = rMove.Checked;
         }
 
+        /// <summary>
+        /// Paints the form background with a vertical gradient effect.
+        /// </summary>
+        /// <param name="sender">The form being painted.</param>
+        /// <param name="e">Paint event arguments with graphics context.</param>
         private void Form1_Paint ( object sender, PaintEventArgs e )
         {
-
             try {
+                // Create vertical gradient from WhiteSmoke to SteelBlue
                 using (var brush = new LinearGradientBrush ( ClientRectangle,
                                                                        Color.WhiteSmoke,
                                                                        Color.SteelBlue,
@@ -588,33 +631,57 @@ namespace FileManager
                 }
             }
             catch {
-
-
+                // Silently ignore painting errors
             }
         }
 
+        /// <summary>
+        /// Event handler for the Send Mail button.
+        /// Processes files from configured directories and sends them via Outlook email.
+        /// </summary>
+        /// <remarks>
+        /// Email Processing Workflow:
+        /// 1. Loads email directory configuration from JSON
+        /// 2. Iterates through each configured directory
+        /// 3. Finds all TIFF and PDF files in subdirectories
+        /// 4. Groups files based on naming conventions and mail method settings:
+        ///    - "בודד-זהה" (Single-Identical): Each file sent separately
+        ///    - "בודד-קצר" (Single-Short): Files with shortened names
+        ///    - "איחוד-קצר" (Merge-Short): Multiple files merged
+        ///    - "איחוד שמי" (Merge-Named): Files merged by name pattern
+        ///    - "איחוד לפי דוח" (Merge-By-Report): Files merged by report criteria
+        /// 5. Creates/merges PDFs as needed
+        /// 6. Sends emails via Outlook with attachments
+        /// 7. Archives sent files
+        /// 8. Updates progress bar during processing
+        ///
+        /// Configuration is loaded from shared JSON file or grid data source.
+        /// Files are only processed from "1" subdirectories or valid date-formatted folders.
+        /// Sleep delay between emails prevents server overload.
+        /// </remarks>
         private void btnMail_Click ( object sender, EventArgs e )
         {
             try
             {
+                // Initialize progress indicators
                 progressBar1.Visible = true;
                 progressBar1.Value = 0;
-                lblProgressMessage.Text = "שולח מיילים";
+                lblProgressMessage.Text = "שולח מיילים";  // "Sending emails"
                 lblProgressMessage.Visible = true;
                 Application.DoEvents();
 
+                // Initialize data structures for file processing
                 List<EmailDirSettings> dirSettings;
-                var dnames = new Dictionary<string, string>();
-                var lCopiedNames = new List<string>();
-                var lpaths = new List<string>();
-                var arfiles = new List<List<string>>();
-                var ardirs = new List<string>();
+                var dnames = new Dictionary<string, string>();        // File names dictionary
+                var lCopiedNames = new List<string>();                // Copied file names
+                var lpaths = new List<string>();                      // File paths
+                var arfiles = new List<List<string>>();               // Grouped files
+                var ardirs = new List<string>();                      // Directory names
                 var configPath = Path.Combine(_config, "fileManager_emailDirConfig.json");
 
-                // if shared config file exist - take values from there, and save email to the dir selected
+                // Load email configuration from shared JSON file if exists
                 if (File.Exists(configPath))
                 {
-
                     using (var r = new StreamReader(configPath))
                     {
                         var json = r.ReadToEnd();
@@ -623,14 +690,18 @@ namespace FileManager
                 }
                 else
                 {
+                    // No config file - use empty settings
                     dirSettings = new List<EmailDirSettings>();
                 }
+
+                // Initialize processing variables
                 var isGoodDirectory = false;
                 var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
                 var counts = validDirs.Count();
-                double pbPart = counts == 0 ? 100 : 100 / counts;
+                double pbPart = counts == 0 ? 100 : 100 / counts;  // Progress bar increment per directory
                 var fOK = false;
-                //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
+
+                // Process each directory with email configuration
                 foreach (var dirSetting in dirSettings)
                 {
                     // get all files in selected directory

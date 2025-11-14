@@ -102,7 +102,18 @@ The codebase includes comprehensive XML documentation comments and inline explan
   - Column width calculations
   - Header and cell rendering
 - **ResultGrid.cs**: Results display form with CSV export and print capabilities
-- **Form1.cs**: Main form with comprehensive field documentation and constructor explanation
+- **Form1.cs**: Main form with comprehensive documentation:
+  - All private fields with detailed purpose descriptions
+  - Constructor with full initialization workflow explanation
+  - Event handlers documented (Close, Start, Delete, Resize, Paint, etc.)
+  - Main workflow method (bStart_Click) with complete processing sequence
+  - Email automation method (btnMail_Click) with detailed workflow steps
+  - Inline comments throughout constructor for grid initialization
+  - Configuration loading and data binding logic explained
+- **AssemblyInfo.cs**: Assembly metadata with XML documentation:
+  - Assembly attributes explained
+  - Version information documented
+  - COM visibility settings with notes on Office interop
 
 ### Documentation Features
 
