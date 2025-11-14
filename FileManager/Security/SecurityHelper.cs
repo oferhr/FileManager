@@ -37,14 +37,19 @@ namespace FileManager.Security
             var fullPath = Path.GetFullPath(combined);
             var fullBasePath = Path.GetFullPath(basePath);
 
-            // Ensure fullBasePath ends with directory separator to prevent bypass
+            // Ensure both paths end with directory separator for consistent comparison
             // This prevents "C:\base-evil\" from matching "C:\base"
             if (!fullBasePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
             {
                 fullBasePath += Path.DirectorySeparatorChar;
             }
 
-            // Ensure the result is within the base directory
+            if (!fullPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                fullPath += Path.DirectorySeparatorChar;
+            }
+
+            // Ensure the result is within the base directory (or equals it)
             if (!fullPath.StartsWith(fullBasePath, StringComparison.OrdinalIgnoreCase))
             {
                 var logger = NLog.LogManager.GetCurrentClassLogger();
@@ -55,7 +60,8 @@ namespace FileManager.Security
                 );
             }
 
-            return fullPath;
+            // Return the original fullPath without the trailing separator we added
+            return Path.GetFullPath(combined);
         }
 
         /// <summary>
