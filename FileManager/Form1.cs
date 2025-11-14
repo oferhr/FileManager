@@ -16,6 +16,7 @@ using System.Windows.Forms;
 using Application = System.Windows.Forms.Application;
 using Excel = Microsoft.Office.Interop.Excel;
 using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
+using FileManager.Services;
 
 namespace FileManager
 {
@@ -31,12 +32,21 @@ namespace FileManager
         private int _numOfDuplicates;
         const string LtrMark = "\u200E";
         private static readonly object LockObject = new object ();
-        private string CopiedFilesDirectory = "9876789";
+
         private  DateTime dtDeleteFiles;
         private readonly List<string> gfoldersList = new List<string>();
-        private readonly string[] mailCheck = new [] {"איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
+
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger ();
         private bool hasErrors = false;
+        
+        // Services
+        private readonly IFileCountService _fileCountService;
+        private readonly IConfigurationService _configurationService;
+        private readonly IFileService _fileService;
+        private readonly IDuplicateManagementService _duplicateManagementService;
+        private readonly IFileNameManagementService _fileNameManagementService;
+        private readonly IEmailService _emailService;
+        private readonly IExcelService _excelService;
 
         public Form1()
         {
@@ -46,7 +56,6 @@ namespace FileManager
 
             try
             {
-                
                 _path = ConfigurationManager.AppSettings["basePath"];
                 _config = ConfigurationManager.AppSettings ["ConfigPath"];
                 _excel = ConfigurationManager.AppSettings ["ExcelPath"];
@@ -57,7 +66,44 @@ namespace FileManager
                     _sleep = 0;
                 }
 
+                // Initialize services
+                _configurationService = new ConfigurationService(_config);
+                _fileService = new FileService();
+                _fileCountService = new FileCountService(
+                    _path, 
+                    _config, 
+                    _fileService, 
+                    _configurationService,
+                    UpdateProgressBar,
+                    LogMessage,
+                    RefreshDataGridView1);
+                _duplicateManagementService = new DuplicateManagementService(
+                    _path,
+                    _fileService,
+                    _configurationService,
+                    UpdateProgressBar);
+                _fileNameManagementService = new FileNameManagementService(
+                    _path,
+                    _fileService,
+                    _configurationService,
+                    UpdateProgressBar,
+                    LogMessage,
+                    (visible) => progressBar1.Visible = visible,
+                    (message) => lblProgressMessage.Text = message);
+                _emailService = new EmailService(
+                    _path,
+                    _fileService,
+                    _configurationService,
+                    _fileCountService,
+                    UpdateProgressBar);
+                _excelService = new ExcelService(
+                    _path,
+                    _excel,
+                    _fileService,
+                    _configurationService,
+                    UpdateProgressBar);
 
+          
                 tabsMain.SelectedTab = tabReports;
                 if (_config == string.Empty)
                 {
@@ -107,7 +153,7 @@ namespace FileManager
                 }
                 
 
-                var countsConfigSettings = GetCountSettings ();
+                var countsConfigSettings = _fileCountService.GetCountSettings();
                 var countDs = new List<CountSettings> ();
                 foreach (var fol in gfoldersList)
                 {
@@ -130,13 +176,12 @@ namespace FileManager
                     }
                 }
 
-
                 grdCount.AutoGenerateColumns = true;
                 grdCount.DataSource = countDs;
 
 
 
-                var splitConfigSettings = GetSplitSettings();
+                var splitConfigSettings = _configurationService.GetSplitSettings();
                 var splitDs = new List<SplitSettings> ();
 
                 foreach (var fol in gfoldersList) {
@@ -165,7 +210,7 @@ namespace FileManager
                 grdFolderSplit.DataSource = splitDs;
 
 
-                var CopyConfigSettings = GetCopySettings();
+                var CopyConfigSettings = _configurationService.GetCopySettings();
                 var copyDs = new List<CopySettings>();
 
                 foreach (var fol in gfoldersList)
@@ -196,39 +241,12 @@ namespace FileManager
                 gridCopy.DataSource = copyDs;
 
 
-                var emailConfigList = GetEmailDirSettings ();
-                var emailsDs = new List<EmailDirSettings>();
-                foreach (var fol in gfoldersList)
-                {
-                    var curdir = emailConfigList.Find ( f => f.dir == fol );
-                    if(curdir != null)
-                    {
-                        emailsDs.Add(new EmailDirSettings
-                        {
-                            dir = fol,
-                            email = curdir.email,
-                            check = curdir.icheck == 0  ? mailCheck[0] : curdir.icheck == 1 ? mailCheck [1] : curdir.icheck == 2 ? mailCheck [2] : mailCheck[3],
-                            method = curdir.method
-                        });
-                    }
-                    else
-                    {
-                        emailsDs.Add(new EmailDirSettings
-                        {
-                            dir = fol,
-                            email = null,
-                            check = mailCheck [1],
-                            icheck = 0,
-                            method = null
-                        } );
-                    }
-                }
-
                 dataGridView1.AutoGenerateColumns = false;
+                var emailsDs = _emailService.GetEmailDirSettingsForGrid(gfoldersList);
                 dataGridView1.DataSource = emailsDs;
 
                 // Initialize grdArchive from JSON configuration file
-                var archiveConfigSettings = GetArchiveSettings();
+                var archiveConfigSettings = _configurationService.GetArchiveSettings();
                 var archiveDs = new List<ArchiveSettings>();
                 
                 // If archive source and destination are already set, populate the grid
@@ -289,7 +307,7 @@ namespace FileManager
                     txtFolderArchiveParent.Text = Properties.Settings.Default.ArchiveSourceName;
                 }
 
-                var folderSettings = GetFolderSettings ();
+                var folderSettings = _configurationService.GetFolderSettings();
 
                 // checking if the user has some saved checked folder list
                 // string countFolderSettings = Settings.Default.selectedFolders;
@@ -328,52 +346,9 @@ namespace FileManager
                 }
 
 
-                var duplicatesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().duplicatesFolders;
-                if (!String.IsNullOrEmpty(duplicatesFolderSettings))
-                {
-                    var folders = duplicatesFolderSettings.Split(',');
-                    for (var i = 0; i <= (DuplicateFolders.Items.Count - 1); i++)
-                    {
-                        foreach (var fol in folders)
-                        {
-                            if (DuplicateFolders.Items[i].ToString() == fol)
-                            {
-                                DuplicateFolders.SetItemChecked(i, true);
-                            }
-                        }
-
-                    }
-                }
-               // string fileNamesFolderSettings = Settings.Default.fileNamesFolders;
-                var fileNamesFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().fileNamesFolders;
-                if (!String.IsNullOrEmpty(fileNamesFolderSettings))
-                {
-                    var folders = fileNamesFolderSettings.Split(',');
-                    for (var i = 0; i <= (filenames.Items.Count - 1); i++)
-                    {
-                        foreach (var fol in folders)
-                        {
-                            if (filenames.Items[i].ToString() == fol)
-                            {
-                                filenames.SetItemChecked(i, true);
-                            }
-                        }
-
-                    }
-                }
-
-                var excelFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().ExcelFolders;
-                if (!String.IsNullOrEmpty ( excelFolderSettings )) {
-                    var folders = excelFolderSettings.Split ( ',' );
-                    for (var i = 0; i <= ( dirList.Items.Count - 1 ); i++) {
-                        foreach (var fol in folders) {
-                            if (dirList.Items [i].ToString () == fol) {
-                                dirList.SetItemChecked ( i, true );
-                            }
-                        }
-
-                    }
-                }
+                _duplicateManagementService.LoadCheckedDuplicateFolders(DuplicateFolders);
+                _fileNameManagementService.LoadFileNameFolders(filenames);
+                _excelService.LoadExcelFolders(dirList);
 
                 var deletedFolderSettings = folderSettings.Count == 0 ? String.Empty : folderSettings.First ().deleteFolders;
                 if (!String.IsNullOrEmpty ( deletedFolderSettings )) {
@@ -422,6 +397,28 @@ namespace FileManager
         //    }
         //    return false;
         //}
+        // Helper methods for service callbacks
+        private void UpdateProgressBar(int value)
+        {
+            if (progressBar1.InvokeRequired)
+            {
+                progressBar1.Invoke(new Action<int>(UpdateProgressBar), value);
+                return;
+            }
+            progressBar1.Value = value;
+            Application.DoEvents();
+        }
+
+        private void LogMessage(string message)
+        {
+            if (txtLog.InvokeRequired)
+            {
+                txtLog.Invoke(new Action<string>(LogMessage), message);
+                return;
+            }
+            txtLog.AppendText(message + Environment.NewLine);
+        }
+
         private void bClose_Click(object sender, EventArgs e)
         {
             Close();
@@ -507,378 +504,18 @@ namespace FileManager
                 lblProgressMessage.Visible = true;
                 Application.DoEvents();
 
-                List<EmailDirSettings> dirSettings;
-                var dnames = new Dictionary<string, string>();
-                var lCopiedNames = new List<string>();
-                var lpaths = new List<string>();
-                var arfiles = new List<List<string>>();
-                var ardirs = new List<string>();
-                var configPath = Path.Combine(_config, "fileManager_emailDirConfig.json");
-
-                // if shared config file exist - take values from there, and save email to the dir selected
-                if (File.Exists(configPath))
-                {
-
-                    using (var r = new StreamReader(configPath))
-                    {
-                        var json = r.ReadToEnd();
-                        dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>>(json);
-                    }
-                }
-                else
-                {
-                    dirSettings = new List<EmailDirSettings>();
-                }
-                var isGoodDirectory = false;
+                var dirSettings = _configurationService.GetEmailDirSettings();
                 var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
-                var counts = validDirs.Count();
-                double pbPart = counts == 0 ? 100 : 100 / counts;
-                var fOK = false;
-                //dirSettings = dirSettings.Where ( c => c.check ).ToList ();
-                foreach (var dirSetting in dirSettings)
+                
+                if (!validDirs.Any())
                 {
-                    // get all files in selected directory
-                    arfiles.Clear();
-                    lCopiedNames.Clear();
-                    dnames.Clear();
-                    lpaths.Clear();
-                    ardirs.Clear();
-
-                    if (string.IsNullOrEmpty(dirSetting.email))
-                    {
-                        continue;
-                    }
-
-                    var basePath = Path.Combine(_path, dirSetting.dir);
-                    if (!Directory.Exists(basePath))
-                    {
-                        continue;
-                    }
-                    var lfiles = Directory.GetFiles(basePath, "*.*", SearchOption.AllDirectories)
-                        .Where(
-                            s =>
-                                s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") ||
-                                s.ToLower().EndsWith(".pdf"));
-                    var files = lfiles as IList<string> ?? lfiles.ToList();
-                    if (files.Any())
-                    {
-                        //iterate through the files and get the names and insert the names and the paths to lists
-                        foreach (var file in files)
-                        {
-                            // good directory is only with the name "1" of a date in format dd.mm.yy like 24.02.17
-                            isGoodDirectory = false;
-                            var currentDir = Path.GetFileName(Path.GetDirectoryName(file));
-                            if (currentDir == "1")
-                            {
-                                if (!ardirs.Contains(currentDir))
-                                {
-                                    ardirs.Add(currentDir);
-                                }
-                                isGoodDirectory = true;
-                            }
-                            else
-                            {
-                                isGoodDirectory = false;
-                                //var regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
-                                //var m = Regex.Match(currentDir, regex);
-                                //if (m.Success)
-                                //{
-                                //    isGoodDirectory = false;
-                                //}
-                                //else
-                                //{
-                                //    if (!ardirs.Contains(currentDir))
-                                //    {
-                                //        ardirs.Add(currentDir);
-                                //    }
-
-                                //    isGoodDirectory = true;
-                                //}
-                            }
-                            //else
-                            //{
-                            //    var regex = @"^(\d{1,2})([.])(\d{1,2})([.])(\d{1,2})$";
-                            //    var m = Regex.Match(currentDir, regex);
-                            //    if (m.Success)
-                            //    {
-                            //        if (!ardirs.Contains(currentDir))
-                            //        {
-                            //            ardirs.Add(currentDir);
-                            //        }
-
-                            //        isGoodDirectory = true;
-                            //    }
-                            //    else
-                            //    {
-                            //        isGoodDirectory = false;
-                            //    }
-                            //}
-                            if (!isGoodDirectory)
-                            {
-                                continue;
-                            }
-
-                            var fileName = Path.GetFileName(file);
-                            if (fileName == null || IsThumbsInPath(file))
-                            {
-                                continue;
-                            }
-                            using (var w = File.AppendText("log.txt"))
-                            {
-                                Log("000000000000---------------" + fileName, w);
-                            }
-                            var newFileName = fileName;
-                            var newFile = file;
-                            if (fileName.Trim().Contains(" "))
-                            {
-                                newFileName = fileName.Replace(" ", "_");
-                                
-                            }
-
-                            var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
-                            if (!Directory.Exists(copiedPath))
-                            {
-                                Directory.CreateDirectory(copiedPath);
-                            }
-                            newFile = Path.Combine(copiedPath, newFileName);
-                            File.Copy(file, newFile, true);
-
-                            lCopiedNames.Add(GetMailFileName(fileName, dirSetting.icheck));
-                            if (!dnames.ContainsKey(newFileName))
-                            {
-                                var mailfile = GetMailFileName(fileName, dirSetting.icheck);
-                                var mailfileNoExt = Path.GetFileNameWithoutExtension(mailfile);
-                                dnames.Add(newFileName, mailfileNoExt);
-                            }
-                            lpaths.Add(newFile);
-                        }
-                        if (!isGoodDirectory)
-                        {
-                            continue;
-                        }
-                        using (var w = File.AppendText("log.txt"))
-                        {
-                            Log("222222222222222222---------------" + string.Join(",", lCopiedNames.ToArray()), w);
-                        }
-                        using (var w = File.AppendText("log.txt"))
-                        {
-                            Log("333333333333333---------------" + string.Join(",", lpaths.ToArray()), w);
-                        }
-                        // group file names 
-                        var duplicateKeys = lCopiedNames.GroupBy(x => x)
-                            .Select(group => group.Key);
-                        using (var w = File.AppendText("log.txt"))
-                        {
-                            Log("5555555555555---------------" + string.Join(",", duplicateKeys.ToArray()), w);
-                        }
-                        var enumerable = duplicateKeys as string[] ?? duplicateKeys.ToArray();
-                        if (enumerable.Any())
-                        {
-                            using (var w = File.AppendText("log.txt"))
-                            {
-                                Log("6666666666------INNN enumerable - " + enumerable.Count(), w);
-                            }
-                            // create a list of lists - for every group name, get all the files that match it
-                            // example - if group name is 111_222 then get all files like 111_222_1.tif, 111_222_2.tif
-                            foreach (var duplicateKey in enumerable)
-                            {
-                                //var xduplicateKey = duplicateKey.Split('.')[0];
-                                var xduplicateKey = Path.GetFileNameWithoutExtension(duplicateKey);
-                                xduplicateKey = duplicateKey.Replace(" ", "_");
-                                //if (dirSetting.icheck == 3)
-                                //{
-                                //    xduplicateKey = duplicateKey.Replace(" ", "_");
-                                //}
-                                using (var w = File.AppendText("log.txt"))
-                                {
-                                    Log("777777777------" + xduplicateKey, w);
-                                }
-                                var ll = from ln in lpaths where ln.Contains(xduplicateKey) select ln;
-                                using (var w = File.AppendText("log.txt"))
-                                {
-                                    Log("11111111111---------------" + string.Join(",", ll.ToArray()), w);
-                                }
-                                arfiles.Add(new List<string>(ll.ToList()));
-                            }
-                        }
-                        using (var w = File.AppendText("log.txt"))
-                        {
-                            if(arfiles.Count > 0)
-                            {
-                                Log("4444444444---------------" + string.Join(",", arfiles[0].ToArray()), w);
-                            }
-                            else
-                            {
-                                Log("4444444444---------------Log files empty", w);
-                            }
-                            
-                        }
-
-                        //for each group open a email from outlook and set the group name as subject, and all files as attachment
-                        foreach (var arfile in arfiles)
-                        {
-
-
-                            var pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
-                            var oApp = new OutlookApp();
-                            var oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
-                            oMsg.To = dirSetting.email;
-                            using (var w = File.AppendText("log.txt"))
-                            {
-                                Log("*****-------*********" + string.Join(",", arfile.ToArray()), w);
-                            }
-                            string fileName = "";
-                            try
-                            {
-                                fileName = Path.GetFileName(arfile[0]);
-                            }
-                            catch (System.Exception ex)
-                            {
-                                using (var w = File.AppendText("log.txt"))
-                                {
-                                    Log("---ERRORRRRRR---" + arfile.Count(), w);
-                                    Log("---ERRORRRRRR---" + string.Join(",", arfile.ToArray()), w);
-                                }
-                                continue;
-                            }
-                            // var mailFileName = GetMailFileName ( fileName, dirSetting.check ).Split ( '.' ) [0];
-                            var subject = string.Empty;
-                            if (fileName != null)
-                            {
-                                subject = dirSetting.icheck == 2 ? GetMailFileName(dnames[fileName], dirSetting.icheck, true) : dnames[fileName];
-                            }
-                            oMsg.Subject = subject;
-                            foreach (var curFile in arfile)
-                            {
-                                //using (StreamWriter w = File.AppendText ( "log.txt" )) {
-                                //    Log ( curFile, w );
-                                //}
-                                oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
-                            }
-                            oMsg.GetInspector.Activate();
-                            var signature = oMsg.HTMLBody;
-                            oMsg.HTMLBody = string.Empty + signature;
-
-                            // oMsg.Display ( true );
-                            //add this to add signature to mail body
-                            //oMsg.HTMLBody = string.Empty + oMsg.HTMLBody;
-                            //oMsg.DeleteAfterSubmit = false;
-                            //Outlook.Folder sentFolder = (Outlook.Folder)oApp.Session.GetDefaultFolder ( Outlook.OlDefaultFolders.olFolderSentMail );
-                            //if (sentFolder != null)
-                            //{
-                            //    oMsg.SaveSentMessageFolder = sentFolder;
-                            //}
-
-                            oMsg.Send();
-
-                            oMsg = null;
-                            oApp = null;
-
-                            //SendMail ( arfile, subject, dirSetting.email );
-                            var dVal = progressBar1.Value + pbIncrement;
-                            var val = Convert.ToInt32(dVal);
-                            if (val > 100)
-                            {
-                                val = 100;
-                            }
-                            progressBar1.Value = val;
-                            Application.DoEvents();
-                            if (_sleep > 0) {
-                                Thread.Sleep ( _sleep * 1000 );
-                            }
-                        }
-
-
-
-                        foreach (var arfile in arfiles)
-                        {
-                            foreach (var curFile in arfile)
-                            {
-                                if (curFile.Contains(CopiedFilesDirectory))
-                                {
-                                    var path = Path.GetDirectoryName(curFile);
-                                    if (Directory.Exists(path))
-                                    {
-                                        Directory.Delete(path, true);
-                                    }
-                                }
-
-                            }
-                        }
-
-                        var dt = DateTime.Now;
-                        var name = dt.Day.ToString().PadLeft(2, '0') + "." + dt.Month.ToString().PadLeft(2, '0') + "." +
-                                   dt.Year % 100 + "." + dt.Hour.ToString().PadLeft(2, '0') + "." +
-                                   dt.Minute.ToString().PadLeft(2, '0');
-                        var newDir = Path.Combine(basePath, name);
-
-
-                        Directory.CreateDirectory(newDir);
-                        foreach (var ardir in ardirs)
-                        {
-                            var checkedPath = Path.Combine(basePath, ardir);
-                            if (!Directory.Exists(checkedPath))
-                            {
-                                continue;
-                            }
-                            var dirFiles = Directory.GetFiles(checkedPath);
-                            foreach (var dirFile in dirFiles)
-                            {
-                                File.Move(dirFile, Path.Combine(newDir, Path.GetFileName(dirFile)));
-                            }
-
-                        }
-                        var curdirfiles = Directory.GetFiles(newDir);
-                        if (curdirfiles.Length == 0)
-                        {
-                            try
-                            {
-                                Directory.Delete(newDir, true);
-                            }
-                            catch
-                            {
-                                using (var w = File.AppendText("log.txt"))
-                                {
-                                    Log("could not delete directory:" + newDir, w);
-                                }
-                            }
-                        }
-
-                        foreach (var ardir in ardirs)
-                        {
-                            var checkedPath = Path.Combine(basePath, ardir);
-                            if (!Directory.Exists(checkedPath))
-                            {
-                                continue;
-                            }
-                            try
-                            {
-                                Directory.Delete(checkedPath);
-                            }
-                            catch (IOException)
-                            {
-                                Directory.Delete(checkedPath, true);
-                            }
-                            catch (UnauthorizedAccessException)
-                            {
-                                Directory.Delete(checkedPath, true);
-                            }
-
-                        }
-
-
-
-                    }
-                    fOK = true;
+                    MessageBox.Show("אין מיילים מוגדרים לשליחה");
+                    return;
                 }
-                if (fOK)
-                {
-                    MessageBox.Show("המיילים נשלחו בהצלחה");
-                }
-                else
-                {
-                    MessageBox.Show("המיילים לא נשלחו בהצלחה");
-                }
+
+                _emailService.SendEmails(dirSettings, _sleep);
+                
+                MessageBox.Show("המיילים נשלחו בהצלחה");
                 btnMail.Enabled = false;
             }
             catch (System.Exception ex)
@@ -886,6 +523,7 @@ namespace FileManager
                 using (var w = File.AppendText ( "log.txt" )) {
                     Log ("error in mail send : /n" + ex.Message + ",----/n" +  (ex.InnerException?.Message ?? "") + "----/n" + ex.StackTrace, w );
                 }
+                MessageBox.Show("המיילים לא נשלחו בהצלחה");
             }
         }
 
@@ -894,65 +532,12 @@ namespace FileManager
             if (e.ColumnIndex > 0 && dataGridView1.Columns [e.ColumnIndex] != null && dataGridView1.Columns [e.ColumnIndex].Name == "check") {
                 return;
             }
-          //  string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
 
             var mail = dataGridView1.Rows [e.RowIndex].Cells ["email"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["email"].Value.ToString ();
-
             var fol = dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value.ToString ();
-
             var method = dataGridView1.Rows [e.RowIndex].Cells ["method"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["method"].Value.ToString ();
 
-            var emailConfigList = GetEmailDirSettings ();
-
-
-            var curdir = emailConfigList.Find ( f => f.dir == fol );
-            if (curdir != null) {
-                if (string.IsNullOrEmpty ( mail ) && string.IsNullOrEmpty ( method )) {
-                    emailConfigList.Remove ( curdir );
-                }
-                else {
-                    curdir.email = mail;
-                    curdir.method = method;
-                }
-
-            }
-            else {
-                if (!string.IsNullOrEmpty ( mail ) || !string.IsNullOrEmpty ( method )) {
-                    emailConfigList.Add ( new EmailDirSettings
-                    {
-                        dir = fol,
-                        email = mail,
-                        method = method,
-                        check = mailCheck [0],
-                        icheck = 0
-                    } );
-                }
-
-            }
-
-            setMailSettings(emailConfigList);
-
-            var countsConfigList = GetCountSettings ();
-
-            var curCountDir = countsConfigList.Find ( f => f.dir == fol );
-            if (curCountDir != null) {
-                curCountDir.method = string.IsNullOrEmpty ( method ) ? null : method;
-
-            }
-            else {
-                if (!string.IsNullOrEmpty ( method )) {
-                    countsConfigList.Add ( new CountSettings
-                    {
-                        dir = fol,
-                        method = method,
-                        check = false
-                    } );
-                }
-
-            }
-
-            setCountSettings ( countsConfigList );
-
+            _emailService.HandleGridCellEndEdit(e.RowIndex, mail, fol, method);
         }
 
         private void dataGridView1_CellContentClick ( object sender, DataGridViewCellEventArgs e )
@@ -969,37 +554,9 @@ namespace FileManager
                 return;
             }
             var check = dataGridView1 [e.ColumnIndex, e.RowIndex].Value.ToString();
-            var icheck = 0;
-            for (var i = 0; i < mailCheck.Length; i++)
-            {
-                if (mailCheck[i] == check)
-                {
-                    icheck = i;
-                }
-            }
-            var dirSettings = GetEmailDirSettings ();
             var ddir = dataGridView1 [0, e.RowIndex].Value?.ToString ();
-            var dirObj = dirSettings.Find ( f => f.dir == ddir );
-            if (dirObj != null) {
-                dirObj.icheck = icheck;
-            }
-            else {
-                dirSettings.Add ( new EmailDirSettings
-                {
-                    dir = ddir,
-                    icheck = icheck
-                } );
-            }
-
-
-            var configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
-
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( dirSettings.ToArray () );
-                File.WriteAllText ( configPath, sjson );
-            }
-
-
+            
+            _emailService.HandleGridCellValueChanged(e.RowIndex, check, ddir);
         }
         private void grdFolderSplit_CellContentClick ( object sender, DataGridViewCellEventArgs e )
         {
@@ -1265,10 +822,13 @@ namespace FileManager
             if (e.RowIndex == -1)
                 return;
 
+            var columnName = grdCount.Columns[e.ColumnIndex].Name;
+            var value = grdCount.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
+            
             // Handle checkbox column changes
-            if (grdCount.Columns [e.ColumnIndex].Name == "chb") {
-                var check = (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
-                var dirSettings = GetCountSettings ();
+            if (columnName == "chb") {
+                var check = (bool)value;
+                var dirSettings = _fileCountService.GetCountSettings();
                 var ddir = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
                 var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
                 var dirObj = dirSettings.Find ( f => f.dir == ddir );
@@ -1283,15 +843,15 @@ namespace FileManager
                         check = check
                     } );
                 }
-                setCountSettings ( dirSettings );
+                _fileCountService.SetCountSettings(dirSettings);
             }
             // Handle methods column changes
-            else if (grdCount.Columns [e.ColumnIndex].Name == "methods") {
-                var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
+            else if (columnName == "methods") {
+                var method = value == null ? string.Empty : value.ToString();
                 var fol = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
                 
                 // Update email settings
-                var emailConfigList = GetEmailDirSettings ();
+                var emailConfigList = _configurationService.GetEmailDirSettings();
                 var curMailDir = emailConfigList.Find ( f => f.dir == fol );
                 if (curMailDir != null) {
                     curMailDir.method = string.IsNullOrEmpty ( method ) ? null : method;
@@ -1302,13 +862,13 @@ namespace FileManager
                         {
                             dir = fol,
                             method = method,
-                            check = mailCheck [0],
+                            check = "איחוד-קצר",
                             icheck = 0,
                             email = null
                         } );
                     }
                 }
-                setMailSettings(emailConfigList);
+                _configurationService.SetEmailDirSettings(emailConfigList);
                 
                 // Refresh dataGridView1 to reflect the method changes
                 RefreshDataGridView1();
@@ -1317,36 +877,7 @@ namespace FileManager
 
         private void RefreshDataGridView1()
         {
-            var emailConfigList = GetEmailDirSettings();
-            var emailsDs = new List<EmailDirSettings>();
-            foreach (var fol in gfoldersList)
-            {
-                var curdir = emailConfigList.Find(f => f.dir == fol);
-                if (curdir != null)
-                {
-                    emailsDs.Add(new EmailDirSettings
-                    {
-                        dir = fol,
-                        email = curdir.email,
-                        check = curdir.icheck == 0 ? mailCheck[0] : curdir.icheck == 1 ? mailCheck[1] : curdir.icheck == 2 ? mailCheck[2] : mailCheck[3],
-                        method = curdir.method
-                    });
-                }
-                else
-                {
-                    emailsDs.Add(new EmailDirSettings
-                    {
-                        dir = fol,
-                        email = null,
-                        check = mailCheck[1],
-                        icheck = 0,
-                        method = null
-                    });
-                }
-            }
-
-            dataGridView1.DataSource = null;
-            dataGridView1.DataSource = emailsDs;
+            _emailService.RefreshEmailGrid(dataGridView1, gfoldersList);
         }
 
         private void RefreshGrdArchive()
@@ -1412,64 +943,12 @@ namespace FileManager
             if (e.ColumnIndex > 0 && grdCount.Columns [e.ColumnIndex] != null && grdCount.Columns [e.ColumnIndex].Name == "chb") {
                 return;
             }
-            // string configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
+            
             var check = grdCount.Rows [e.RowIndex].Cells ["chb"].Value != null && (bool)grdCount.Rows [e.RowIndex].Cells ["chb"].Value;
-
             var method = grdCount.Rows [e.RowIndex].Cells ["methods"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["methods"].Value.ToString ();
-
             var fol = grdCount.Rows [e.RowIndex].Cells ["dirs"].Value == null ? string.Empty : grdCount.Rows [e.RowIndex].Cells ["dirs"].Value.ToString ();
 
-            var countsConfigList = GetCountSettings ();
-            
-
-            var curCountDir = countsConfigList.Find ( f => f.dir == fol );
-            if (curCountDir != null) {
-                if (string.IsNullOrEmpty ( method ) && check == false) {
-                    countsConfigList.Remove ( curCountDir );
-                }
-                else {
-                    curCountDir.method = method;
-                }
-
-            }
-            else {
-                if (!string.IsNullOrEmpty ( method )) {
-                    countsConfigList.Add ( new CountSettings
-                    {
-                        dir = fol,
-                        method = method,
-                        check = check
-                    } );
-                }
-
-            }
-
-            setCountSettings ( countsConfigList );
-
-            var emailConfigList = GetEmailDirSettings ();
-
-            var curMailDir = emailConfigList.Find ( f => f.dir == fol );
-            if (curMailDir != null) {
-                curMailDir.method = string.IsNullOrEmpty ( method ) ? null : method;
-
-            }
-            else {
-                if (!string.IsNullOrEmpty ( method )) {
-                    emailConfigList.Add ( new EmailDirSettings
-                    {
-                        dir = fol,
-                        method = method,
-                        check = mailCheck [0],
-                        icheck = 0,
-                        email = null
-                    } );
-                }
-
-            }
-            setMailSettings(emailConfigList);
-            
-            // Refresh dataGridView1 to reflect the method changes
-            RefreshDataGridView1();
+            _fileCountService.HandleGridCellEndEdit(e.RowIndex, method, fol, check);
         }
 
         private void btnBrowsDest_Click ( object sender, EventArgs e )
@@ -1608,7 +1087,7 @@ namespace FileManager
 
 
 
-            var folderSettings = GetFolderSettings ();
+            var folderSettings = _configurationService.GetFolderSettings();
             if (folderSettings.Count > 0) {
                 folderSettings.First ().deleteFolders = items.TrimEnd ( ',' );
             }
@@ -1622,7 +1101,7 @@ namespace FileManager
                     duplicatesFolders = string.Empty
                 } );
             }
-            setFolderSettings ( folderSettings );
+            _configurationService.SetFolderSettings(folderSettings);
         }
 
         private void SetSelectedReportFolders(CheckedListBox.CheckedItemCollection checkedItems)
@@ -1637,7 +1116,7 @@ namespace FileManager
             
             
 
-            var folderSettings = GetFolderSettings ();
+            var folderSettings = _configurationService.GetFolderSettings();
             if (folderSettings.Count > 0) {
                 folderSettings.First ().reportsFolders = items.TrimEnd ( ',' );
             }
@@ -1651,199 +1130,34 @@ namespace FileManager
                     deleteFolders = string.Empty
                 } );
             }
-            setFolderSettings ( folderSettings );
+            _configurationService.SetFolderSettings(folderSettings);
             //Settings.Default.duplicatesFolders = items.TrimEnd(',');
             //Settings.Default.Save();
             //Settings.Default.Reload();
         }
-        private void SetSelectedDuplicatesFolders ( CheckedListBox.CheckedItemCollection checkedItems )
-        {
-            var items = String.Empty;
-            foreach (var checkedItem in checkedItems) {
-                //set a comma delimited string to be saved in Settings
-                items += checkedItem + ",";
-            }
 
-
-
-
-            var folderSettings = GetFolderSettings ();
-            if (folderSettings.Count > 0) {
-                folderSettings.First ().duplicatesFolders = items.TrimEnd ( ',' );
-            }
-            else {
-                folderSettings.Add ( new FolderSettings
-                {
-                    duplicatesFolders = items.TrimEnd ( ',' ),
-                    fileNamesFolders = string.Empty,
-                    selectedFolders = string.Empty,
-                    deleteFolders = string.Empty,
-                    reportsFolders = string.Empty
-                } );
-            }
-            setFolderSettings ( folderSettings );
-            //Settings.Default.duplicatesFolders = items.TrimEnd(',');
-            //Settings.Default.Save();
-            //Settings.Default.Reload();
-        }
         private void SetSelectedExcelFolders ( CheckedListBox.CheckedItemCollection checkedItems )
         {
-            var items = String.Empty;
-            foreach (var checkedItem in checkedItems) {
-                //set a comma delimited string to be saved in Settings
-                items += checkedItem + ",";
-            }
-
-
-
-
-            var folderSettings = GetFolderSettings ();
-            if (folderSettings.Count > 0) {
-                folderSettings.First ().ExcelFolders = items.TrimEnd ( ',' );
-            }
-            else {
-                folderSettings.Add ( new FolderSettings
-                {
-                    ExcelFolders = items.TrimEnd ( ',' ),
-                    reportsFolders = string.Empty,
-                    fileNamesFolders = string.Empty,
-                    selectedFolders = string.Empty,
-                    duplicatesFolders = string.Empty
-                } );
-            }
-            setFolderSettings ( folderSettings );
-            //Settings.Default.duplicatesFolders = items.TrimEnd(',');
-            //Settings.Default.Save();
-            //Settings.Default.Reload();
+            var itemsList = checkedItems.Cast<string>().ToList();
+            _excelService.SetSelectedExcelFolders(itemsList);
         }
 
         private void SetSelectedFileNameFolders(CheckedListBox.CheckedItemCollection checkedItems)
         {
-            var items = String.Empty;
-            foreach (var checkedItem in checkedItems)
-            {
-                //set a comma delimited string to be saved in Settings
-                items += checkedItem + ",";
-            }
-
-            var folderSettings = GetFolderSettings ();
-            if (folderSettings.Count > 0) {
-                folderSettings.First ().fileNamesFolders = items.TrimEnd ( ',' );
-            }
-            else {
-                folderSettings.Add ( new FolderSettings
-                {
-                    duplicatesFolders = string.Empty,
-                    fileNamesFolders = items.TrimEnd ( ',' ),
-                    reportsFolders = string.Empty,
-                    selectedFolders = string.Empty,
-                    deleteFolders = string.Empty
-                } );
-            }
-            setFolderSettings ( folderSettings );
-            
-
-            //Settings.Default.fileNamesFolders = items.TrimEnd(',');
-            //Settings.Default.Save();
-            //Settings.Default.Reload();
+            var itemsList = checkedItems.Cast<string>().ToList();
+            _fileNameManagementService.SetSelectedFileNameFolders(itemsList);
         }
         
         private List<FileCount> SetSelectedItems(List<CountSettings> checkedItems, bool useProgressBar)
         {
-            var list = new List<FileCount>();
-            var items = String.Empty;
-            var percent = 0;
-            if (useProgressBar)
-            {
-                var itemCount = checkedItems.Count;
-                percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(100.0 / itemCount, 0));
-            }
-            //loop over the checked items
-            foreach (var checkedItem in checkedItems)
-            {
-                //set a comma delimited string to be saved in Settings
-                
-                items += checkedItem.dir + ",";
-                var checkedPath = Path.Combine ( _path, checkedItem.dir );
-                if (!Directory.Exists( checkedPath )) {
-                    continue;
-                }
-                var lfiles = Directory.GetFiles(checkedPath, "*.*",
-                    SearchOption.AllDirectories)
-                     .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
-                //check if file Thumbs.db exist in folder. If yes than reduce one file from file count.
-                var files = lfiles as IList<string> ?? lfiles.ToList();
-                var isThumbs = files.Any(IsThumbsInPath);
-
-                int fileCount;
-                if (isThumbs)
-                {
-                    fileCount = files.Count() - 1;
-                }
-                else
-                {
-                    fileCount = files.Count();
-                }
-                //create a list to be sent to the grid form
-                if (fileCount > 0)
-                {
-                    list.Add(new FileCount
-                    {
-                        FileName = checkedItem.dir,
-                        method = checkedItem.method,
-                        Count = fileCount
-                    });
-                }
-                
-                if (useProgressBar)
-                {
-                    var val = progressBar1.Value + percent;
-                    if (val > 100)
-                    {
-                        val = 100;
-                    }
-                    progressBar1.Value = val;
-                }
-                
-            }
-
-            //save selected items to Settings
-            var folderSettings = GetFolderSettings ();
-            if(folderSettings.Count > 0)
-            {
-                folderSettings.First ().selectedFolders = items.TrimEnd ( ',' );
-            }
-            else
-            {
-                folderSettings.Add(new FolderSettings
-                {
-                    duplicatesFolders = string.Empty,
-                    fileNamesFolders = string.Empty,
-                    reportsFolders = string.Empty,
-                    selectedFolders = items.TrimEnd ( ',' ),
-                    deleteFolders = string.Empty
-                } );
-            }
-            setFolderSettings ( folderSettings );
-
+            // Save selected folders to settings
+            _fileCountService.SaveSelectedFoldersToSettings(checkedItems);
             
-            //Settings.Default.selectedFolders = items.TrimEnd(',');
-            //Settings.Default.Save();
-            //Settings.Default.Reload();
-            if (useProgressBar)
-            {
-                progressBar1.Value = 100;
-            }
-            
-            return list;
+            // Use the service to count files
+            return _fileCountService.CountFilesInDirectories(checkedItems, useProgressBar);
         }
 
-        private bool IsThumbsInPath(string filePath)
-        {
-            if (filePath.Contains("Thumbs"))
-                return true;
-            return false;
-        }
+
         private void CopyFiles()
         {
             progressBar1.Value = 0;
@@ -2209,11 +1523,9 @@ namespace FileManager
                 lblProgressMessage.Visible = true;
                 Application.DoEvents();
 
-                var countsSettings = GetCountSettings ();
+                var countsSettings = _fileCountService.GetCountSettings();
+                var checkedItems = countsSettings.FindAll(f => f.check);
 
-                var checkedItems = countsSettings.FindAll ( f => f.check);
-
-                
                 if (checkedItems.Count == 0)
                 {
                     FixDuplicates();
@@ -2223,9 +1535,9 @@ namespace FileManager
                 
                 var list = SetSelectedItems(checkedItems, true);
                 FixDuplicates();
-                FixFileNames( false );
+                FixFileNames(false);
                 
-                //open the gris form with the selected data.
+                //open the grid form with the selected data.
                 var grid = new ResultGrid(list.OrderBy(o=>o.FileName).ToList());
                 grid.Show();
             }
@@ -2238,7 +1550,7 @@ namespace FileManager
                     Exception = ex,
                     Message = "CountFiles Error"
                 };
-                logger.Log ( eventInfo );
+                logger.Log(eventInfo);
                 hasErrors = true;
             }
         }
@@ -2499,10 +1811,8 @@ namespace FileManager
         }
         private void FixDuplicates()
         {
-            string curdir = null, fileName=null,newName=null;
             try
             {
-                string[] availDirs, allAvailDirs;
                 progressBar1.Value = 0;
                 _numOfDuplicates = 0;
                 lblProgressMessage.Text = "מתקן כפילויות";
@@ -2512,352 +1822,20 @@ namespace FileManager
                 {
                     return;
                 }
+
                 // save selected items to Settings
-                SetSelectedDuplicatesFolders(checkedItems);
-                var itemCount = checkedItems.Count;
-                var percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0 / itemCount, 0));
-                foreach (var checkedItem in checkedItems)
+                _duplicateManagementService.SaveSelectedDuplicateFolders(checkedItems);
+                // Convert CheckedItemCollection to List<string>
+                var checkedItemsList = new List<string>();
+                foreach (var item in checkedItems)
                 {
-                    var counter = 1;
-                    // get the base path of each folder
-                    var basePath = Path.Combine(_path, checkedItem.ToString());
-                    var allFilesPath = String.Empty;
-                    //get all sub folders of base folder
-                    allAvailDirs = Directory.GetDirectories(basePath);
-                    availDirs = allAvailDirs.Where(w =>
-                    {
-                        var dn = Path.GetFileName(w);
-                        return dn != null && dn.Length < 3;
-                    }).ToArray();
-                    if (availDirs.Length > 0)
-                    {
-                        // run over the array to get the dir/1 folder path where all the files are
-                        try {
-                            foreach (var cd in availDirs)
-                            {
-                                curdir = cd;
-                                var checkdir = Path.GetFileName ( curdir );
-                                if (checkdir == null || checkdir.Length > 2) {
-                                    continue;
-                                }
-                                if (!Directory.Exists ( curdir )) {
-                                    continue;
-                                }
-                                var folder = Path.GetFileName ( curdir );
-                                if (folder == counter.ToString ()) {
-                                    // if it is the first folder (dir/1) rename all files 
-                                    // from fileName.xxx to fileName_1.xxx
-                                    if (counter == 1) {
-                                        var lfiles = Directory.GetFiles ( curdir, "*.*", SearchOption.TopDirectoryOnly )
-                                             .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
-                                        var files = lfiles as IList<string> ?? lfiles.ToList ();
-                                        if (files.Any ()) {
-                                            if (CheckFolderIfNotFirstDuplication ( files, curdir )) {
-                                                allFilesPath = curdir;
-                                                break;
-                                            }
-                                            foreach (var file in files) {
-
-                                                fileName = Path.GetFileName ( file );
-
-                                                if (fileName == null || IsThumbsInPath ( file )) {
-                                                    continue;
-                                                }
-                                                newName = GetNewFileName ( fileName, 1 );
-                                                if (String.IsNullOrEmpty ( newName )) {
-                                                    continue;
-                                                }
-                                                // if it is the first duplication of the file first rename the file in the
-                                                // base folder (dir/1) from fileName.xxx to fileName_1.xxx
-                                                if (!File.Exists ( Path.Combine ( curdir, newName ) )) {
-                                                    move ( Path.Combine ( curdir, fileName ),
-                                                        Path.Combine ( curdir, newName ) );
-                                                }
-
-                                            }
-                                        }
-                                        allFilesPath = curdir;
-                                        break;
-                                    }
-
-                                }
-                            }
-                        }
-                        catch (System.Exception ex) {
-                            var props =
-                                    new {
-                                        method = "FixDuplicates",
-                                        fileName = fileName,
-                                        destFile = newName
-                                    };
-                            LogEventInfo eventInfo = new LogEventInfo
-                            {
-                                Level = LogLevel.Error,
-                                Exception = ex,
-                                Message = "בעיה בשינוי שם הקובץ",
-                                Properties = { { "Files", props } }
-                            };
-                            logger.Log ( eventInfo );
-                            hasErrors = true;
-                        }
-                        // if the folder does not contain dir/1 folder continue.
-                        if (String.IsNullOrEmpty(allFilesPath))
-                        {
-                            continue;
-                        }
-                        counter = 1;
-                        // run again to get the duplicated folders
-                        //foreach (string curdir in availDirs)
-                        for (var i = 0; i < availDirs.Length; i++)
-                        {
-                            var curAvailDir = availDirs[i];
-                            if (!Directory.Exists ( curAvailDir )) {
-                                continue;
-                            }
-                            var checkdir = Path.GetFileName ( curAvailDir );
-                            // if the folder is the base folder (dir/1) continue - check all duplicated folders only
-                            if (checkdir == "1")
-                            {
-                                counter++;
-                                continue;
-                            }
-                            
-                            if (checkdir == null || checkdir.Length > 2) {
-                                continue;
-                            }
-                            var llfiles = Directory.GetFiles( curAvailDir, "*.*", SearchOption.TopDirectoryOnly)
-                                .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
-                            var ffiles = llfiles as IList<string> ?? llfiles.ToList();
-                            if (ffiles.Any())
-                            {
-                                //run over the files in the duplicated folder (dir/2...)
-                                try {
-                                    foreach (var xfile in ffiles) {
-                                        fileName = Path.GetFileName ( xfile );
-                                        if (fileName == null || IsThumbsInPath ( xfile )) {
-                                            continue;
-                                        }
-
-                                        newName = GetNewFileName ( fileName, 1 );
-                                        if (string.IsNullOrEmpty ( newName )) {
-                                            continue;
-                                        }
-                                        if (File.Exists ( Path.Combine ( allFilesPath, newName ) )) {
-                                            var miniCounter = 2;
-                                            var isCopy = false;
-                                            while (!isCopy) {
-                                                var copyName = GetNewFileName ( fileName, miniCounter );
-                                                if (File.Exists ( Path.Combine ( allFilesPath, copyName ) )) {
-                                                    miniCounter++;
-                                                }
-                                                else {
-                                                    isCopy = true;
-                                                    _numOfDuplicates++;
-                                                    CopyFiles ( xfile,
-                                                    Path.Combine ( allFilesPath, copyName ) );
-                                                }
-                                            }
-
-                                        }
-                                        else {
-                                            MessageBox.Show ( "file name : \r" + fileName + "\r" +
-                                                            "exist in duplicated folder but not in base folder" );
-                                            LogEventInfo eventInfo = new LogEventInfo
-                                            {
-                                                Level = LogLevel.Info,
-                                                Message = "file name : \r" + fileName + "\r" +
-                                                            "exist in duplicated folder but not in base folder"
-                                            };
-                                            logger.Log ( eventInfo );
-                                            hasErrors = true;
-
-                                        }
-                                    }
-                                }
-                                catch (System.Exception ex) {
-                                    var props =
-                                    new {
-                                        method = "FixDuplicates",
-                                        fileName = fileName,
-                                        destFile = newName
-                                    };
-                                    LogEventInfo eventInfo = new LogEventInfo
-                                    {
-                                        Level = LogLevel.Error,
-                                        Exception = ex,
-                                        Message = "בעיה בהעתקת הקובץ",
-                                        Properties = { { "Files", props } }
-                                    };
-                                    logger.Log ( eventInfo );
-                                    hasErrors = true;
-
-                                }
-                            }
-                            counter++;
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            //string folder = Path.GetFileName(dir);
-                            //if (folder == counter.ToString())
-                            //{
-                            //    if (counter == 1)
-                            //    {
-                            //        counter++;
-                            //        continue;
-                            //    }
-                            //    string[] files = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly);
-                            //    if (files.Length > 0)
-                            //    {
-                            //        //run over the files in the duplicated folder (dir/2...)
-                            //        foreach (string file in files)
-                            //        {
-                            //            string fileName = Path.GetFileName(file);
-                            //            if (fileName == null || IsThumbsInPath(file))
-                            //            {
-                            //                continue;
-                            //            }
-                                       
-                            //            string newName = GetNewFileName(fileName, 1);
-                            //            if (String.IsNullOrEmpty(newName))
-                            //            {
-                            //                continue;
-                            //            }
-                            //            if (File.Exists(Path.Combine(allFilesPath, newName)))
-                            //            {
-                            //                var copyName = GetNewFileName(fileName, counter);
-                            //                if (!File.Exists(Path.Combine(allFilesPath, copyName)))
-                            //                {
-                            //                    NumOfDuplicates++;
-                            //                    CopyFiles(file,
-                            //                        Path.Combine(allFilesPath, copyName));
-                            //                }
-                            //                else
-                            //                {
-                            //                    int miniCounter = counter + 1;
-                            //                    bool isCopy = false;
-                            //                    while (!isCopy)
-                            //                    {
-                            //                        copyName = GetNewFileName(fileName, miniCounter);
-                            //                        if (File.Exists(Path.Combine(allFilesPath, copyName)))
-                            //                        {
-                            //                            miniCounter++;
-                            //                        }
-                            //                        else
-                            //                        {
-                            //                            isCopy = true;
-                            //                            CopyFiles(file,
-                            //                            Path.Combine(allFilesPath, copyName));
-                            //                        }
-                            //                    }
-                                                
-                            //                }
-
-
-
-                                            
-                            //            }
-                            //            else
-                            //            {
-                            //                MessageBox.Show("file name : \r" + fileName + "\r" +
-                            //                                "exist in duplicated folder but not in base folder");
-                            //            }
-                            //            //}
-                            //        }
-                            //    }
-                            //    counter++;
-                            //}
-                        }
-                    }
-                    var val = progressBar1.Value + percent;
-                    if (val > 100)
-                    {
-                        val = 100;
-                    }
-                    progressBar1.Value = val;
-                }
-                // run second time over the folders to delete empty folders
-                foreach (var checkedItem in checkedItems)
-                {
-                    var basePath = Path.Combine(_path, checkedItem.ToString());
-                    allAvailDirs = Directory.GetDirectories ( basePath );
-                    availDirs = allAvailDirs.Where ( w => {
-                        var dn = Path.GetFileName ( w );
-                        return dn != null && dn.Length < 3;
-                    } ).ToArray ();
-                    //availDirs = Directory.GetDirectories(basePath);
-                    if (availDirs.Length > 1)
-                    {
-                        try {
-                            for (var i = 0; i < availDirs.Length; i++) {
-                                if (!Directory.Exists ( availDirs [i] )) {
-                                    continue;
-                                }
-                                fileName = Path.GetFileName ( availDirs [i] );
-                                if (fileName == "1" || fileName.Length > 2) {
-                                    continue;
-                                }
-                                // delete all remaining files so get all files not only tif and pdf
-                                var lfiles = Directory.GetFiles ( availDirs [i], "*.*", SearchOption.TopDirectoryOnly );
-                                var files = lfiles as IList<string> ?? lfiles.ToList ();
-                                if (!files.Any ()) {
-                                    try {
-                                        Directory.Delete ( availDirs [i] );
-                                    }
-                                    catch (IOException) {
-                                        Directory.Delete ( availDirs [i], true );
-                                    }
-                                    catch (UnauthorizedAccessException) {
-                                        Directory.Delete ( availDirs [i], true );
-                                    }
-                                }
-                                else if (files.Count == 1 && IsThumbsInPath ( files [0] )) {
-                                    try {
-                                        File.SetAttributes ( files [0], FileAttributes.Normal );
-                                        File.Delete ( files [0] );
-                                        Directory.Delete ( availDirs [i] );
-                                    }
-                                    catch (IOException) {
-                                        Directory.Delete ( availDirs [i], true );
-                                    }
-                                    catch (UnauthorizedAccessException) {
-                                        Directory.Delete ( availDirs [i], true );
-                                    }
-                                }
-                            }
-                        }
-                        catch (System.Exception ex) {
-                            var props =
-                                    new {
-                                        method = "FixDuplicates",
-                                        fileName = fileName
-                                    };
-                            LogEventInfo eventInfo = new LogEventInfo
-                            {
-                                Level = LogLevel.Error,
-                                Exception = ex,
-                                Message = "בעיה במחיקת הקובץ",
-                                Properties = { { "Files", props } }
-                            };
-                            logger.Log ( eventInfo );
-                            hasErrors = true;
-
-                        }
-                    }
-                    progressBar1.Value = 100;
+                    checkedItemsList.Add(item.ToString());
                 }
 
+                // Use the service to fix duplicates
+                _numOfDuplicates = _duplicateManagementService.FixDuplicates(checkedItemsList);
+
+                // Update UI
                 boxSummary.Visible = true;
                 lbl1.Visible = true;
                 lbl2.Visible = true;
@@ -2874,152 +1852,57 @@ namespace FileManager
                     Exception = ex,
                     Message = "FixDuplicates Error"
                 };
-                logger.Log ( eventInfo );
+                logger.Log(eventInfo);
                 hasErrors = true;
             }
-
         }
 
+
+        private void SetSelectedDuplicatesFolders ( CheckedListBox.CheckedItemCollection checkedItems )
+        {
+            var items = String.Empty;
+            foreach (var checkedItem in checkedItems) {
+                //set a comma delimited string to be saved in Settings
+                items += checkedItem + ",";
+            }
+
+
+
+
+            var folderSettings = _configurationService.GetFolderSettings ();
+            if (folderSettings.Count > 0) {
+                folderSettings.First ().duplicatesFolders = items.TrimEnd ( ',' );
+            }
+            else {
+                folderSettings.Add ( new FolderSettings
+                {
+                    duplicatesFolders = items.TrimEnd ( ',' ),
+                    fileNamesFolders = string.Empty,
+                    selectedFolders = string.Empty,
+                    deleteFolders = string.Empty,
+                    reportsFolders = string.Empty
+                } );
+            }
+            _configurationService.SetFolderSettings(folderSettings);
+            //Settings.Default.duplicatesFolders = items.TrimEnd(',');
+            //Settings.Default.Save();
+            //Settings.Default.Reload();
+        }
         private void FixFileNames(bool isMigdal)
         {
-            string curdir = null, fileName=null,newName=null, copyName=null;
             try
             {
-                progressBar1.Visible = true;
-                progressBar1.Value = 0;
-                _numOfDuplicates = 0;
-                lblProgressMessage.Text = "מתקן שמות";
-                lblProgressMessage.Visible = true;
-                Application.DoEvents();
-                var checkedItems = filenames.CheckedItems;
+                var checkedItems = filenames.CheckedItems.Cast<string>().ToList();
                 if (checkedItems.Count == 0)
                 {
                     return;
                 }
-                // save selected items to Settings
-                SetSelectedFileNameFolders(checkedItems);
-                //int counter;
-                var itemCount = checkedItems.Count;
-                var percent = itemCount == 0 ? 100 : Convert.ToInt32(Math.Round(95.0/itemCount, 0));
-                var progress = 0;
-                //loop over the checked items
-                foreach (var checkedItem in checkedItems)
-                {
-                    var basePath = Path.Combine(_path, checkedItem.ToString());
-                    var dirs = Directory.GetDirectories(basePath);
-                    if (dirs.Length > 0)
-                    {
-                        // run over the array to get the dir/1 folder path where all the files are
-                        foreach (var cd in dirs)
-                        {
-                           
-                            curdir = cd;
-                            if (!Directory.Exists ( curdir )) {
-                                continue;
-                            }
-                            var checkdir = Path.GetFileNameWithoutExtension ( curdir );
-                            if (checkdir == null || checkdir.Length > 2) {
-                                continue;
-                            }
-                            var lfiles = Directory.GetFiles(curdir, "*.*", SearchOption.AllDirectories)
-                               .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower().EndsWith(".pdf"));
 
-                            var files = lfiles as IList<string> ?? lfiles.ToList();
-
-
-                            foreach (var file in files)
-                            {
-                                fileName = Path.GetFileName(file);
-                                
-
-                                if (fileName == null || fileName.Contains("-"))
-                                {
-                                    continue;
-                                }
-                                //var extSplits = fileName.Split('.');
-                                var fnwe = Path.GetFileNameWithoutExtension (fileName);
-                                var ext = Path.GetExtension (fileName);
-                                var splits = fnwe.Split('_');
-                                if (splits.Length != 3)
-                                {
-                                    continue;
-                                }
-                                newName = String.Empty;
-                                if (splits[1] == "9999999999")
-                                {
-                                    for (var i = 0; i < splits.Length; i++)
-                                    {
-                                        if (i == 1) continue;
-                                        var part = splits[i];
-                                        newName += part + "_";
-                                    }
-                                }
-                                else
-                                {
-                                    for (var i = 0; i < splits.Length; i++)
-                                    {
-                                        var part = splits[i];
-                                        if (i == 0 && isMigdal)
-                                        {
-                                            newName += part + "-";
-                                        }
-                                        else
-                                        {
-                                            newName += part + "_";
-                                        }
-
-                                    }
-                                }
-                                var miniCounter = 1;
-                                var isCopy = false;
-                                while (!isCopy) {
-                                    var based = Directory.GetParent ( curdir ).FullName;
-                                    var newdir = Path.Combine ( based, miniCounter.ToString() );
-                                    
-                                    copyName = Path.Combine ( newdir, newName.TrimEnd ( '_' ) + ext) ;
-                                    if (File.Exists ( copyName )) {
-                                        miniCounter++;
-                                    }
-                                    else {
-                                        isCopy = true;
-                                        if (!Directory.Exists ( newdir )) {
-                                            Directory.CreateDirectory ( newdir );
-                                        }
-                                        move ( file, copyName );
-                                        //move ( file, Path.Combine ( curdir, copyName ) );
-                                    }
-                                }
-                                
-                            }
-                            
-                        }
-                    }
-                   
-                    progress += percent;
-                    progressBar1.Value = progress;
-                }
-                progressBar1.Value = 100;
+                _fileNameManagementService.FixFileNames(checkedItems, isMigdal);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show("FixFileNames Error :\r" + ex.Message);
-                var props =
-                    new
-                    {
-                        method = "FixFileNames",
-                        fileName = fileName,
-                        destFile = copyName
-                    };
-                LogEventInfo eventInfo = new LogEventInfo
-                {
-                    Level = LogLevel.Error,
-                    Exception = ex,
-                    Message = "FixFileNames Error",
-                    Properties = { { "Files", props } }
-                };
-                logger.Log ( eventInfo );
                 hasErrors = true;
-
             }
         }
 
@@ -3036,14 +1919,14 @@ namespace FileManager
             foreach (var file in files)
             {
                 var ff = Path.GetFileNameWithoutExtension(file);
-                if (ff != null && !IsThumbsInPath(ff) && ((r.Match(ff).Success || ff.Contains(LtrMark))))
+                if (ff != null && !_fileService.IsThumbsInPath(ff) && ((r.Match(ff).Success || ff.Contains(LtrMark))))
                 {
                     duplicatedFiles.Add(ff);
                     isDuplicated = true;
                 }
                 else
                 {
-                    if (ff != null && (!IsThumbsInPath(ff) && !ff.Contains(LtrMark)))
+                    if (ff != null && (!_fileService.IsThumbsInPath(ff) && !ff.Contains(LtrMark)))
                     {
                         newFiles.Add(file);
                     }
@@ -3188,132 +2071,13 @@ namespace FileManager
             w.WriteLine ( "-------------------------------" );
         }
 
-        private  string GetMailFileName(string fileName, int isCheck, bool shortenName = false )
-        {
-            // try to plit with _, -, space
-            //var isCheck = ischeck;
-            var type = 1;
-            var fne = Path.GetFileNameWithoutExtension( fileName );
-            var ext = Path.GetExtension( fileName );
-           // var ext = fileName.Split ( '.' );
-            var splits = fne.Split('_');
-            if (splits.Length == 1)
-            {
-                type = 2;
-                splits = fne.Split('-');
-                if (splits.Length == 1)
-                {
-                    type = 3;
-                    splits = fne.Split(' ');
-                }
-            }
-            // if checkbox is checked remove the last part of the splits
-            if (isCheck == 0 || shortenName)
-            {
-                var first = splits[0];
-                var last = splits[splits.Length - 1];
-                string[] newName;
-                var sep = type == 1 ? "_" : type == 2 ? "-" : " ";
-                //check if the first split is diget only
-                if (!first.Any(ch => ch < '0' || ch > '9'))
-                {
-                    newName = splits.Skip(1).Take(splits.Count()).ToArray();
-                }
-                else if (!last.Any(ch => ch < '0' || ch > '9'))
-                {
-                    newName = splits.Take(splits.Count() - 1).ToArray();
-                }
-                else
-                {
-                    newName = splits;
-                }
-
-                var name = string.Join(sep, newName);
-                return ext.Length == 1 ? name : name + ext;
-            }
-            else if (isCheck == 3)
-            {
-                for (int i = 0; i < splits.Length; i++)
-                {
-                    var sp = splits[i];
-                    if (sp.Split(' ').Length > 1)
-                    {
-                        return sp;
-                    }
-                }
-                return splits[0];
-            }
-            else if (isCheck == 4)
-            {
-                var sep = type == 1 ? "_" : type == 2 ? "-" : " ";
-                if (splits.Length == 4)
-                {
-                    return splits[0] + sep + splits[1] + sep + splits[3];
-                }
-                else
-                {
-                    return splits[0] + sep + splits[1] + sep + splits[2];
-                }
-            }
-            else
-            {
-                return fileName;
-            }
 
 
-        }
 
-        private List<EmailDirSettings> GetEmailDirSettings ()
-        {
-            var dirSettings = new List<EmailDirSettings> ();
-            var configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
-            if (File.Exists ( configPath )) {
 
-                using (var r = new StreamReader ( configPath )) {
-                    var json = r.ReadToEnd ();
-                    dirSettings = JsonConvert.DeserializeObject<List<EmailDirSettings>> ( json );
-                }
-            }
-            return dirSettings;
-        }
 
-        private void setFolderSettings (List<FolderSettings> folSettings )
-        {
-            var configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
 
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
-                File.WriteAllText ( configPath, sjson );
-            }
-        }
 
-        private List<FolderSettings> GetFolderSettings ()
-        {
-            var configPath = Path.Combine ( _config, "fileManager_foldersConfig.json" );
-            var folderSettings = new List<FolderSettings> ();
-            if (File.Exists ( configPath )) {
-
-                using (var r = new StreamReader ( configPath )) {
-                    var json = r.ReadToEnd ();
-                    folderSettings = JsonConvert.DeserializeObject<List<FolderSettings>> ( json );
-                }
-            }
-            else {
-                folderSettings = new List<FolderSettings> ();
-            }
-
-            return folderSettings;
-        }
-
-        private void setCountSettings ( List<CountSettings> folSettings )
-        {
-            var configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
-
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
-                File.WriteAllText ( configPath, sjson );
-            }
-        }
         private void setSplitSettings ( List<SplitSettings> folSettings )
         {
             var configPath = Path.Combine ( _config, "fileManager_splitConfig.json" );
@@ -3344,33 +2108,9 @@ namespace FileManager
         }
         
 
-        private void setMailSettings ( List<EmailDirSettings> folSettings )
-        {
-            var configPath = Path.Combine ( _config, "fileManager_emailDirConfig.json" );
 
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
-                File.WriteAllText ( configPath, sjson );
-            }
-        }
 
-        private List<CountSettings> GetCountSettings ()
-        {
-            var configPath = Path.Combine ( _config, "fileManager_countsConfig.json" );
-            List<CountSettings> folderSettings;
-            if (File.Exists ( configPath )) {
 
-                using (var r = new StreamReader ( configPath )) {
-                    var json = r.ReadToEnd ();
-                    folderSettings = JsonConvert.DeserializeObject<List<CountSettings>> ( json );
-                }
-            }
-            else {
-                folderSettings = new List<CountSettings> ();
-            }
-
-            return folderSettings;
-        }
         private List<SplitSettings> GetSplitSettings ()
         {
             var configPath = Path.Combine ( _config, "fileManager_splitConfig.json" );
@@ -3445,243 +2185,35 @@ namespace FileManager
 
         private void SetExcelNames ()
         {
-            string curFile = null, newFilePath = null;
             try {
-                var checkedItems = dirList.CheckedItems;
+                var checkedItems = dirList.CheckedItems.Cast<string>().ToList();
                 if (checkedItems.Count == 0) {
                     return;
                 }
-                var arr = GetExcelValues ();
+                
                 progressBar1.Visible = true;
                 progressBar1.Value = 0;
                 lblProgressMessage.Text = "מתקן שמות מאקסל";
                 lblProgressMessage.Visible = true;
                 Application.DoEvents ();
 
-                SetSelectedExcelFolders ( checkedItems );
-
-                var itemCount = checkedItems.Count;
-                var itemParts = itemCount == 0 ? 100 : Convert.ToInt32 ( Math.Round ( 100.0 / itemCount, 0 ) );
-                var progress = 0;
-                var index = 0;
-                foreach (var checkedItem in checkedItems) {
-                    var basePath = Path.Combine ( _path, checkedItem.ToString () );
-                    if (!Directory.Exists ( basePath )) {
-                        continue;
-                    }
-                    var lfiles = Directory.GetFiles ( basePath, "*.*", SearchOption.AllDirectories )
-                               .Where ( s => s.ToLower ().EndsWith ( ".tif" ) || s.ToLower ().EndsWith ( ".tiff" ) || s.ToLower ().EndsWith ( ".pdf" ) );
-
-
-
-                    var files = lfiles as IList<string> ?? lfiles.ToList ();
-                    var percent = files.Count == 0 ? 100 : itemParts / files.Count;
-
-                    foreach (var file in files)
-                    {
-                        curFile = file;
-                        var fileName = Path.GetFileName ( file );
-
-                        if (fileName == null) {
-                            continue;
-                        }
-
-                        //var extSplits = fileName.Split ( '.' );
-                        var ext = Path.GetExtension(fileName);
-                        if (string.IsNullOrEmpty(ext))
-                        {
-                            continue;
-                        }
-                        //if (extSplits.Length == 0) {
-                        //    continue;
-                        //}
-                        var hyphenSplits = Path.GetFileNameWithoutExtension(fileName).Split ( '-' );
-
-
-                        var parts = new List<string> ();
-                        foreach (var split in hyphenSplits) {
-                            var splits = split.Split ( '_' );
-                            foreach (var s in splits) {
-                                parts.Add ( s );
-                            }
-
-                        }
-
-                        foreach (var part in parts) {
-                           
-                            var result = CheckExcelForItems ( arr, part );
-
-                            if (!string.IsNullOrEmpty ( result )) {
-                                string newFileName;
-                                if (Regex.IsMatch ( fileName, @"[\p{IsHebrew}]+" )) {
-                                    newFileName = SetExcelFileName ( parts, part, result ) + ext;
-                                }
-                                else {
-                                    newFileName = SetExcelFileName2 ( parts, part, result ) + ext;
-                                }
-                                var ndir = Path.GetDirectoryName ( file );
-                                if (ndir != null) {
-                                    newFilePath = Path.Combine ( ndir, newFileName );
-                                    if (File.Exists(newFilePath))
-                                    {
-                                        File.Delete(newFilePath);
-                                    }
-                                    File.Move ( file, newFilePath );
-                                }
-                                
-                                break;
-                            }
-                        }
-                        
-                        progress += ( index * itemParts ) + percent;
-                        if (progress > 100) progress = 100;
-                        progressBar1.Value = progress;
-
-
-                    }
-                    index++;
-                }
-                progressBar1.Value = 100;
-                //MessageBox.Show ( "הפעולה הסתיימה בהצלחה" );
+                SetSelectedExcelFolders ( dirList.CheckedItems );
+                _excelService.SetExcelNames(checkedItems);
             }
             catch (System.Exception ex)
             {
-                var props = new {file = curFile, destFile = newFilePath};
                 LogEventInfo eventInfo = new LogEventInfo
                 {
                     Level = LogLevel.Error,
                     Exception = ex,
-                    Message = "SetExcelNames Error",
-                    Properties = { { "Files", props } }
+                    Message = "SetExcelNames Error"
                 };
                 logger.Log(eventInfo);
                 hasErrors = true;
             }
         }
 
-        private string SetExcelFileName(List<string> parts, string part, string result)
-        {
-            if (parts == null)
-            {
-                return string.Empty;
-            }
-            var arPart = parts.IndexOf(part);
-            if (parts.Count > arPart && arPart >= 0)
-            {
-                parts [arPart] = result;
-            }
 
-            if (parts.Count != 3)
-            {
-                string name = string.Empty;
-                foreach (var part1 in parts)
-                {
-                    name += part1 + '-';
-                }
-                return name.TrimEnd('-');
-            }
-            return parts[2] + "_" + parts[0] + "-" + parts[1];
-        }
-        private string SetExcelFileName2 ( List<string> parts, string part, string result )
-        {
-            var arPart = parts.IndexOf ( part );
-            parts [arPart] = result;
-            string name = string.Empty;
-            for (int i = 0; i < parts.Count; i++)
-            {
-                if (i > 0)
-                {
-                    if (i < parts.Count - 1)
-                    {
-                        name += "_";
-                    }
-                    else {
-                        name += "-";
-                    }
-                }
-                name += parts[i];
-                
-            }
-            
-            return name;
-        }
-        private object[,] GetExcelValues (  )
-        {
-            var lst = new List<string> ();
-            var xlApp = new Excel.Application ();
-            Excel.Workbook xlWorkbook = null;
-            Excel._Worksheet xlWorksheet = null;
-            Excel.Range xlRange = null;
-            try {
-
-                xlWorkbook = xlApp.Workbooks.Open ( _excel );
-                xlApp.Visible = false;
-                xlWorksheet = (Excel._Worksheet)xlWorkbook.Sheets [1];
-                xlRange = xlWorksheet.UsedRange;
-
-                var vals = (object[,])xlRange.Cells.Value2;
-                xlWorkbook.Close();
-                xlApp.Quit();
-                return vals;
-            }
-            catch(System.Exception ex) {
-                LogEventInfo eventInfo = new LogEventInfo
-                {
-                    Level = LogLevel.Error,
-                    Exception = ex,
-                    Message = "GetExcelValues Error",
-                    Properties = { { "Files", "" } }
-                };
-                logger.Log(eventInfo);
-                xlWorkbook.Close();
-                xlApp.Quit();
-
-                return new object [0,0];
-
-            }
-            finally {
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-
-                if (xlWorksheet != null)
-                {
-                    Marshal.ReleaseComObject(xlWorksheet);
-                }
-                //close and release
-                if (xlWorkbook != null)
-                {
-                    Marshal.ReleaseComObject(xlWorkbook);
-                }
-
-                if (xlApp != null)
-                {
-                    //quit and release
-
-                    Marshal.ReleaseComObject(xlApp);
-                }
-                
-            }
-            
-        }
-
-        private string CheckExcelForItems ( object [,] arr, string part )
-        {
-            var lst = new List<string> ();
-            for (var x = 1; x <= arr.GetLength ( 0 ); x++) {
-                if (part == arr [x, 1].ToString ()) {
-                    for (var y = 2; y <= arr.GetLength ( 1 ); y++) {
-                        var val = arr [x, y]?.ToString ();
-                        if (!string.IsNullOrEmpty ( val )) {
-                            lst.Add ( val );
-                        }
-                    }
-                }
-            }
-            if (lst.Count > 0) {
-                return String.Join ( " ", lst.ToArray () );
-            }
-            return null;
-        }
 
         private void DelteFiles ()
         {

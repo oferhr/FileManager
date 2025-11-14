@@ -1,0 +1,389 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Windows.Forms;
+using Microsoft.Office.Interop.Outlook;
+using FileManager;
+using Newtonsoft.Json;
+
+namespace FileManager.Services
+{
+    public class EmailService : IEmailService
+    {
+        private readonly string _basePath;
+        private readonly IFileService _fileService;
+        private readonly IConfigurationService _configurationService;
+        private readonly IFileCountService _fileCountService;
+        private readonly Action<int> _progressCallback;
+        private readonly string[] _mailCheck = { "איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
+        private const string CopiedFilesDirectory = "9876789";
+
+        public EmailService(
+            string basePath, 
+            IFileService fileService, 
+            IConfigurationService configurationService,
+            IFileCountService fileCountService,
+            Action<int> progressCallback = null)
+        {
+            _basePath = basePath;
+            _fileService = fileService;
+            _configurationService = configurationService;
+            _fileCountService = fileCountService;
+            _progressCallback = progressCallback;
+        }
+
+        public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
+        {
+            var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
+            var counts = validDirs.Count();
+            double pbPart = counts == 0 ? 100 : 100 / counts;
+
+            foreach (var dirSetting in dirSettings)
+            {
+                if (string.IsNullOrEmpty(dirSetting.email))
+                {
+                    continue;
+                }
+
+                var basePath = Path.Combine(_basePath, dirSetting.dir);
+                if (!Directory.Exists(basePath))
+                {
+                    continue;
+                }
+
+                var lfiles = Directory.GetFiles(basePath, "*.*", SearchOption.AllDirectories)
+                    .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") || s.ToLower().EndsWith(".pdf"));
+                var files = lfiles as IList<string> ?? lfiles.ToList();
+
+                if (files.Any())
+                {
+                    var arfiles = ProcessFilesForEmail(files, dirSetting);
+                    SendEmailAttachments(arfiles, dirSetting, pbPart, sleepSeconds);
+                    CleanupCopiedFiles(arfiles);
+                    ArchiveProcessedFiles(basePath);
+                }
+            }
+        }
+
+        public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
+        {
+            var emailConfigList = _configurationService.GetEmailDirSettings();
+
+            var curdir = emailConfigList.Find(f => f.dir == folder);
+            if (curdir != null)
+            {
+                if (string.IsNullOrEmpty(email) && string.IsNullOrEmpty(method))
+                {
+                    emailConfigList.Remove(curdir);
+                }
+                else
+                {
+                    curdir.email = email;
+                    curdir.method = method;
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(email) || !string.IsNullOrEmpty(method))
+                {
+                    emailConfigList.Add(new EmailDirSettings
+                    {
+                        dir = folder,
+                        email = email,
+                        method = method,
+                        check = _mailCheck[0],
+                        icheck = 0
+                    });
+                }
+            }
+
+            _configurationService.SetEmailDirSettings(emailConfigList);
+
+            var countsConfigList = _fileCountService.GetCountSettings();
+
+            var curCountDir = countsConfigList.Find(f => f.dir == folder);
+            if (curCountDir != null)
+            {
+                curCountDir.method = string.IsNullOrEmpty(method) ? null : method;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(method))
+                {
+                    countsConfigList.Add(new CountSettings
+                    {
+                        dir = folder,
+                        method = method,
+                        check = false
+                    });
+                }
+            }
+
+            _fileCountService.SetCountSettings(countsConfigList);
+        }
+
+        public void HandleGridCellValueChanged(int rowIndex, string checkValue, string folder)
+        {
+            var icheck = 0;
+            for (var i = 0; i < _mailCheck.Length; i++)
+            {
+                if (_mailCheck[i] == checkValue)
+                {
+                    icheck = i;
+                }
+            }
+
+            var dirSettings = _configurationService.GetEmailDirSettings();
+            var dirObj = dirSettings.Find(f => f.dir == folder);
+            if (dirObj != null)
+            {
+                dirObj.icheck = icheck;
+            }
+            else
+            {
+                dirSettings.Add(new EmailDirSettings
+                {
+                    dir = folder,
+                    icheck = icheck
+                });
+            }
+
+            _configurationService.SetEmailDirSettings(dirSettings);
+        }
+
+        public void RefreshEmailGrid(DataGridView dataGridView, List<string> foldersList)
+        {
+            var emailsDs = GetEmailDirSettingsForGrid(foldersList);
+            dataGridView.DataSource = null;
+            dataGridView.DataSource = emailsDs;
+        }
+
+        public List<EmailDirSettings> GetEmailDirSettingsForGrid(List<string> foldersList)
+        {
+            var emailConfigList = _configurationService.GetEmailDirSettings();
+            var emailsDs = new List<EmailDirSettings>();
+            
+            foreach (var fol in foldersList)
+            {
+                var curdir = emailConfigList.Find(f => f.dir == fol);
+                if (curdir != null)
+                {
+                    emailsDs.Add(new EmailDirSettings
+                    {
+                        dir = fol,
+                        email = curdir.email,
+                        check = curdir.icheck == 0 ? _mailCheck[0] : curdir.icheck == 1 ? _mailCheck[1] : curdir.icheck == 2 ? _mailCheck[2] : _mailCheck[3],
+                        method = curdir.method
+                    });
+                }
+                else
+                {
+                    emailsDs.Add(new EmailDirSettings
+                    {
+                        dir = fol,
+                        email = null,
+                        check = _mailCheck[1],
+                        icheck = 0,
+                        method = null
+                    });
+                }
+            }
+
+            return emailsDs;
+        }
+
+        private List<List<string>> ProcessFilesForEmail(IList<string> files, EmailDirSettings dirSetting)
+        {
+            var lCopiedNames = new List<string>();
+            var lpaths = new List<string>();
+            var arfiles = new List<List<string>>();
+            var ardirs = new List<string>();
+
+            foreach (var file in files)
+            {
+                var isGoodDirectory = false;
+                var currentDir = Path.GetFileName(Path.GetDirectoryName(file));
+                
+                if (currentDir == "1")
+                {
+                    if (!ardirs.Contains(currentDir))
+                    {
+                        ardirs.Add(currentDir);
+                    }
+                    isGoodDirectory = true;
+                }
+
+                if (!isGoodDirectory)
+                {
+                    continue;
+                }
+
+                var fileName = Path.GetFileName(file);
+                if (fileName == null || _fileService.IsThumbsInPath(file))
+                {
+                    continue;
+                }
+
+                var newFileName = fileName;
+                var newFile = file;
+                if (fileName.Trim().Contains(" "))
+                {
+                    newFileName = fileName.Replace(" ", "_");
+                }
+
+                var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
+                if (!Directory.Exists(copiedPath))
+                {
+                    Directory.CreateDirectory(copiedPath);
+                }
+                
+                newFile = Path.Combine(copiedPath, newFileName);
+                File.Copy(file, newFile, true);
+
+                lCopiedNames.Add(_fileService.GetMailFileName(fileName, dirSetting.icheck));
+                lpaths.Add(newFile);
+            }
+
+            // Group file names
+            var duplicateKeys = lCopiedNames.GroupBy(x => x).Select(group => group.Key);
+            var enumerable = duplicateKeys as string[] ?? duplicateKeys.ToArray();
+            
+            if (enumerable.Any())
+            {
+                foreach (var duplicateKey in enumerable)
+                {
+                    var xduplicateKey = Path.GetFileNameWithoutExtension(duplicateKey);
+                    xduplicateKey = duplicateKey.Replace(" ", "_");
+                    var ll = from ln in lpaths where ln.Contains(xduplicateKey) select ln;
+                    arfiles.Add(new List<string>(ll.ToList()));
+                }
+            }
+
+            return arfiles;
+        }
+
+        private void SendEmailAttachments(List<List<string>> arfiles, EmailDirSettings dirSetting, double pbPart, int sleepSeconds)
+        {
+            var pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
+
+            foreach (var arfile in arfiles)
+            {
+                var oApp = new Microsoft.Office.Interop.Outlook.Application();
+                var oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
+                oMsg.To = dirSetting.email;
+
+                string fileName = "";
+                try
+                {
+                    fileName = Path.GetFileName(arfile[0]);
+                }
+                catch (System.Exception ex)
+                {
+                    continue;
+                }
+
+                var subject = string.Empty;
+                if (fileName != null)
+                {
+                    subject = dirSetting.icheck == 2 ? _fileService.GetMailFileName(fileName, dirSetting.icheck, true) : fileName;
+                }
+                oMsg.Subject = subject;
+
+                foreach (var curFile in arfile)
+                {
+                    oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
+                }
+
+                oMsg.GetInspector.Activate();
+                var signature = oMsg.HTMLBody;
+                oMsg.HTMLBody = string.Empty + signature;
+                oMsg.Send();
+
+                oMsg = null;
+                oApp = null;
+
+                var dVal = pbIncrement;
+                var val = Convert.ToInt32(dVal);
+                if (val > 100)
+                {
+                    val = 100;
+                }
+                _progressCallback?.Invoke(val);
+
+                if (sleepSeconds > 0)
+                {
+                    Thread.Sleep(sleepSeconds * 1000);
+                }
+            }
+        }
+
+        private void CleanupCopiedFiles(List<List<string>> arfiles)
+        {
+            foreach (var arfile in arfiles)
+            {
+                foreach (var curFile in arfile)
+                {
+                    if (curFile.Contains(CopiedFilesDirectory))
+                    {
+                        var path = Path.GetDirectoryName(curFile);
+                        if (Directory.Exists(path))
+                        {
+                            Directory.Delete(path, true);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ArchiveProcessedFiles(string basePath)
+        {
+            var dt = DateTime.Now;
+            var name = dt.Day.ToString().PadLeft(2, '0') + "." + dt.Month.ToString().PadLeft(2, '0') + "." +
+                       dt.Year % 100 + "." + dt.Hour.ToString().PadLeft(2, '0') + "." +
+                       dt.Minute.ToString().PadLeft(2, '0');
+            var newDir = Path.Combine(basePath, name);
+
+            Directory.CreateDirectory(newDir);
+            var checkedPath = Path.Combine(basePath, "1");
+            if (Directory.Exists(checkedPath))
+            {
+                var dirFiles = Directory.GetFiles(checkedPath);
+                foreach (var dirFile in dirFiles)
+                {
+                    _fileService.MoveFiles(dirFile, Path.Combine(newDir, Path.GetFileName(dirFile)));
+                }
+            }
+
+            var curdirfiles = Directory.GetFiles(newDir);
+            if (curdirfiles.Length == 0)
+            {
+                try
+                {
+                    Directory.Delete(newDir, true);
+                }
+                catch
+                {
+                    // Log error if needed
+                }
+            }
+
+            if (Directory.Exists(checkedPath))
+            {
+                try
+                {
+                    Directory.Delete(checkedPath);
+                }
+                catch (IOException)
+                {
+                    Directory.Delete(checkedPath, true);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Directory.Delete(checkedPath, true);
+                }
+            }
+        }
+    }
+}

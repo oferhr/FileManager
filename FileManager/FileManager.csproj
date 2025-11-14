@@ -138,6 +138,34 @@
     <Compile Include="ResultGrid.Designer.cs">
       <DependentUpon>ResultGrid.cs</DependentUpon>
     </Compile>
+    <Compile Include="Services\ArchiveService.cs" />
+    <Compile Include="Services\ConfigurationService.cs" />
+    <Compile Include="Services\DuplicateManagementService.cs" />
+    <Compile Include="Services\EmailService.cs" />
+    <Compile Include="Services\ExcelExportService.cs" />
+    <Compile Include="Services\ExcelService.cs" />
+    <Compile Include="Services\FileCopyService.cs" />
+    <Compile Include="Services\FileCountService.cs" />
+    <Compile Include="Services\FileDeletionService.cs" />
+    <Compile Include="Services\FileNameManagementService.cs" />
+    <Compile Include="Services\FileService.cs" />
+    <Compile Include="Services\FolderSplitService.cs" />
+    <Compile Include="Services\IArchiveService.cs" />
+    <Compile Include="Services\IConfigurationService.cs" />
+    <Compile Include="Services\IDuplicateManagementService.cs" />
+    <Compile Include="Services\IEmailService.cs" />
+    <Compile Include="Services\IExcelExportService.cs" />
+    <Compile Include="Services\IExcelService.cs" />
+    <Compile Include="Services\IFileCopyService.cs" />
+    <Compile Include="Services\IFileCountService.cs" />
+    <Compile Include="Services\IFileDeletionService.cs" />
+    <Compile Include="Services\IFileNameManagementService.cs" />
+    <Compile Include="Services\IFileService.cs" />
+    <Compile Include="Services\IFolderSplitService.cs" />
+    <Compile Include="Services\ILoggingService.cs" />
+    <Compile Include="Services\IReportManagementService.cs" />
+    <Compile Include="Services\LoggingService.cs" />
+    <Compile Include="Services\ReportManagementService.cs" />
     <Compile Include="Settings.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
