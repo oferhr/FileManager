@@ -3,8 +3,8 @@
 ################################################################################
 
 /.vs/FileManager
-/FileManager/bin
-/FileManager/obj
+/FileManager/bin/*
+/FileManager/obj/*
 /FileManager/nul
 /nul
 ## Build results

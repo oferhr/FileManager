@@ -105,9 +105,10 @@ namespace FileManager.Services
 
                                 if (IsContain888(fname))
                                 {
+                                    string destFile = string.Empty, destFileError = string.Empty, sFile = string.Empty, sFileError = string.Empty;
                                     try
                                     {
-                                        string destFile, destFileError, sFile, sFileError;
+                                        
                                         bool destValid = PathValidator.ValidateAndNormalize(Path.Combine(destDir, fname), null, out destFile, out destFileError);
                                         bool sourceValid = PathValidator.ValidateAndNormalize(Path.Combine(cd, fname), _basePath, out sFile, out sFileError);
 
