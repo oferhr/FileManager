@@ -170,13 +170,23 @@ namespace FileManager.Services
                                     else
                                     {
                                         isCopy = true;
-                                        if (!Directory.Exists(newdir))
+                                        try
                                         {
-                                            _loggingService.LogFileOperation("CREATE_DIR", newdir);
-                                            Directory.CreateDirectory(newdir);
+                                            if (!Directory.Exists(newdir))
+                                            {
+                                                Directory.CreateDirectory(newdir);
+                                                _loggingService.LogFileOperation("CREATE_DIR", newdir, true);
+                                            }
+                                            _fileService.MoveFiles(file, copyName);
+                                            _loggingService.LogFileOperation("MOVE", $"{file} -> {copyName}", true);
                                         }
-                                        _loggingService.LogFileOperation("MOVE", $"{file} -> {copyName}");
-                                        _fileService.MoveFiles(file, copyName);
+                                        catch (Exception ex)
+                                        {
+                                            _loggingService.LogFileOperation("MOVE", $"{file} -> {copyName}", false, ex.Message);
+                                            _loggingService.LogError($"Failed to move file in FileNameManagementService: {file}", ex);
+                                            // Don't break the loop, let outer catch handle it
+                                            throw;
+                                        }
                                     }
                                 }
                             }

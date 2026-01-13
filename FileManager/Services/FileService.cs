@@ -96,6 +96,8 @@ namespace FileManager.Services
                 _loggingService?.LogError("FileService.MoveFiles", ex, $"Failed to move file from {src} to {dest}");
                 _loggingService?.LogFileOperation("MoveFile", $"{src} -> {dest}", false, ex.Message);
                 MessageBox.Show($"Error while moving file:\r{src}\rTo:\r{dest}\rError Message:\r{ex.Message}");
+                // Rethrow to allow callers to handle the failure (e.g., ArchiveService data loss protection)
+                throw;
             }
         }
 

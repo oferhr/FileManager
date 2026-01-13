@@ -117,11 +117,12 @@ namespace FileManager.Services
                                             continue;
                                         }
 
-                                        _loggingService.LogFileOperation("COPY", $"{sFile} -> {destFile}");
                                         File.Copy(sFile, destFile);
+                                        _loggingService.LogFileOperation("COPY", $"{sFile} -> {destFile}", true);
                                     }
                                     catch (Exception e)
                                     {
+                                        _loggingService.LogFileOperation("COPY", $"{sFile} -> {destFile}", false, e.Message);
                                         _loggingService.LogError($"Failed to copy file {file}", e);
                                         MessageBox.Show($"נכשל בהעברת קובץ {file}----{e.Message}");
                                     }

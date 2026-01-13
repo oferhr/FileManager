@@ -121,13 +121,21 @@ namespace FileManager.Services
                                     break;
                                 }
 
-                                if (File.Exists(newFilePath))
+                                try
                                 {
-                                    _loggingService.LogFileOperation("DELETE", newFilePath);
-                                    File.Delete(newFilePath);
+                                    if (File.Exists(newFilePath))
+                                    {
+                                        File.Delete(newFilePath);
+                                        _loggingService.LogFileOperation("DELETE", newFilePath, true);
+                                    }
+                                    _fileService.MoveFiles(file, newFilePath);
+                                    _loggingService.LogFileOperation("RENAME", $"{file} -> {newFilePath}", true);
                                 }
-                                _loggingService.LogFileOperation("RENAME", $"{file} -> {newFilePath}");
-                                _fileService.MoveFiles(file, newFilePath);
+                                catch (Exception ex)
+                                {
+                                    _loggingService.LogFileOperation("RENAME", $"{file} -> {newFilePath}", false, ex.Message);
+                                    _loggingService.LogError($"Failed to rename Excel file: {file}", ex);
+                                }
                             }
                             break;
                         }
