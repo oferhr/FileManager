@@ -184,8 +184,9 @@ namespace FileManager.Services
                                         {
                                             _loggingService.LogFileOperation("MOVE", $"{file} -> {copyName}", false, ex.Message);
                                             _loggingService.LogError($"Failed to move file in FileNameManagementService: {file}", ex);
-                                            // Don't break the loop, let outer catch handle it
-                                            throw;
+                                            // Don't rethrow - continue processing remaining files
+                                            // The error is logged, and we want to process other files
+                                            break; // Exit the while loop for this file, continue with next file
                                         }
                                     }
                                 }

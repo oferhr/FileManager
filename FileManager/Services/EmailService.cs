@@ -425,7 +425,15 @@ namespace FileManager.Services
                 var dirFiles = Directory.GetFiles(checkedPath);
                 foreach (var dirFile in dirFiles)
                 {
-                    _fileService.MoveFiles(dirFile, Path.Combine(newDir, Path.GetFileName(dirFile)));
+                    try
+                    {
+                        _fileService.MoveFiles(dirFile, Path.Combine(newDir, Path.GetFileName(dirFile)));
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService.LogError($"Failed to archive file during email processing: {dirFile}", ex);
+                        // Continue processing remaining files even if one fails
+                    }
                 }
             }
 
