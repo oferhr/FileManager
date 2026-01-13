@@ -121,13 +121,24 @@ namespace FileManager.Services
                                     break;
                                 }
 
-                                try
+                                // Use separate try-catch blocks to log the correct operation type
+                                if (File.Exists(newFilePath))
                                 {
-                                    if (File.Exists(newFilePath))
+                                    try
                                     {
                                         File.Delete(newFilePath);
                                         _loggingService.LogFileOperation("DELETE", newFilePath, true);
                                     }
+                                    catch (Exception ex)
+                                    {
+                                        _loggingService.LogFileOperation("DELETE", newFilePath, false, ex.Message);
+                                        _loggingService.LogError($"Failed to delete existing Excel file: {newFilePath}", ex);
+                                        break; // Skip rename if delete fails
+                                    }
+                                }
+
+                                try
+                                {
                                     _fileService.MoveFiles(file, newFilePath);
                                     _loggingService.LogFileOperation("RENAME", $"{file} -> {newFilePath}", true);
                                 }

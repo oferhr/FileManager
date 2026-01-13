@@ -199,8 +199,9 @@ namespace FileManager.Services
                                 {
                                     _loggingService.LogWarning($"Archive incomplete: {successfulMoves}/{totalFiles} files moved. Source directory preserved to prevent data loss: {dirPath}");
                                 }
-                                else if (totalFiles > 0)
+                                else
                                 {
+                                    // Delete directory whether it has files or is empty (totalFiles == 0)
                                     try
                                     {
                                         Directory.Delete(dirPath, true);

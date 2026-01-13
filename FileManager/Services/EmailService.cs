@@ -331,7 +331,9 @@ namespace FileManager.Services
                     }
                     catch (System.Exception ex)
                     {
-                        _loggingService.LogError($"Failed to get filename for email attachment: {arfile[0]}", ex);
+                        // Don't access arfile[0] again if it caused the exception (e.g., IndexOutOfRangeException)
+                        var safeFileInfo = arfile != null && arfile.Count > 0 ? arfile[0] : "[empty attachment list]";
+                        _loggingService.LogError($"Failed to get filename for email attachment: {safeFileInfo}", ex);
                         throw; // Rethrow to outer catch which will cleanup COM objects
                     }
 
@@ -429,7 +431,7 @@ namespace FileManager.Services
                     {
                         _fileService.MoveFiles(dirFile, Path.Combine(newDir, Path.GetFileName(dirFile)));
                     }
-                    catch (Exception ex)
+                    catch (System.Exception ex)
                     {
                         _loggingService.LogError($"Failed to archive file during email processing: {dirFile}", ex);
                         // Continue processing remaining files even if one fails
