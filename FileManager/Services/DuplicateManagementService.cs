@@ -320,13 +320,14 @@ namespace FileManager.Services
                             {
                                 try
                                 {
-                                    _loggingService.LogFileOperation("DELETE", files[0]);
                                     File.SetAttributes(files[0], FileAttributes.Normal);
                                     File.Delete(files[0]);
+                                    _loggingService.LogFileOperation("DELETE", files[0], true);
                                     DeleteDirectory(availDirs[i]);
                                 }
                                 catch (Exception ex)
                                 {
+                                    _loggingService.LogFileOperation("DELETE", files[0], false, ex.Message);
                                     _loggingService.LogError($"Error deleting thumbs file: {files[0]}", ex);
                                     LogError("FixDuplicates", ex, "בעיה במחיקת הקובץ");
                                 }
@@ -353,18 +354,36 @@ namespace FileManager.Services
 
             try
             {
-                _loggingService.LogFileOperation("DELETE_DIR", normalizedPath);
                 Directory.Delete(normalizedPath);
+                _loggingService.LogFileOperation("DELETE_DIR", normalizedPath, true);
             }
             catch (IOException ex)
             {
                 _loggingService.LogInfo($"Directory not empty, attempting recursive delete: {normalizedPath}");
-                Directory.Delete(normalizedPath, true);
+                try
+                {
+                    Directory.Delete(normalizedPath, true);
+                    _loggingService.LogFileOperation("DELETE_DIR", normalizedPath, true);
+                }
+                catch (Exception deleteEx)
+                {
+                    _loggingService.LogFileOperation("DELETE_DIR", normalizedPath, false, deleteEx.Message);
+                    throw;
+                }
             }
             catch (UnauthorizedAccessException ex)
             {
                 _loggingService.LogWarning($"Unauthorized access, attempting recursive delete: {normalizedPath}");
-                Directory.Delete(normalizedPath, true);
+                try
+                {
+                    Directory.Delete(normalizedPath, true);
+                    _loggingService.LogFileOperation("DELETE_DIR", normalizedPath, true);
+                }
+                catch (Exception deleteEx)
+                {
+                    _loggingService.LogFileOperation("DELETE_DIR", normalizedPath, false, deleteEx.Message);
+                    throw;
+                }
             }
         }
 

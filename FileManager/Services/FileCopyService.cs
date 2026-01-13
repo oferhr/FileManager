@@ -75,8 +75,17 @@ namespace FileManager.Services
 
                             if (!Directory.Exists(destDir))
                             {
-                                _loggingService.LogFileOperation("CREATE_DIR", destDir);
-                                Directory.CreateDirectory(destDir);
+                                try
+                                {
+                                    Directory.CreateDirectory(destDir);
+                                    _loggingService.LogFileOperation("CREATE_DIR", destDir, true);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _loggingService.LogFileOperation("CREATE_DIR", destDir, false, ex.Message);
+                                    _loggingService.LogError($"Failed to create directory: {destDir}", ex);
+                                    continue; // Skip this directory and continue with others
+                                }
                             }
 
                             var files = Directory.GetFiles(cd, "*.*", SearchOption.TopDirectoryOnly);
