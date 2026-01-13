@@ -6,6 +6,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Office.Interop.Outlook;
 using FileManager;
+using FileManager.Utilities;
 using Newtonsoft.Json;
 
 namespace FileManager.Services
@@ -16,35 +17,56 @@ namespace FileManager.Services
         private readonly IFileService _fileService;
         private readonly IConfigurationService _configurationService;
         private readonly IFileCountService _fileCountService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
         private readonly string[] _mailCheck = { "איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
         private const string CopiedFilesDirectory = "9876789";
 
         public EmailService(
-            string basePath, 
-            IFileService fileService, 
+            string basePath,
+            IFileService fileService,
             IConfigurationService configurationService,
             IFileCountService fileCountService,
+            ILoggingService loggingService,
             Action<int> progressCallback = null)
         {
             _basePath = basePath;
             _fileService = fileService;
             _configurationService = configurationService;
             _fileCountService = fileCountService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
         }
 
         public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
         {
-            var validDirs = dirSettings.Where(w => !string.IsNullOrEmpty(w.email));
+            // Validate all email addresses before processing
+            var validDirs = dirSettings.Where(w =>
+            {
+                if (string.IsNullOrEmpty(w.email))
+                    return false;
+
+                string emailError;
+                if (!EmailValidator.IsValidEmail(w.email, out emailError))
+                {
+                    _loggingService.LogSecurityEvent($"Invalid email address blocked: {w.email} for directory: {w.dir}. Error: {emailError}");
+                    return false;
+                }
+
+                return true;
+            });
+
             var counts = validDirs.Count();
             double pbPart = counts == 0 ? 100 : 100 / counts;
 
-            foreach (var dirSetting in dirSettings)
+            foreach (var dirSetting in validDirs)
             {
-                if (string.IsNullOrEmpty(dirSetting.email))
+                // Sanitize email address
+                var sanitizedEmail = EmailValidator.SanitizeEmailAddress(dirSetting.email);
+                if (sanitizedEmail != dirSetting.email)
                 {
-                    continue;
+                    _loggingService.LogInfo($"Email address sanitized from '{dirSetting.email}' to '{sanitizedEmail}'");
+                    dirSetting.email = sanitizedEmail;
                 }
 
                 var basePath = Path.Combine(_basePath, dirSetting.dir);
@@ -69,6 +91,20 @@ namespace FileManager.Services
 
         public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
         {
+            // Validate email address if provided
+            if (!string.IsNullOrEmpty(email))
+            {
+                string emailError;
+                if (!EmailValidator.IsValidEmail(email, out emailError))
+                {
+                    _loggingService.LogSecurityEvent($"Invalid email address rejected in grid: {email}. Error: {emailError}");
+                    throw new ArgumentException($"Invalid email address: {email}. {emailError}");
+                }
+
+                // Sanitize email address
+                email = EmailValidator.SanitizeEmailAddress(email);
+            }
+
             var emailConfigList = _configurationService.GetEmailDirSettings();
 
             var curdir = emailConfigList.Find(f => f.dir == folder);
@@ -82,6 +118,7 @@ namespace FileManager.Services
                 {
                     curdir.email = email;
                     curdir.method = method;
+                    _loggingService.LogInfo($"Updated email settings for folder {folder}: {email}");
                 }
             }
             else
@@ -96,6 +133,7 @@ namespace FileManager.Services
                         check = _mailCheck[0],
                         icheck = 0
                     });
+                    _loggingService.LogInfo($"Added email settings for folder {folder}: {email}");
                 }
             }
 
@@ -270,51 +308,68 @@ namespace FileManager.Services
 
             foreach (var arfile in arfiles)
             {
-                var oApp = new Microsoft.Office.Interop.Outlook.Application();
-                var oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
-                oMsg.To = dirSetting.email;
-
-                string fileName = "";
                 try
                 {
-                    fileName = Path.GetFileName(arfile[0]);
+                    var oApp = new Microsoft.Office.Interop.Outlook.Application();
+                    var oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
+
+                    // Validate and sanitize email before assignment
+                    var sanitizedEmail = EmailValidator.SanitizeEmailAddress(dirSetting.email);
+                    oMsg.To = sanitizedEmail;
+
+                    string fileName = "";
+                    try
+                    {
+                        fileName = Path.GetFileName(arfile[0]);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        _loggingService.LogError($"Failed to get filename for email attachment: {arfile[0]}", ex);
+                        continue;
+                    }
+
+                    var subject = string.Empty;
+                    if (fileName != null)
+                    {
+                        subject = dirSetting.icheck == 2 ? _fileService.GetMailFileName(fileName, dirSetting.icheck, true) : fileName;
+                    }
+
+                    // Sanitize subject to prevent header injection
+                    subject = InputValidator.SanitizeString(subject);
+                    oMsg.Subject = subject;
+
+                    foreach (var curFile in arfile)
+                    {
+                        oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
+                    }
+
+                    oMsg.GetInspector.Activate();
+                    var signature = oMsg.HTMLBody;
+                    oMsg.HTMLBody = string.Empty + signature;
+
+                    _loggingService.LogInfo($"Sending email to {sanitizedEmail} with {arfile.Count} attachments, subject: {subject}");
+                    oMsg.Send();
+
+                    oMsg = null;
+                    oApp = null;
+
+                    var dVal = pbIncrement;
+                    var val = Convert.ToInt32(dVal);
+                    if (val > 100)
+                    {
+                        val = 100;
+                    }
+                    _progressCallback?.Invoke(val);
+
+                    if (sleepSeconds > 0)
+                    {
+                        Thread.Sleep(sleepSeconds * 1000);
+                    }
                 }
                 catch (System.Exception ex)
                 {
-                    continue;
-                }
-
-                var subject = string.Empty;
-                if (fileName != null)
-                {
-                    subject = dirSetting.icheck == 2 ? _fileService.GetMailFileName(fileName, dirSetting.icheck, true) : fileName;
-                }
-                oMsg.Subject = subject;
-
-                foreach (var curFile in arfile)
-                {
-                    oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
-                }
-
-                oMsg.GetInspector.Activate();
-                var signature = oMsg.HTMLBody;
-                oMsg.HTMLBody = string.Empty + signature;
-                oMsg.Send();
-
-                oMsg = null;
-                oApp = null;
-
-                var dVal = pbIncrement;
-                var val = Convert.ToInt32(dVal);
-                if (val > 100)
-                {
-                    val = 100;
-                }
-                _progressCallback?.Invoke(val);
-
-                if (sleepSeconds > 0)
-                {
-                    Thread.Sleep(sleepSeconds * 1000);
+                    _loggingService.LogError($"Failed to send email to {dirSetting.email}", ex);
+                    // Continue processing other emails even if one fails
                 }
             }
         }

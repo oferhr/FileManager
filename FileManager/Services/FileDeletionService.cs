@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using FileManager;
+using FileManager.Utilities;
 
 namespace FileManager.Services
 {
@@ -11,12 +12,14 @@ namespace FileManager.Services
     {
         private readonly string _basePath;
         private readonly IFileService _fileService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
 
-        public FileDeletionService(string basePath, IFileService fileService, Action<int> progressCallback = null)
+        public FileDeletionService(string basePath, IFileService fileService, ILoggingService loggingService, Action<int> progressCallback = null)
         {
             _basePath = basePath;
             _fileService = fileService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
         }
 
@@ -32,7 +35,14 @@ namespace FileManager.Services
 
             foreach (var checkedItem in checkedItems)
             {
-                var basePath = Path.Combine(_basePath, checkedItem);
+                var combinedPath = Path.Combine(_basePath, checkedItem);
+                string basePath, errorMessage;
+                if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                {
+                    _loggingService.LogSecurityEvent($"Path validation failed in FileDeletionService: {errorMessage}");
+                    continue; // Skip this item
+                }
+
                 var fileParts = new List<string>();
 
                 var dirs1 = Directory.GetDirectories(basePath);
@@ -87,7 +97,15 @@ namespace FileManager.Services
 
                     foreach (var fileToDelete in filesToDelete)
                     {
-                        File.Delete(fileToDelete);
+                        try
+                        {
+                            _loggingService.LogFileOperation("DELETE", fileToDelete);
+                            File.Delete(fileToDelete);
+                        }
+                        catch (Exception ex)
+                        {
+                            _loggingService.LogError($"Failed to delete file: {fileToDelete}", ex);
+                        }
                     }
 
                     var dirsToDelete = new List<string>();
@@ -110,7 +128,23 @@ namespace FileManager.Services
 
                     foreach (var dtd in dirsToDelete)
                     {
-                        Directory.Delete(dtd);
+                        try
+                        {
+                            // Safety check: validate path before deletion
+                            string normalizedPath, validationError;
+                            if (!PathValidator.ValidateAndNormalize(dtd, _basePath, out normalizedPath, out validationError))
+                            {
+                                _loggingService.LogSecurityEvent($"Attempted to delete directory outside boundary: {validationError}");
+                                continue;
+                            }
+
+                            _loggingService.LogFileOperation("DELETE_DIR", normalizedPath);
+                            Directory.Delete(normalizedPath, recursive: false); // Only delete empty directories
+                        }
+                        catch (Exception ex)
+                        {
+                            _loggingService.LogError($"Failed to delete directory: {dtd}", ex);
+                        }
                     }
 
                     filesToDelete.Clear();

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if not exist \"Utilities\" mkdir Utilities)",
+      "Bash(cmd /c \"if not exist C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager\\\\Utilities mkdir C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager\\\\Utilities\")",
+      "Bash(dir \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager\\\\Utilities\")",
+      "Bash(cmd /c \"dir /B C:\\\\projects\\\\ofer\\\\filemanager\")",
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "Bash(msbuild:*)",
+      "Bash(\"C:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\v4.0.30319\\\\MSBuild.exe\" \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager.sln\" /t:Build /p:Configuration=Debug /v:minimal)",
+      "Bash(\"C:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\v4.0.30319\\\\MSBuild.exe\" \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager.sln\" /t:Rebuild /p:Configuration=Debug /v:minimal /nologo)",
+      "Bash(\"C:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\v4.0.30319\\\\MSBuild.exe\" \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager.sln\" /p:Configuration=Debug)",
+      "Bash(\"/c/Windows/Microsoft.NET/Framework64/v4.0.30319/MSBuild.exe\" FileManager.sln)",
+      "Bash(\"/c/Windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe\" /t:library /r:System.dll /r:System.Core.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /nologo /out:temp_test.dll Services/ConfigurationService.cs Services/IConfigurationService.cs Services/LoggingService.cs Services/ILoggingService.cs Utilities/PathValidator.cs Utilities/EmailValidator.cs Utilities/InputValidator.cs FileCount.cs /r:packages/Newtonsoft.Json.13.0.3/lib/net45/Newtonsoft.Json.dll /r:packages/NLog.4.6.8/lib/net45/NLog.dll)",
+      "Bash(where:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Build /p:Configuration=Debug /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln //t:Build //p:Configuration=Debug //v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.csproj /t:Build /p:Configuration=Debug /verbosity:normal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.csproj)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Release /p:Platform=\"Any CPU\" /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Release /p:Platform=AnyCPU /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager\\\\FileManager.csproj\" /t:Rebuild /p:Configuration=Release /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" /noautoresponse \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager\\\\FileManager.csproj\" /t:Rebuild /p:Configuration=Release /v:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" FileManager.sln -t:Rebuild -p:Configuration=Release -v:minimal)"
+    ]
+  }
+}

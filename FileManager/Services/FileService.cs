@@ -1,19 +1,23 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Linq;
+using FileManager.Utilities;
 
 namespace FileManager.Services
 {
     public class FileService : IFileService
     {
         private readonly bool _isMove;
+        private readonly ILoggingService _loggingService;
         private const string LtrMark = "\u200E";
 
-        public FileService(bool isMove = true)
+        public FileService(bool isMove = true, ILoggingService loggingService = null)
         {
             _isMove = isMove;
+            _loggingService = loggingService;
         }
 
         public bool IsThumbsInPath(string filePath)
@@ -23,6 +27,24 @@ namespace FileManager.Services
 
         public void CopyFiles(string src, string dest)
         {
+            // Validate source path
+            if (!PathValidator.IsValidPath(src, out string srcError))
+            {
+                var errorMsg = $"Invalid source path: {srcError}";
+                _loggingService?.LogSecurityEvent("PathValidationFailure", errorMsg,
+                    new Dictionary<string, object> { { "SourcePath", src } });
+                throw new ArgumentException(errorMsg, nameof(src));
+            }
+
+            // Validate destination path
+            if (!PathValidator.IsValidPath(dest, out string destError))
+            {
+                var errorMsg = $"Invalid destination path: {destError}";
+                _loggingService?.LogSecurityEvent("PathValidationFailure", errorMsg,
+                    new Dictionary<string, object> { { "DestinationPath", dest } });
+                throw new ArgumentException(errorMsg, nameof(dest));
+            }
+
             if (_isMove)
             {
                 MoveFiles(src, dest);
@@ -32,9 +54,12 @@ namespace FileManager.Services
                 try
                 {
                     File.Copy(src, dest);
+                    _loggingService?.LogFileOperation("CopyFile", $"{src} -> {dest}", true);
                 }
                 catch (Exception ex)
                 {
+                    _loggingService?.LogError("FileService.CopyFiles", ex, $"Failed to copy file from {src} to {dest}");
+                    _loggingService?.LogFileOperation("CopyFile", $"{src} -> {dest}", false, ex.Message);
                     MessageBox.Show($"Error while copying file:\r{src}\rTo:\r{dest}\rError Message:\r{ex.Message}");
                 }
             }
@@ -42,13 +67,34 @@ namespace FileManager.Services
 
         public void MoveFiles(string src, string dest)
         {
+            // Validate source path
+            if (!PathValidator.IsValidPath(src, out string srcError))
+            {
+                var errorMsg = $"Invalid source path: {srcError}";
+                _loggingService?.LogSecurityEvent("PathValidationFailure", errorMsg,
+                    new Dictionary<string, object> { { "SourcePath", src } });
+                throw new ArgumentException(errorMsg, nameof(src));
+            }
+
+            // Validate destination path
+            if (!PathValidator.IsValidPath(dest, out string destError))
+            {
+                var errorMsg = $"Invalid destination path: {destError}";
+                _loggingService?.LogSecurityEvent("PathValidationFailure", errorMsg,
+                    new Dictionary<string, object> { { "DestinationPath", dest } });
+                throw new ArgumentException(errorMsg, nameof(dest));
+            }
+
             try
             {
                 File.SetAttributes(src, FileAttributes.Normal);
                 File.Move(src, dest);
+                _loggingService?.LogFileOperation("MoveFile", $"{src} -> {dest}", true);
             }
             catch (Exception ex)
             {
+                _loggingService?.LogError("FileService.MoveFiles", ex, $"Failed to move file from {src} to {dest}");
+                _loggingService?.LogFileOperation("MoveFile", $"{src} -> {dest}", false, ex.Message);
                 MessageBox.Show($"Error while moving file:\r{src}\rTo:\r{dest}\rError Message:\r{ex.Message}");
             }
         }

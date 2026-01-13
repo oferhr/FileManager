@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using FileManager;
+using FileManager.Utilities;
 using NLog;
 
 namespace FileManager.Services
@@ -13,6 +14,7 @@ namespace FileManager.Services
         private readonly string _basePath;
         private readonly IFileService _fileService;
         private readonly IConfigurationService _configurationService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
         private readonly Action<string> _logCallback;
         private readonly Action<bool> _progressVisibilityCallback;
@@ -20,9 +22,10 @@ namespace FileManager.Services
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         public FileNameManagementService(
-            string basePath, 
-            IFileService fileService, 
+            string basePath,
+            IFileService fileService,
             IConfigurationService configurationService,
+            ILoggingService loggingService,
             Action<int> progressCallback = null,
             Action<string> logCallback = null,
             Action<bool> progressVisibilityCallback = null,
@@ -31,6 +34,7 @@ namespace FileManager.Services
             _basePath = basePath;
             _fileService = fileService;
             _configurationService = configurationService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
             _logCallback = logCallback;
             _progressVisibilityCallback = progressVisibilityCallback;
@@ -61,7 +65,14 @@ namespace FileManager.Services
                 // Loop over the checked items
                 foreach (var checkedItem in checkedItems)
                 {
-                    var basePath = Path.Combine(_basePath, checkedItem.ToString());
+                    var combinedPath = Path.Combine(_basePath, checkedItem.ToString());
+                    string basePath, errorMessage;
+                    if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                    {
+                        _loggingService.LogSecurityEvent($"Path traversal attempt blocked in FileNameManagementService: {errorMessage}");
+                        continue;
+                    }
+
                     var dirs = Directory.GetDirectories(basePath);
                     
                     if (dirs.Length > 0)
@@ -135,9 +146,23 @@ namespace FileManager.Services
                                 while (!isCopy)
                                 {
                                     var based = Directory.GetParent(curdir).FullName;
-                                    var newdir = Path.Combine(based, miniCounter.ToString());
-                                    copyName = Path.Combine(newdir, newName.TrimEnd('_') + ext);
-                                    
+                                    var combinedNewDir = Path.Combine(based, miniCounter.ToString());
+                                    string newdir, newdirError;
+                                    if (!PathValidator.ValidateAndNormalize(combinedNewDir, _basePath, out newdir, out newdirError))
+                                    {
+                                        _loggingService.LogSecurityEvent($"Invalid directory in FileNameManagementService: {newdirError}");
+                                        break;
+                                    }
+
+                                    var combinedCopyName = Path.Combine(newdir, newName.TrimEnd('_') + ext);
+                                    string tempCopyName, copyError;
+                                    if (!PathValidator.ValidateAndNormalize(combinedCopyName, _basePath, out tempCopyName, out copyError))
+                                    {
+                                        _loggingService.LogSecurityEvent($"Invalid file path in FileNameManagementService: {copyError}");
+                                        break;
+                                    }
+                                    copyName = tempCopyName;
+
                                     if (File.Exists(copyName))
                                     {
                                         miniCounter++;
@@ -147,8 +172,10 @@ namespace FileManager.Services
                                         isCopy = true;
                                         if (!Directory.Exists(newdir))
                                         {
+                                            _loggingService.LogFileOperation("CREATE_DIR", newdir);
                                             Directory.CreateDirectory(newdir);
                                         }
+                                        _loggingService.LogFileOperation("MOVE", $"{file} -> {copyName}");
                                         _fileService.MoveFiles(file, copyName);
                                     }
                                 }

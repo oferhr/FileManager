@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using FileManager;
+using FileManager.Utilities;
 
 namespace FileManager.Services
 {
@@ -13,18 +14,21 @@ namespace FileManager.Services
         private readonly string _basePath;
         private readonly IFileService _fileService;
         private readonly IConfigurationService _configurationService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
         private const string LtrMark = "\u200E";
 
         public DuplicateManagementService(
-            string basePath, 
-            IFileService fileService, 
+            string basePath,
+            IFileService fileService,
             IConfigurationService configurationService,
+            ILoggingService loggingService,
             Action<int> progressCallback = null)
         {
             _basePath = basePath;
             _fileService = fileService;
             _configurationService = configurationService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
         }
 
@@ -91,7 +95,14 @@ namespace FileManager.Services
 
             foreach (var checkedItem in checkedItems)
             {
-                var basePath = Path.Combine(_basePath, checkedItem);
+                var combinedPath = Path.Combine(_basePath, checkedItem);
+                string basePath, errorMessage;
+                if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                {
+                    _loggingService.LogSecurityEvent($"Path traversal attempt blocked in DuplicateManagementService.FixDuplicates: {errorMessage}");
+                    continue;
+                }
+
                 var allAvailDirs = Directory.GetDirectories(basePath);
                 var availDirs = allAvailDirs.Where(w =>
                 {
@@ -266,7 +277,14 @@ namespace FileManager.Services
         {
             foreach (var checkedItem in checkedItems)
             {
-                var basePath = Path.Combine(_basePath, checkedItem);
+                var combinedPath = Path.Combine(_basePath, checkedItem);
+                string basePath, errorMessage;
+                if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                {
+                    _loggingService.LogSecurityEvent($"Path traversal attempt blocked in DuplicateManagementService.CleanupEmptyFolders: {errorMessage}");
+                    continue;
+                }
+
                 var allAvailDirs = Directory.GetDirectories(basePath);
                 var availDirs = allAvailDirs.Where(w =>
                 {
@@ -302,12 +320,14 @@ namespace FileManager.Services
                             {
                                 try
                                 {
+                                    _loggingService.LogFileOperation("DELETE", files[0]);
                                     File.SetAttributes(files[0], FileAttributes.Normal);
                                     File.Delete(files[0]);
                                     DeleteDirectory(availDirs[i]);
                                 }
                                 catch (Exception ex)
                                 {
+                                    _loggingService.LogError($"Error deleting thumbs file: {files[0]}", ex);
                                     LogError("FixDuplicates", ex, "בעיה במחיקת הקובץ");
                                 }
                             }
@@ -325,14 +345,24 @@ namespace FileManager.Services
         {
             try
             {
-                Directory.Delete(path);
+                string normalizedPath, errorMessage;
+                if (!PathValidator.ValidateAndNormalize(path, _basePath, out normalizedPath, out errorMessage))
+                {
+                    _loggingService.LogSecurityEvent($"Attempted to delete directory outside boundary: {errorMessage}");
+                    return;
+                }
+
+                _loggingService.LogFileOperation("DELETE_DIR", normalizedPath);
+                Directory.Delete(normalizedPath);
             }
-            catch (IOException)
+            catch (IOException ex)
             {
+                _loggingService.LogInfo($"Directory not empty, attempting recursive delete: {path}");
                 Directory.Delete(path, true);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
+                _loggingService.LogWarning($"Unauthorized access, attempting recursive delete: {path}");
                 Directory.Delete(path, true);
             }
         }
