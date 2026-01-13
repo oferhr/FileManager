@@ -106,9 +106,10 @@ namespace FileManager.Services
 
                                 if (fname.Contains(str))
                                 {
+                                    string destFile = string.Empty, destFileError, sFile = string.Empty, sFileError;
                                     try
                                     {
-                                        string destFile, destFileError, sFile, sFileError;
+                                        
                                         bool destValid = PathValidator.ValidateAndNormalize(Path.Combine(destDir, fname), null, out destFile, out destFileError);
                                         bool sourceValid = PathValidator.ValidateAndNormalize(Path.Combine(cd, fname), _basePath, out sFile, out sFileError);
 

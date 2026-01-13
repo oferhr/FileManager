@@ -26,7 +26,13 @@
       "Bash(ls:*)",
       "Bash(test:*)",
       "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Debug /p:Platform=\"Any CPU\" /v:minimal /nologo)",
-      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU /v:minimal)"
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU /v:minimal)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix premature success logging and exception swallowing\n\nFixed 2 additional critical issues from PR review:\n\n1. MEDIUM: Premature success logging before operations complete\n   - FileCopyService: Log File.Copy after completion with success/failure\n   - ExcelService: Log File.Delete and MoveFiles after completion\n   - FileNameManagementService: Log Directory.CreateDirectory and MoveFiles after completion\n   - Wrapped operations in try-catch to capture actual success/failure\n   - Provides accurate audit trail without misleading \"success then error\" sequences\n\n2. HIGH: FileService.MoveFiles swallowing exceptions breaks data loss protection\n   - FileService.MoveFiles now rethrows exceptions after logging and MessageBox\n   - Enables ArchiveService data loss protection to work correctly\n   - When move fails: exception propagates → anyMoveFailed=true → source preserved\n   - Prevents deletion of source files when archive operations fail\n   - Fixes the stated purpose of the ArchiveService \"CRITICAL FIX\"\n\nImpact:\n- Audit logs now show accurate operation results \\(no false success entries\\)\n- ArchiveService data loss protection now functional\n- Exception propagation allows proper error handling in callers\n- All existing try-catch blocks continue to work as expected\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Microsoft Visual Studio\\\\2019\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager.sln\" /p:Configuration=Release /t:Rebuild /v:minimal /nologo)",
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\MSBuild\\\\14.0\\\\Bin\\\\MSBuild.exe\" \"C:\\\\projects\\\\ofer\\\\filemanager\\\\FileManager.sln\" /p:Configuration=Release /t:Rebuild /v:minimal /nologo)"
     ]
   }
 }
