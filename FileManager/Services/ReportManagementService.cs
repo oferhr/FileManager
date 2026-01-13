@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using FileManager;
+using FileManager.Utilities;
 
 namespace FileManager.Services
 {
@@ -11,12 +12,14 @@ namespace FileManager.Services
     {
         private readonly string _basePath;
         private readonly IFileService _fileService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
 
-        public ReportManagementService(string basePath, IFileService fileService, Action<int> progressCallback = null)
+        public ReportManagementService(string basePath, IFileService fileService, ILoggingService loggingService, Action<int> progressCallback = null)
         {
             _basePath = basePath;
             _fileService = fileService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
         }
 
@@ -27,10 +30,25 @@ namespace FileManager.Services
 
             foreach (var checkedItem in checkedItems)
             {
-                var basePath = Path.Combine(_basePath, checkedItem);
-                var dest = Path.Combine(basePath, destFolName);
+                var combinedPath = Path.Combine(_basePath, checkedItem);
+                string basePath, errorMessage;
+                if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                {
+                    _loggingService.LogSecurityEvent($"Path traversal attempt blocked in ReportManagementService: {errorMessage}");
+                    continue;
+                }
+
+                var combinedDest = Path.Combine(basePath, destFolName);
+                string dest, destError;
+                if (!PathValidator.ValidateAndNormalize(combinedDest, _basePath, out dest, out destError))
+                {
+                    _loggingService.LogSecurityEvent($"Invalid destination path in ReportManagementService: {destError}");
+                    continue;
+                }
+
                 if (!Directory.Exists(dest))
                 {
+                    _loggingService.LogFileOperation("CREATE_DIR", dest);
                     Directory.CreateDirectory(dest);
                 }
 
@@ -84,6 +102,7 @@ namespace FileManager.Services
                         }
                         catch (Exception ex)
                         {
+                            _loggingService.LogError($"Error reading source files in report management: {source}", ex);
                             MessageBox.Show($"בעיה נמצאה בקריאת קבצי המקור, {ex.Message}");
                             continue;
                         }
@@ -111,6 +130,7 @@ namespace FileManager.Services
                         }
                         catch (Exception ex)
                         {
+                            _loggingService.LogError($"Error checking destination files in report management: {dest}", ex);
                             MessageBox.Show($"בעיה נמצאה בבדיקת קבצי היעד, {ex.Message}");
                             continue;
                         }
@@ -138,7 +158,16 @@ namespace FileManager.Services
                                     }
                                     newFile = newFile.TrimEnd('-') + ext;
 
-                                    _fileService.MoveFiles(gf, Path.Combine(dest, Path.GetFileName(newFile)));
+                                    var combinedDestFile = Path.Combine(dest, Path.GetFileName(newFile));
+                                    string destFilePath, destFileError;
+                                    if (!PathValidator.ValidateAndNormalize(combinedDestFile, _basePath, out destFilePath, out destFileError))
+                                    {
+                                        _loggingService.LogSecurityEvent($"Invalid destination file in ReportManagementService: {destFileError}");
+                                        continue;
+                                    }
+
+                                    _loggingService.LogFileOperation("MOVE", $"{gf} -> {destFilePath}");
+                                    _fileService.MoveFiles(gf, destFilePath);
                                 }
                                 if (grpId != "00000000")
                                 {
@@ -148,6 +177,7 @@ namespace FileManager.Services
                         }
                         catch (Exception ex)
                         {
+                            _loggingService.LogError("Error moving files in report management", ex);
                             MessageBox.Show($"בעיה בהעברת הקובץ, {ex.Message}");
                         }
                     }

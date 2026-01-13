@@ -1,5 +1,5 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+# .NET / C# GitIgnore
 ################################################################################
 
 /.vs/FileManager
@@ -7,3 +7,294 @@
 /FileManager/obj
 /FileManager/nul
 /nul
+## Build results
+bin/*
+obj/*
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio cache/options directory
+.vs/
+.vscode/
+*.code-workspace
+
+## Visual Studio Code (keep some settings)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+## Visual Studio Trace Files
+*.e2e
+
+## TFS 2012 Local Workspace
+$tf/
+
+## Guidance Automation Toolkit
+*.gpState
+
+## ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## TeamCity
+_TeamCity*
+
+## DotCover
+*.dotCover
+
+## AxoCover
+.axoCover/*
+!.axoCover/settings.json
+
+## Visual Studio code coverage results
+*.coverage
+*.coveragexml
+
+## NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+## MightyMoose
+*.mm.*
+AutoTest.Net/
+
+## Web workbench (sass)
+.sass-cache/
+
+## Installshield output folder
+[Ee]xpress/
+
+## DocProject
+DocProject/buildhelp/
+DocProject/Help/*.HxT
+DocProject/Help/*.HxC
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2
+DocProject/Help/html
+
+## Click-Once directory
+publish/
+
+## Publish Web Output
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
+
+## Microsoft Azure Web App publish settings
+PublishScripts/
+
+## NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+## StyleCop
+StyleCopReport.xml
+
+## Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+*.exe
+*.dll
+*.pdb
+
+
+## Chutzpah Test files
+_Chutzpah*
+
+## Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Mono auto generated files
+mono_crash.*
+
+## Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+## Folder config file
+Desktop.ini
+
+## Recycle Bin
+$RECYCLE.BIN/
+
+## Mac desktop service store files
+.DS_Store
+
+## Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+## Windows shortcuts
+*.lnk
+
+## Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+## MSTest test Results
+[Tt]est[Rr]esult*/
+*.trx
+
+## NUnit
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+## Build Results of an ATL Project
+[Dd]ebugPS/
+[Rr]eleasePS/
+dlldata.c
+
+## Benchmark Results
+BenchmarkDotNet.Artifacts/
+
+## Paket dependency manager
+.paket/paket.exe
+paket-files/
+
+## FAKE - F# Make
+.fake/
+
+## CodeRush personal settings
+.cr/personal
+
+## Python Tools for Visual Studio (PTVS)
+__pycache__/
+*.pyc
+
+## Cake - Uncomment if you are using it
+# tools/**
+# !tools/packages.config
+
+## Tabs Studio
+*.tss
+
+## Telerik's JustMock configuration file
+*.jmconfig
+
+## BizTalk build output
+*.btp.cs
+*.btm.cs
+*.odx.cs
+*.xsd.cs
+
+## OpenCover UI analysis results
+OpenCover/
+
+## Azure Stream Analytics local run output
+ASALocalRun/
+
+## MSBuild Binary and Structured Log
+*.binlog
+
+## NVidia Nsight GPU debugger configuration file
+*.nvuser
+
+## MFractors (Xamarin productivity tool) working folder
+.mfractor/
+
+## Local History for Visual Studio
+.localhistory/
+
+## BeatPulse healthcheck temp db
+healthchecksdb
+
+## Backup folder (Package Manager Console)
+Backup/
+
+## Ionide (cross platform F# VS Code tools) working folder
+.ionide/
+
+## Fody - auto-generated XML schema
+FodyWeavers.xsd
+nul
+
+## Claude Code temporary files
+tmpclaude-*

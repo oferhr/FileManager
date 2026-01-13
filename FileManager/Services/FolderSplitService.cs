@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using FileManager;
+using FileManager.Utilities;
 
 namespace FileManager.Services
 {
@@ -11,12 +12,14 @@ namespace FileManager.Services
     {
         private readonly string _basePath;
         private readonly IFileService _fileService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
 
-        public FolderSplitService(string basePath, IFileService fileService, Action<int> progressCallback = null)
+        public FolderSplitService(string basePath, IFileService fileService, ILoggingService loggingService, Action<int> progressCallback = null)
         {
             _basePath = basePath;
             _fileService = fileService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
         }
 
@@ -31,8 +34,24 @@ namespace FileManager.Services
             {
                 foreach (var checkedItem in checkedItems)
                 {
-                    var basePath = Path.Combine(_basePath, checkedItem.dir);
-                    var destPath = checkedItem.dest;
+                    // Validate source path
+                    var combinedPath = Path.Combine(_basePath, checkedItem.dir);
+                    string basePath, errorMessage;
+                    if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                    {
+                        _loggingService.LogSecurityEvent($"Path traversal attempt blocked in FolderSplitService source: {errorMessage}");
+                        continue;
+                    }
+
+                    // Validate destination path
+                    string destPath, destError;
+                    if (!PathValidator.ValidateAndNormalize(checkedItem.dest, null, out destPath, out destError))
+                    {
+                        _loggingService.LogSecurityEvent($"Invalid destination path in FolderSplitService: {destError}");
+                        continue;
+                    }
+                    // Note: destPath can be outside _basePath as it's a split destination
+
                     var availDirs = Directory.GetDirectories(basePath);
 
                     if (availDirs.Length > 0)
@@ -45,10 +64,27 @@ namespace FileManager.Services
                                 continue;
                             }
 
-                            var destDir = Path.Combine(destPath, checkdir);
+                            var combinedDestDir = Path.Combine(destPath, checkdir);
+                            string destDir, destDirError;
+                            if (!PathValidator.ValidateAndNormalize(combinedDestDir, null, out destDir, out destDirError))
+                            {
+                                _loggingService.LogSecurityEvent($"Invalid destination directory in FolderSplitService: {destDirError}");
+                                continue;
+                            }
+
                             if (!Directory.Exists(destDir))
                             {
-                                Directory.CreateDirectory(destDir);
+                                try
+                                {
+                                    Directory.CreateDirectory(destDir);
+                                    _loggingService.LogFileOperation("CREATE_DIR", destDir, true);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _loggingService.LogFileOperation("CREATE_DIR", destDir, false, ex.Message);
+                                    _loggingService.LogError($"Failed to create directory: {destDir}", ex);
+                                    continue;
+                                }
                             }
 
                             var files = Directory.GetFiles(cd, "*.*", SearchOption.TopDirectoryOnly);
@@ -71,19 +107,31 @@ namespace FileManager.Services
                                 {
                                     try
                                     {
-                                        var destFile = Path.Combine(destDir, fname);
-                                        var sFile = Path.Combine(cd, fname);
-                                        
+                                        string destFile, destFileError, sFile, sFileError;
+                                        bool destValid = PathValidator.ValidateAndNormalize(Path.Combine(destDir, fname), null, out destFile, out destFileError);
+                                        bool sourceValid = PathValidator.ValidateAndNormalize(Path.Combine(cd, fname), _basePath, out sFile, out sFileError);
+
+                                        if (!destValid || !sourceValid)
+                                        {
+                                            var errorMsg = !destValid ? destFileError : sFileError;
+                                            _loggingService.LogSecurityEvent($"Path validation failed for folder split: {errorMsg}");
+                                            continue;
+                                        }
+
                                         if (File.Exists(destFile))
                                         {
+                                            _loggingService.LogInfo($"Duplicate file name detected during folder split: {destFile}");
                                             MessageBox.Show($"פיצול תיקיות - שם קובץ כפול - {destFile}");
                                             continue;
                                         }
-                                        
+
                                         _fileService.MoveFiles(sFile, destFile);
+                                        _loggingService.LogFileOperation("MOVE", $"{sFile} -> {destFile}", true);
                                     }
                                     catch (Exception e)
                                     {
+                                        _loggingService.LogFileOperation("MOVE", $"{sFile} -> {destFile}", false, e.Message);
+                                        _loggingService.LogError($"Failed to move file during folder split: {file}", e);
                                         MessageBox.Show($"נכשל בהעברת קובץ {file}----{e.Message}");
                                     }
                                 }
@@ -92,7 +140,16 @@ namespace FileManager.Services
                                 {
                                     if (File.Exists(file))
                                     {
-                                        File.Delete(file);
+                                        try
+                                        {
+                                            File.Delete(file);
+                                            _loggingService.LogFileOperation("DELETE", file, true);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _loggingService.LogFileOperation("DELETE", file, false, ex.Message);
+                                            _loggingService.LogError($"Failed to delete file: {file}", ex);
+                                        }
                                         continue;
                                     }
                                 }
@@ -122,9 +179,25 @@ namespace FileManager.Services
                                     {
                                         dnewName = dname.Replace("888_", "");
                                     }
-                                    
-                                    var destFile = Path.Combine(destDir, dnewName + dext);
-                                    _fileService.MoveFiles(df, destFile);
+
+                                    var combinedDestFile = Path.Combine(destDir, dnewName + dext);
+                                    string destFile, destFileError;
+                                    if (!PathValidator.ValidateAndNormalize(combinedDestFile, null, out destFile, out destFileError))
+                                    {
+                                        _loggingService.LogSecurityEvent($"Invalid rename destination: {destFileError}");
+                                        continue;
+                                    }
+
+                                    try
+                                    {
+                                        _fileService.MoveFiles(df, destFile);
+                                        _loggingService.LogFileOperation("RENAME", $"{df} -> {destFile}", true);
+                                    }
+                                    catch (Exception renameEx)
+                                    {
+                                        _loggingService.LogFileOperation("RENAME", $"{df} -> {destFile}", false, renameEx.Message);
+                                        _loggingService.LogError($"Failed to rename file: {df}", renameEx);
+                                    }
                                 }
                             }
                         }
@@ -133,6 +206,7 @@ namespace FileManager.Services
             }
             catch (Exception ex)
             {
+                _loggingService.LogError("General error in folder split operation", ex);
                 MessageBox.Show($"תקלה בפיצול תיקיות - {ex.Message}");
             }
 

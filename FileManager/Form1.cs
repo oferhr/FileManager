@@ -17,6 +17,7 @@ using Application = System.Windows.Forms.Application;
 using Excel = Microsoft.Office.Interop.Excel;
 using OutlookApp = Microsoft.Office.Interop.Outlook.Application;
 using FileManager.Services;
+using FileManager.Utilities;
 
 namespace FileManager
 {
@@ -112,6 +113,7 @@ namespace FileManager
         private bool hasErrors = false;
         
         // Services
+        private readonly ILoggingService _loggingService;
         private readonly IFileCountService _fileCountService;
         private readonly IConfigurationService _configurationService;
         private readonly IFileService _fileService;
@@ -162,8 +164,9 @@ namespace FileManager
                 }
 
                 // Initialize services
-                _configurationService = new ConfigurationService(_config);
-                _fileService = new FileService();
+                _loggingService = new LoggingService();
+                _configurationService = new ConfigurationService(_config, _loggingService);
+                _fileService = new FileService(true, _loggingService);
                 _fileCountService = new FileCountService(
                     _path, 
                     _config, 
@@ -176,11 +179,13 @@ namespace FileManager
                     _path,
                     _fileService,
                     _configurationService,
+                    _loggingService,
                     UpdateProgressBar);
                 _fileNameManagementService = new FileNameManagementService(
                     _path,
                     _fileService,
                     _configurationService,
+                    _loggingService,
                     UpdateProgressBar,
                     LogMessage,
                     (visible) => progressBar1.Visible = visible,
@@ -190,12 +195,14 @@ namespace FileManager
                     _fileService,
                     _configurationService,
                     _fileCountService,
+                    _loggingService,
                     UpdateProgressBar);
                 _excelService = new ExcelService(
                     _path,
                     _excel,
                     _fileService,
                     _configurationService,
+                    _loggingService,
                     UpdateProgressBar);
 
           
@@ -699,6 +706,10 @@ namespace FileManager
             }
         }
 
+        /// <summary>
+        /// Event handler for when a cell edit is completed in the email grid.
+        /// Validates email addresses when the email column is edited.
+        /// </summary>
         private void dataGridView1_CellEndEdit ( object sender, DataGridViewCellEventArgs e )
         {
             if (e.ColumnIndex > 0 && dataGridView1.Columns [e.ColumnIndex] != null && dataGridView1.Columns [e.ColumnIndex].Name == "check") {
@@ -708,6 +719,35 @@ namespace FileManager
             var mail = dataGridView1.Rows [e.RowIndex].Cells ["email"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["email"].Value.ToString ();
             var fol = dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value.ToString ();
             var method = dataGridView1.Rows [e.RowIndex].Cells ["method"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["method"].Value.ToString ();
+
+            // Validate email address if the email column was edited and contains data
+            if (dataGridView1.Columns[e.ColumnIndex].Name == "email" && !string.IsNullOrWhiteSpace(mail))
+            {
+                if (!EmailValidator.IsValidEmail(mail, out string emailError))
+                {
+                    // Log validation failure
+                    _loggingService.LogValidationFailure("EmailValidation", mail, emailError);
+
+                    // Show error message to user
+                    MessageBox.Show(
+                        $"כתובת דואר אלקטרוני לא תקינה: {emailError}\n\nהכתובת: {mail}",
+                        "שגיאת אימות",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning,
+                        MessageBoxDefaultButton.Button1,
+                        MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+
+                    // Keep focus on the cell to allow correction
+                    dataGridView1.CurrentCell = dataGridView1.Rows[e.RowIndex].Cells["email"];
+                    dataGridView1.BeginEdit(true);
+                    return;
+                }
+                else
+                {
+                    // Log successful validation for audit trail
+                    _loggingService.LogInfo($"Email validation successful: {mail}", "EmailValidation");
+                }
+            }
 
             _emailService.HandleGridCellEndEdit(e.RowIndex, mail, fol, method);
         }
