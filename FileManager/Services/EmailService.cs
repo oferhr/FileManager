@@ -41,6 +41,7 @@ namespace FileManager.Services
         public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
         {
             // Validate all email addresses before processing
+            // Materialize with .ToList() to avoid duplicate enumeration and duplicate security event logging
             var validDirs = dirSettings.Where(w =>
             {
                 if (string.IsNullOrEmpty(w.email))
@@ -54,9 +55,9 @@ namespace FileManager.Services
                 }
 
                 return true;
-            });
+            }).ToList();
 
-            var counts = validDirs.Count();
+            var counts = validDirs.Count;
             double pbPart = counts == 0 ? 100 : 100 / counts;
 
             foreach (var dirSetting in validDirs)

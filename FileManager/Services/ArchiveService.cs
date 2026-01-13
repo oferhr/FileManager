@@ -150,8 +150,14 @@ namespace FileManager.Services
                                 }
 
                                 // CRITICAL FIX: Use safe relative path calculation for files
+                                // Track failed moves to prevent data loss
+                                bool anyMoveFailed = false;
+                                int successfulMoves = 0;
+                                int totalFiles = 0;
+
                                 foreach (string file_name in Directory.GetFiles(dirPath, "*", SearchOption.AllDirectories))
                                 {
+                                    totalFiles++;
                                     try
                                     {
                                         // Get relative path safely
@@ -162,6 +168,7 @@ namespace FileManager.Services
                                         {
                                             _loggingService.LogSecurityEvent("PathTraversalAttempt", $"Invalid relative file path detected: {relativePath}",
                                                 new Dictionary<string, object> { { "SourceFile", file_name }, { "BasePath", dirPath } });
+                                            anyMoveFailed = true;
                                             continue;
                                         }
 
@@ -172,26 +179,37 @@ namespace FileManager.Services
                                         {
                                             _loggingService.LogSecurityEvent("PathBoundaryViolation", $"Destination file outside boundary: {destFileError}",
                                                 new Dictionary<string, object> { { "DestFile", destFile }, { "DestPath", destPath } });
+                                            anyMoveFailed = true;
                                             continue;
                                         }
 
                                         _fileService.MoveFiles(file_name, destFile);
                                         _loggingService.LogFileOperation("MoveFile", file_name, true);
+                                        successfulMoves++;
                                     }
                                     catch (Exception ex)
                                     {
                                         _loggingService.LogError("ArchiveService.MoveFile", ex, $"Failed to move file: {file_name}");
+                                        anyMoveFailed = true;
                                     }
                                 }
 
-                                try
+                                // Only delete source directory if all files were moved successfully
+                                if (anyMoveFailed)
                                 {
-                                    Directory.Delete(dirPath, true);
-                                    _loggingService.LogFileOperation("DeleteDirectory", dirPath, true);
+                                    _loggingService.LogWarning($"Archive incomplete: {successfulMoves}/{totalFiles} files moved. Source directory preserved to prevent data loss: {dirPath}");
                                 }
-                                catch (Exception ex)
+                                else if (totalFiles > 0)
                                 {
-                                    _loggingService.LogError("ArchiveService.DeleteDirectory", ex, $"Failed to delete directory: {dirPath}");
+                                    try
+                                    {
+                                        Directory.Delete(dirPath, true);
+                                        _loggingService.LogFileOperation("DeleteDirectory", dirPath, true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _loggingService.LogError("ArchiveService.DeleteDirectory", ex, $"Failed to delete directory after successful archive: {dirPath}");
+                                    }
                                 }
                             }
                         }

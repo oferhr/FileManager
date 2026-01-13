@@ -3,6 +3,8 @@
 ################################################################################
 
 ## Build results
+bin/*
+obj/*
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -155,6 +157,10 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+*.exe
+*.dll
+*.pdb
+
 
 ## Chutzpah Test files
 _Chutzpah*
@@ -284,3 +290,6 @@ Backup/
 ## Fody - auto-generated XML schema
 FodyWeavers.xsd
 nul
+
+## Claude Code temporary files
+tmpclaude-*

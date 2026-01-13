@@ -343,27 +343,28 @@ namespace FileManager.Services
 
         private void DeleteDirectory(string path)
         {
+            // Validate path outside try block so normalizedPath is accessible in catch blocks
+            string normalizedPath, errorMessage;
+            if (!PathValidator.ValidateAndNormalize(path, _basePath, out normalizedPath, out errorMessage))
+            {
+                _loggingService.LogSecurityEvent($"Attempted to delete directory outside boundary: {errorMessage}");
+                return;
+            }
+
             try
             {
-                string normalizedPath, errorMessage;
-                if (!PathValidator.ValidateAndNormalize(path, _basePath, out normalizedPath, out errorMessage))
-                {
-                    _loggingService.LogSecurityEvent($"Attempted to delete directory outside boundary: {errorMessage}");
-                    return;
-                }
-
                 _loggingService.LogFileOperation("DELETE_DIR", normalizedPath);
                 Directory.Delete(normalizedPath);
             }
             catch (IOException ex)
             {
-                _loggingService.LogInfo($"Directory not empty, attempting recursive delete: {path}");
-                Directory.Delete(path, true);
+                _loggingService.LogInfo($"Directory not empty, attempting recursive delete: {normalizedPath}");
+                Directory.Delete(normalizedPath, true);
             }
             catch (UnauthorizedAccessException ex)
             {
-                _loggingService.LogWarning($"Unauthorized access, attempting recursive delete: {path}");
-                Directory.Delete(path, true);
+                _loggingService.LogWarning($"Unauthorized access, attempting recursive delete: {normalizedPath}");
+                Directory.Delete(normalizedPath, true);
             }
         }
 
