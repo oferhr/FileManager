@@ -93,13 +93,16 @@ namespace FileManager.Services
         public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
         {
             // Validate email address if provided
+            // Note: Don't throw exception here as this method is called for all column edits,
+            // not just email column. Email validation is handled in Form1's dataGridView1_CellEndEdit
+            // for the email column specifically. This is just a safety check.
             if (!string.IsNullOrEmpty(email))
             {
                 string emailError;
                 if (!EmailValidator.IsValidEmail(email, out emailError))
                 {
-                    _loggingService.LogSecurityEvent($"Invalid email address rejected in grid: {email}. Error: {emailError}");
-                    throw new ArgumentException($"Invalid email address: {email}. {emailError}");
+                    _loggingService.LogWarning($"Skipping grid update due to invalid email: {email}. Error: {emailError}");
+                    return; // Skip updating configuration with invalid email
                 }
 
                 // Sanitize email address

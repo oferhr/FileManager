@@ -74,8 +74,17 @@ namespace FileManager.Services
 
                             if (!Directory.Exists(destDir))
                             {
-                                _loggingService.LogFileOperation("CREATE_DIR", destDir);
-                                Directory.CreateDirectory(destDir);
+                                try
+                                {
+                                    Directory.CreateDirectory(destDir);
+                                    _loggingService.LogFileOperation("CREATE_DIR", destDir, true);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _loggingService.LogFileOperation("CREATE_DIR", destDir, false, ex.Message);
+                                    _loggingService.LogError($"Failed to create directory: {destDir}", ex);
+                                    continue;
+                                }
                             }
 
                             var files = Directory.GetFiles(cd, "*.*", SearchOption.TopDirectoryOnly);
@@ -116,11 +125,12 @@ namespace FileManager.Services
                                             continue;
                                         }
 
-                                        _loggingService.LogFileOperation("MOVE", $"{sFile} -> {destFile}");
                                         _fileService.MoveFiles(sFile, destFile);
+                                        _loggingService.LogFileOperation("MOVE", $"{sFile} -> {destFile}", true);
                                     }
                                     catch (Exception e)
                                     {
+                                        _loggingService.LogFileOperation("MOVE", $"{sFile} -> {destFile}", false, e.Message);
                                         _loggingService.LogError($"Failed to move file during folder split: {file}", e);
                                         MessageBox.Show($"נכשל בהעברת קובץ {file}----{e.Message}");
                                     }
@@ -130,8 +140,16 @@ namespace FileManager.Services
                                 {
                                     if (File.Exists(file))
                                     {
-                                        _loggingService.LogFileOperation("DELETE", file);
-                                        File.Delete(file);
+                                        try
+                                        {
+                                            File.Delete(file);
+                                            _loggingService.LogFileOperation("DELETE", file, true);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _loggingService.LogFileOperation("DELETE", file, false, ex.Message);
+                                            _loggingService.LogError($"Failed to delete file: {file}", ex);
+                                        }
                                         continue;
                                     }
                                 }
@@ -170,8 +188,16 @@ namespace FileManager.Services
                                         continue;
                                     }
 
-                                    _loggingService.LogFileOperation("RENAME", $"{df} -> {destFile}");
-                                    _fileService.MoveFiles(df, destFile);
+                                    try
+                                    {
+                                        _fileService.MoveFiles(df, destFile);
+                                        _loggingService.LogFileOperation("RENAME", $"{df} -> {destFile}", true);
+                                    }
+                                    catch (Exception renameEx)
+                                    {
+                                        _loggingService.LogFileOperation("RENAME", $"{df} -> {destFile}", false, renameEx.Message);
+                                        _loggingService.LogError($"Failed to rename file: {df}", renameEx);
+                                    }
                                 }
                             }
                         }

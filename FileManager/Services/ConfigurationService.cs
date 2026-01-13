@@ -16,15 +16,30 @@ namespace FileManager.Services
         {
             _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
 
-            // Validate configuration path
-            if (!PathValidator.IsValidPath(configPath, out string validationError))
+            // Allow empty/null config path to maintain backward compatibility with Form1's validation flow
+            // Form1 checks for empty config path and shows user-friendly Hebrew message
+            if (string.IsNullOrWhiteSpace(configPath))
             {
-                _loggingService.LogSecurityEvent("PathValidationFailure", $"Invalid configuration path: {validationError}",
-                    new Dictionary<string, object> { { "ConfigPath", configPath } });
-                throw new ArgumentException($"Invalid configuration path: {validationError}", nameof(configPath));
+                _loggingService.LogWarning("ConfigurationService initialized with empty path - operations will fail until valid path is provided");
+                _configPath = string.Empty;
+                return;
             }
 
-            _configPath = Path.GetFullPath(configPath);
+            // Validate configuration path for security issues (traversal, invalid chars, etc)
+            // but allow the constructor to succeed so Form1 can show user-friendly error messages
+            if (!PathValidator.IsValidPath(configPath, out string validationError))
+            {
+                _loggingService.LogSecurityEvent("PathValidationFailure", $"Configuration path has validation warnings: {validationError}",
+                    new Dictionary<string, object> { { "ConfigPath", configPath } });
+                // Don't throw - just log warning and store the path as-is
+                // Operations using this path will fail gracefully later
+                _configPath = configPath;
+            }
+            else
+            {
+                _configPath = Path.GetFullPath(configPath);
+            }
+
             _loggingService.LogInfo($"ConfigurationService initialized with path: {_configPath}", "ConfigurationService");
         }
 

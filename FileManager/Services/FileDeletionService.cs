@@ -99,11 +99,12 @@ namespace FileManager.Services
                     {
                         try
                         {
-                            _loggingService.LogFileOperation("DELETE", fileToDelete);
                             File.Delete(fileToDelete);
+                            _loggingService.LogFileOperation("DELETE", fileToDelete, true);
                         }
                         catch (Exception ex)
                         {
+                            _loggingService.LogFileOperation("DELETE", fileToDelete, false, ex.Message);
                             _loggingService.LogError($"Failed to delete file: {fileToDelete}", ex);
                         }
                     }
@@ -138,11 +139,12 @@ namespace FileManager.Services
                                 continue;
                             }
 
-                            _loggingService.LogFileOperation("DELETE_DIR", normalizedPath);
                             Directory.Delete(normalizedPath, recursive: false); // Only delete empty directories
+                            _loggingService.LogFileOperation("DELETE_DIR", normalizedPath, true);
                         }
                         catch (Exception ex)
                         {
+                            _loggingService.LogFileOperation("DELETE_DIR", dtd, false, ex.Message);
                             _loggingService.LogError($"Failed to delete directory: {dtd}", ex);
                         }
                     }
