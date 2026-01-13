@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
+using FileManager.Utilities;
 
 namespace FileManager.Services
 {
@@ -15,19 +16,22 @@ namespace FileManager.Services
         private readonly string _excelPath;
         private readonly IFileService _fileService;
         private readonly IConfigurationService _configurationService;
+        private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
 
         public ExcelService(
-            string basePath, 
-            string excelPath, 
-            IFileService fileService, 
+            string basePath,
+            string excelPath,
+            IFileService fileService,
             IConfigurationService configurationService,
+            ILoggingService loggingService,
             Action<int> progressCallback = null)
         {
             _basePath = basePath;
             _excelPath = excelPath;
             _fileService = fileService;
             _configurationService = configurationService;
+            _loggingService = loggingService;
             _progressCallback = progressCallback;
         }
 
@@ -46,7 +50,14 @@ namespace FileManager.Services
 
             foreach (var checkedItem in checkedItems)
             {
-                var basePath = Path.Combine(_basePath, checkedItem);
+                var combinedPath = Path.Combine(_basePath, checkedItem);
+                string basePath, errorMessage;
+                if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out errorMessage))
+                {
+                    _loggingService.LogSecurityEvent($"Path traversal attempt blocked in ExcelService: {errorMessage}");
+                    continue;
+                }
+
                 if (!Directory.Exists(basePath))
                 {
                     continue;
@@ -102,12 +113,40 @@ namespace FileManager.Services
                             var ndir = Path.GetDirectoryName(file);
                             if (ndir != null)
                             {
-                                var newFilePath = Path.Combine(ndir, newFileName);
+                                var combinedNewPath = Path.Combine(ndir, newFileName);
+                                string newFilePath, newFileError;
+                                if (!PathValidator.ValidateAndNormalize(combinedNewPath, _basePath, out newFilePath, out newFileError))
+                                {
+                                    _loggingService.LogSecurityEvent($"Invalid file path in ExcelService: {newFileError}");
+                                    break;
+                                }
+
+                                // Use separate try-catch blocks to log the correct operation type
                                 if (File.Exists(newFilePath))
                                 {
-                                    File.Delete(newFilePath);
+                                    try
+                                    {
+                                        File.Delete(newFilePath);
+                                        _loggingService.LogFileOperation("DELETE", newFilePath, true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _loggingService.LogFileOperation("DELETE", newFilePath, false, ex.Message);
+                                        _loggingService.LogError($"Failed to delete existing Excel file: {newFilePath}", ex);
+                                        break; // Skip rename if delete fails
+                                    }
                                 }
-                                _fileService.MoveFiles(file, newFilePath);
+
+                                try
+                                {
+                                    _fileService.MoveFiles(file, newFilePath);
+                                    _loggingService.LogFileOperation("RENAME", $"{file} -> {newFilePath}", true);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _loggingService.LogFileOperation("RENAME", $"{file} -> {newFilePath}", false, ex.Message);
+                                    _loggingService.LogError($"Failed to rename Excel file: {file}", ex);
+                                }
                             }
                             break;
                         }
@@ -192,6 +231,7 @@ namespace FileManager.Services
             }
             catch (Exception ex)
             {
+                _loggingService.LogError($"Error reading Excel file: {_excelPath}", ex);
                 MessageBox.Show($"Error reading Excel file: {ex.Message}");
                 xlWorkbook?.Close();
                 xlApp?.Quit();
