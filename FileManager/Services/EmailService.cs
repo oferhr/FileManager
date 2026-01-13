@@ -312,10 +312,13 @@ namespace FileManager.Services
 
             foreach (var arfile in arfiles)
             {
+                Microsoft.Office.Interop.Outlook.Application oApp = null;
+                MailItem oMsg = null;
+
                 try
                 {
-                    var oApp = new Microsoft.Office.Interop.Outlook.Application();
-                    var oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
+                    oApp = new Microsoft.Office.Interop.Outlook.Application();
+                    oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
 
                     // Validate and sanitize email before assignment
                     var sanitizedEmail = EmailValidator.SanitizeEmailAddress(dirSetting.email);
@@ -329,7 +332,7 @@ namespace FileManager.Services
                     catch (System.Exception ex)
                     {
                         _loggingService.LogError($"Failed to get filename for email attachment: {arfile[0]}", ex);
-                        continue;
+                        throw; // Rethrow to outer catch which will cleanup COM objects
                     }
 
                     var subject = string.Empty;
@@ -354,9 +357,6 @@ namespace FileManager.Services
                     _loggingService.LogInfo($"Sending email to {sanitizedEmail} with {arfile.Count} attachments, subject: {subject}");
                     oMsg.Send();
 
-                    oMsg = null;
-                    oApp = null;
-
                     var dVal = pbIncrement;
                     var val = Convert.ToInt32(dVal);
                     if (val > 100)
@@ -374,6 +374,20 @@ namespace FileManager.Services
                 {
                     _loggingService.LogError($"Failed to send email to {dirSetting.email}", ex);
                     // Continue processing other emails even if one fails
+                }
+                finally
+                {
+                    // Always release COM objects to prevent resource leaks
+                    if (oMsg != null)
+                    {
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oMsg);
+                        oMsg = null;
+                    }
+                    if (oApp != null)
+                    {
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oApp);
+                        oApp = null;
+                    }
                 }
             }
         }
