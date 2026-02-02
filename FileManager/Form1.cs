@@ -122,6 +122,12 @@ namespace FileManager
         private readonly IEmailService _emailService;
         private readonly IExcelService _excelService;
 
+        /// <summary>
+        /// Original unfiltered list of email directory settings for the email grid.
+        /// Used to restore the full list when clearing the search filter.
+        /// </summary>
+        private List<EmailDirSettings> _originalEmailList;
+
         #endregion
 
         #region Constructor and Initialization
@@ -350,7 +356,11 @@ namespace FileManager
                 // Bind email settings to grid (manual column configuration)
                 dataGridView1.AutoGenerateColumns = false;
                 var emailsDs = _emailService.GetEmailDirSettingsForGrid(gfoldersList);
+                _originalEmailList = emailsDs; // Store original list for filtering
                 dataGridView1.DataSource = emailsDs;
+
+                // Wire up real-time filtering on the search textbox
+                txtSearchEmail.TextChanged += TxtSearchEmail_TextChanged;
 
                 // Initialize grdArchive from JSON configuration file
                 var archiveConfigSettings = _configurationService.GetArchiveSettings();
@@ -706,6 +716,60 @@ namespace FileManager
             }
         }
 
+        /// <summary>
+        /// Event handler for email search clear button click.
+        /// Clears the search filter and restores the full email list.
+        /// </summary>
+        private void btnEmailSearchClear_Click(object sender, EventArgs e)
+        {
+            txtSearchEmail.Text = string.Empty;
+            RestoreFullEmailList();
+        }
+
+        /// <summary>
+        /// Event handler for real-time filtering as the user types in the search box.
+        /// </summary>
+        private void TxtSearchEmail_TextChanged(object sender, EventArgs e)
+        {
+            FilterEmailGrid(txtSearchEmail.Text);
+        }
+
+        /// <summary>
+        /// Filters the email grid to show only rows where the email column contains the search text.
+        /// </summary>
+        /// <param name="searchText">The text to search for in the email column.</param>
+        private void FilterEmailGrid(string searchText)
+        {
+            if (_originalEmailList == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                RestoreFullEmailList();
+                return;
+            }
+
+            // Filter the list by email column (case-insensitive contains)
+            var filteredList = _originalEmailList
+                .Where(item => !string.IsNullOrEmpty(item.email) &&
+                              item.email.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            dataGridView1.DataSource = null;
+            dataGridView1.DataSource = filteredList;
+        }
+
+        /// <summary>
+        /// Restores the full unfiltered email list to the grid.
+        /// </summary>
+        private void RestoreFullEmailList()
+        {
+            if (_originalEmailList == null)
+                return;
+
+            dataGridView1.DataSource = null;
+            dataGridView1.DataSource = _originalEmailList;
+        }
         /// <summary>
         /// Event handler for when a cell edit is completed in the email grid.
         /// Validates email addresses when the email column is edited.
@@ -1087,9 +1151,25 @@ namespace FileManager
             }
         }
 
+        /// <summary>
+        /// Refreshes the email grid with fresh data from the service.
+        /// Preserves the current search filter if one is active.
+        /// </summary>
         private void RefreshDataGridView1()
         {
-            _emailService.RefreshEmailGrid(dataGridView1, gfoldersList);
+            // Get fresh data and update the original list
+            _originalEmailList = _emailService.GetEmailDirSettingsForGrid(gfoldersList);
+
+            // Re-apply the current filter if one exists
+            if (!string.IsNullOrWhiteSpace(txtSearchEmail.Text))
+            {
+                FilterEmailGrid(txtSearchEmail.Text);
+            }
+            else
+            {
+                dataGridView1.DataSource = null;
+                dataGridView1.DataSource = _originalEmailList;
+            }
         }
 
         private void RefreshGrdArchive()
@@ -2790,6 +2870,8 @@ namespace FileManager
                 logger.Log(eventInfo);
             }
         }
+
+        
     }
 }
 #endregion

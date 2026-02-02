@@ -26,7 +26,9 @@
       "Bash(ls:*)",
       "Bash(test:*)",
       "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Debug /p:Platform=\"Any CPU\" /v:minimal /nologo)",
-      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU /v:minimal)"
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln /p:Configuration=Debug /t:Build /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" FileManager.sln -p:Configuration=Debug -t:Build -v:minimal)"
     ]
   }
 }

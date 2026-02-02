@@ -37,6 +37,9 @@
             this.tabsMain = new System.Windows.Forms.TabControl();
             this.tabCounts = new System.Windows.Forms.TabPage();
             this.grdCount = new System.Windows.Forms.DataGridView();
+            this.chb = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.dirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.methods = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabDuplicates = new System.Windows.Forms.TabPage();
             this.DuplicateFolders = new System.Windows.Forms.CheckedListBox();
             this.tabNames = new System.Windows.Forms.TabPage();
@@ -77,6 +80,10 @@
             this.txtFolderArchiveParent = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.grdArchive = new System.Windows.Forms.DataGridView();
+            this.achbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.adir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.parent = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.adest = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lblProgressMessage = new System.Windows.Forms.Label();
             this.boxSummary = new System.Windows.Forms.GroupBox();
             this.lbl2 = new System.Windows.Forms.Label();
@@ -89,13 +96,9 @@
             this.label3 = new System.Windows.Forms.Label();
             this.btnArchive = new System.Windows.Forms.Button();
             this.btnExcel = new System.Windows.Forms.Button();
-            this.chb = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.dirs = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.methods = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.achbdirs = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.adir = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.parent = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.adest = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.label6 = new System.Windows.Forms.Label();
+            this.txtSearchEmail = new System.Windows.Forms.TextBox();
+            this.btnEmailSearchClear = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.tabsMain.SuspendLayout();
             this.tabCounts.SuspendLayout();
@@ -260,6 +263,30 @@
             this.grdCount.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellEndEdit);
             this.grdCount.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdCount_CellValueChanged);
             // 
+            // chb
+            // 
+            this.chb.DataPropertyName = "check";
+            this.chb.HeaderText = " ";
+            this.chb.Name = "chb";
+            this.chb.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.chb.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.chb.Width = 30;
+            // 
+            // dirs
+            // 
+            this.dirs.DataPropertyName = "dir";
+            this.dirs.HeaderText = "תיקיות";
+            this.dirs.Name = "dirs";
+            this.dirs.ReadOnly = true;
+            this.dirs.Width = 110;
+            // 
+            // methods
+            // 
+            this.methods.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.methods.DataPropertyName = "method";
+            this.methods.HeaderText = "אופן שליחה";
+            this.methods.Name = "methods";
+            // 
             // tabDuplicates
             // 
             this.tabDuplicates.Controls.Add(this.DuplicateFolders);
@@ -307,6 +334,9 @@
             // 
             // tabEEmail
             // 
+            this.tabEEmail.Controls.Add(this.btnEmailSearchClear);
+            this.tabEEmail.Controls.Add(this.txtSearchEmail);
+            this.tabEEmail.Controls.Add(this.label6);
             this.tabEEmail.Controls.Add(this.dataGridView1);
             this.tabEEmail.Font = new System.Drawing.Font("Arial", 8.25F);
             this.tabEEmail.Location = new System.Drawing.Point(4, 24);
@@ -330,10 +360,10 @@
             this.check,
             this.email,
             this.method});
-            this.dataGridView1.Location = new System.Drawing.Point(0, 6);
+            this.dataGridView1.Location = new System.Drawing.Point(0, 39);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowHeadersVisible = false;
-            this.dataGridView1.Size = new System.Drawing.Size(810, 685);
+            this.dataGridView1.Size = new System.Drawing.Size(810, 652);
             this.dataGridView1.TabIndex = 16;
             this.dataGridView1.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick);
             this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
@@ -721,6 +751,42 @@
             this.grdArchive.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellClick);
             this.grdArchive.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.grdArchive_CellContentClick);
             // 
+            // achbdirs
+            // 
+            this.achbdirs.DataPropertyName = "check";
+            this.achbdirs.HeaderText = " ";
+            this.achbdirs.Name = "achbdirs";
+            this.achbdirs.ReadOnly = true;
+            this.achbdirs.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.achbdirs.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.achbdirs.Width = 30;
+            // 
+            // adir
+            // 
+            this.adir.DataPropertyName = "dir";
+            this.adir.HeaderText = "תיקיות";
+            this.adir.Name = "adir";
+            this.adir.ReadOnly = true;
+            this.adir.Width = 110;
+            // 
+            // parent
+            // 
+            this.parent.DataPropertyName = "sourceDir";
+            this.parent.HeaderText = " ";
+            this.parent.Name = "parent";
+            this.parent.ReadOnly = true;
+            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.parent.Visible = false;
+            this.parent.Width = 5;
+            // 
+            // adest
+            // 
+            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.adest.DataPropertyName = "dest";
+            this.adest.HeaderText = "תיקיית יעד";
+            this.adest.Name = "adest";
+            this.adest.ReadOnly = true;
+            // 
             // lblProgressMessage
             // 
             this.lblProgressMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -897,65 +963,41 @@
             this.btnExcel.UseVisualStyleBackColor = false;
             this.btnExcel.Click += new System.EventHandler(this.btnExcel_Click);
             // 
-            // chb
+            // label6
             // 
-            this.chb.DataPropertyName = "check";
-            this.chb.HeaderText = " ";
-            this.chb.Name = "chb";
-            this.chb.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.chb.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            this.chb.Width = 30;
+            this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.label6.AutoSize = true;
+            this.label6.BackColor = System.Drawing.Color.Transparent;
+            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.label6.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label6.Location = new System.Drawing.Point(716, 9);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(81, 15);
+            this.label6.TabIndex = 19;
+            this.label6.Text = "סנן לפי אימייל";
+            this.label6.Visible = false;
             // 
-            // dirs
+            // txtSearchEmail
             // 
-            this.dirs.DataPropertyName = "dir";
-            this.dirs.HeaderText = "תיקיות";
-            this.dirs.Name = "dirs";
-            this.dirs.ReadOnly = true;
-            this.dirs.Width = 110;
+            this.txtSearchEmail.Location = new System.Drawing.Point(342, 9);
+            this.txtSearchEmail.Name = "txtSearchEmail";
+            this.txtSearchEmail.Size = new System.Drawing.Size(368, 20);
+            this.txtSearchEmail.TabIndex = 20;
             // 
-            // methods
+            // btnEmailSearchClear
             // 
-            this.methods.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.methods.DataPropertyName = "method";
-            this.methods.HeaderText = "אופן שליחה";
-            this.methods.Name = "methods";
-            // 
-            // achbdirs
-            // 
-            this.achbdirs.DataPropertyName = "check";
-            this.achbdirs.HeaderText = " ";
-            this.achbdirs.Name = "achbdirs";
-            this.achbdirs.ReadOnly = true;
-            this.achbdirs.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.achbdirs.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            this.achbdirs.Width = 30;
-            // 
-            // adir
-            // 
-            this.adir.DataPropertyName = "dir";
-            this.adir.HeaderText = "תיקיות";
-            this.adir.Name = "adir";
-            this.adir.ReadOnly = true;
-            this.adir.Width = 110;
-            // 
-            // parent
-            // 
-            this.parent.DataPropertyName = "sourceDir";
-            this.parent.HeaderText = " ";
-            this.parent.Name = "parent";
-            this.parent.ReadOnly = true;
-            this.parent.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.parent.Visible = false;
-            this.parent.Width = 5;
-            // 
-            // adest
-            // 
-            this.adest.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.adest.DataPropertyName = "dest";
-            this.adest.HeaderText = "תיקיית יעד";
-            this.adest.Name = "adest";
-            this.adest.ReadOnly = true;
+            this.btnEmailSearchClear.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnEmailSearchClear.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.btnEmailSearchClear.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnEmailSearchClear.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
+            this.btnEmailSearchClear.ForeColor = System.Drawing.Color.DarkBlue;
+            this.btnEmailSearchClear.Location = new System.Drawing.Point(251, 7);
+            this.btnEmailSearchClear.Name = "btnEmailSearchClear";
+            this.btnEmailSearchClear.Size = new System.Drawing.Size(85, 23);
+            this.btnEmailSearchClear.TabIndex = 21;
+            this.btnEmailSearchClear.Text = "נקה";
+            this.btnEmailSearchClear.UseVisualStyleBackColor = false;
+            this.btnEmailSearchClear.Click += new System.EventHandler(this.btnEmailSearchClear_Click);
             // 
             // Form1
             // 
@@ -990,6 +1032,7 @@
             this.tabDuplicates.ResumeLayout(false);
             this.tabNames.ResumeLayout(false);
             this.tabEEmail.ResumeLayout(false);
+            this.tabEEmail.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.tabPage1.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
@@ -1082,6 +1125,9 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn adir;
         private System.Windows.Forms.DataGridViewTextBoxColumn parent;
         private System.Windows.Forms.DataGridViewTextBoxColumn adest;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.TextBox txtSearchEmail;
+        private System.Windows.Forms.Button btnEmailSearchClear;
     }
 }
 
