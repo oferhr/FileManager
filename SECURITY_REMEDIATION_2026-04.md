@@ -80,7 +80,7 @@ The application is documented to process confidential customer records. This fin
 
 **Remediation plan**
 
-1. Add a new configuration key `AllowedMailDomains` to `App.config` (comma-separated list of permitted domain suffixes — `@ERAN-MOR.CO.IL,@company.com`).
+1. Add a new configuration key `AllowedMailDomains` to `App.config` (comma-separated list of permitted domain suffixes — `@ERAN-MOR.CO.IL`).
 2. In `EmailService.SendEmails`, after the existing format validation, call `EmailValidator.IsEmailFromAllowedDomain` against the configured allowlist. If the list is empty or the email's domain is not matched, log a `EmailDomainNotAllowed` security event and skip that recipient.
 3. Mirror the same check in `Form1.dataGridView1_CellEndEdit` so disallowed domains are rejected at input time in the UI, not only at send time.
 4. Delete the unused `SecurityHelper.IsEmailAllowed` method to remove the duplicate implementation (addressed in Finding #5).
@@ -89,7 +89,7 @@ The application is documented to process confidential customer records. This fin
 
 **Fix details:** Commit `13f4e01` (*"Add email domain allowlist to block outbound exfiltration"*)
 
-- **App.config**: added `AllowedMailDomains` key with value `@ERAN-MOR.CO.IL,@company.com`.
+- **App.config**: added `AllowedMailDomains` key with value `@ERAN-MOR.CO.IL` (single authoritative organisational domain).
 - **Form1.cs** constructor: parses the config value into `_allowedMailDomains` (a `List<string>`). Parsing tolerates both comma and semicolon delimiters and strips the optional leading `@` so config values like `@ERAN-MOR.CO.IL` and `ERAN-MOR.CO.IL` behave identically.
 - **EmailService.cs**: new constructor parameter `List<string> allowedMailDomains`; new public method `IsEmailDomainAllowed(string email, out string errorMessage)` that wraps `EmailValidator.IsEmailFromAllowedDomain` and treats an empty allowlist as fail-closed (blocks the send rather than silently allowing everything).
 - **EmailService.SendEmails**: the pre-send filter now runs the domain check after format validation; disallowed recipients are dropped and logged as structured `EmailDomainNotAllowed` security events with `Email` and `Dir` properties.
@@ -152,16 +152,17 @@ if (!PathValidator.ValidateAndNormalize(basePath, _basePath, out basePath, out v
 }
 ```
 
-Additionally, validate `dirSetting.dir` upstream in `HandleGridCellEndEdit` with `InputValidator.IsValidFolderName` to reject obviously bad values at UI input time.
+The auditor also suggested validating `dirSetting.dir` upstream in `HandleGridCellEndEdit` as defence-in-depth. That was attempted and then reverted — see the note under "Fix details" below for why.
 
 **Status:** FIXED
 
 **Fix details:** Commit `5079086` (*"Add path boundary validation to EmailService"*)
 
 - **EmailService.SendEmails**: `Path.Combine(_basePath, dirSetting.dir)` is now passed through `PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out pathError)`. Failures are logged as structured `PathValidationFailure` security events with `dir` and `basePath` properties, and the iteration continues to the next recipient — the current recipient is skipped rather than failing the whole batch. The normalised `basePath` returned by the validator is what subsequent `Directory.GetFiles` and `ArchiveProcessedFiles` calls operate on, so any downstream recursive delete is also boundary-constrained.
-- **EmailService.HandleGridCellEndEdit**: rejects folder values that fail `InputValidator.IsValidFolderName` at input time via an early-return plus `LogValidationFailure` call. Prevents bad folder strings from being written into the JSON config, where they would later be picked up by `SendEmails`.
 
 This brings `EmailService` in line with the validation pattern already used by `ExcelService`, `ArchiveService`, `FileDeletionService`, `FileCopyService`, `FileNameManagementService`, `DuplicateManagementService`, `FolderSplitService`, and `ReportManagementService`.
+
+An earlier iteration of this fix also added an `InputValidator.IsValidFolderName` check inside `EmailService.HandleGridCellEndEdit` as defence-in-depth at the UI layer. That check was removed during PR review: `HandleGridCellEndEdit` runs on every cell edit in a row (email, method, etc.) and reads the folder value from the row regardless of which column was edited — an invalid folder value would therefore silently block unrelated edits with no user feedback. The `PathValidator.ValidateAndNormalize` check in `SendEmails` is the security boundary and covers the same threat with structured logging; the UI-layer check was belt-and-suspenders that turned out buggy, and has been dropped.
 
 **Verification:** *(awaiting `/cso` re-run — see Section 7)*
 

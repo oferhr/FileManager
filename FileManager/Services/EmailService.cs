@@ -123,17 +123,6 @@ namespace FileManager.Services
 
         public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
         {
-            // Reject invalid folder names before they can be written to the JSON config and later flow into SendEmails.
-            if (!string.IsNullOrEmpty(folder))
-            {
-                string folderError;
-                if (!InputValidator.IsValidFolderName(folder, out folderError))
-                {
-                    _loggingService.LogValidationFailure("FolderName", folder, folderError);
-                    return;
-                }
-            }
-
             // Validate email address if provided
             // Note: Don't throw exception here as this method is called for all column edits,
             // not just email column. Email validation is handled in Form1's dataGridView1_CellEndEdit
