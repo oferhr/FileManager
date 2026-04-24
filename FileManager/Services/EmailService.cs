@@ -41,14 +41,35 @@ namespace FileManager.Services
             _progressCallback = progressCallback;
         }
 
-        public bool IsEmailDomainAllowed(string email, out string errorMessage)
+        public bool IsEmailDomainAllowed(string emailOrList, out string errorMessage)
         {
             if (_allowedMailDomains.Count == 0)
             {
                 errorMessage = "No allowed mail domains configured (AllowedMailDomains in App.config is empty).";
                 return false;
             }
-            return EmailValidator.IsEmailFromAllowedDomain(email, _allowedMailDomains, out errorMessage);
+
+            // Accept single-address and multi-address (comma/semicolon) forms. Every address must match the allowlist.
+            var addresses = EmailValidator.ParseEmailList(emailOrList);
+            if (addresses.Count == 0)
+            {
+                errorMessage = "No email addresses found.";
+                return false;
+            }
+
+            foreach (var address in addresses)
+            {
+                if (!EmailValidator.IsEmailFromAllowedDomain(address, _allowedMailDomains, out var addressError))
+                {
+                    errorMessage = addresses.Count == 1
+                        ? addressError
+                        : $"'{address}': {addressError}";
+                    return false;
+                }
+            }
+
+            errorMessage = null;
+            return true;
         }
 
         public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
