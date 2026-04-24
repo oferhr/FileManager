@@ -78,17 +78,10 @@ namespace FileManager.Utilities
                 }
             }
 
-            // Try to get full path to validate format
+            // Call Path.GetFullPath purely to validate the path format; it throws for malformed paths.
             try
             {
-                string fullPath = Path.GetFullPath(path);
-
-                // Additional check: ensure GetFullPath didn't resolve to a different path (traversal attempt)
-                if (!fullPath.StartsWith(Path.GetFullPath(path.Split(new[] { ".." }, StringSplitOptions.None)[0])))
-                {
-                    // This is a more conservative check
-                    // We'll allow it but could be tightened based on requirements
-                }
+                Path.GetFullPath(path);
             }
             catch (Exception ex)
             {

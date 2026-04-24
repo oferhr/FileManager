@@ -298,3 +298,6 @@ nul
 
 ## Claude Code temporary files
 tmpclaude-*
+
+## /cso security audit reports — keep out of repo history
+.gstack/
