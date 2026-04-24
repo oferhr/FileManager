@@ -19,6 +19,7 @@ namespace FileManager.Services
         private readonly IFileCountService _fileCountService;
         private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
+        private readonly List<string> _allowedMailDomains;
         private readonly string[] _mailCheck = { "איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
         private const string CopiedFilesDirectory = "9876789";
 
@@ -28,6 +29,7 @@ namespace FileManager.Services
             IConfigurationService configurationService,
             IFileCountService fileCountService,
             ILoggingService loggingService,
+            List<string> allowedMailDomains,
             Action<int> progressCallback = null)
         {
             _basePath = basePath;
@@ -35,7 +37,18 @@ namespace FileManager.Services
             _configurationService = configurationService;
             _fileCountService = fileCountService;
             _loggingService = loggingService;
+            _allowedMailDomains = allowedMailDomains ?? new List<string>();
             _progressCallback = progressCallback;
+        }
+
+        public bool IsEmailDomainAllowed(string email, out string errorMessage)
+        {
+            if (_allowedMailDomains.Count == 0)
+            {
+                errorMessage = "No allowed mail domains configured (AllowedMailDomains in App.config is empty).";
+                return false;
+            }
+            return EmailValidator.IsEmailFromAllowedDomain(email, _allowedMailDomains, out errorMessage);
         }
 
         public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
@@ -51,6 +64,15 @@ namespace FileManager.Services
                 if (!EmailValidator.IsValidEmail(w.email, out emailError))
                 {
                     _loggingService.LogSecurityEvent($"Invalid email address blocked: {w.email} for directory: {w.dir}. Error: {emailError}");
+                    return false;
+                }
+
+                string domainError;
+                if (!IsEmailDomainAllowed(w.email, out domainError))
+                {
+                    _loggingService.LogSecurityEvent("EmailDomainNotAllowed",
+                        $"Blocked send to disallowed domain: {w.email}. {domainError}",
+                        new Dictionary<string, object> { { "Email", w.email }, { "Dir", w.dir } });
                     return false;
                 }
 
