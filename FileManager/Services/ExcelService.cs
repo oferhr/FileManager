@@ -219,6 +219,8 @@ namespace FileManager.Services
             
             try
             {
+                // Force-disable macros in opened workbooks. Excel COM default is msoAutomationSecurityLow, which runs VBA silently.
+                xlApp.AutomationSecurity = Microsoft.Office.Core.MsoAutomationSecurity.msoAutomationSecurityForceDisable;
                 xlWorkbook = xlApp.Workbooks.Open(_excelPath);
                 xlApp.Visible = false;
                 xlWorksheet = (Excel._Worksheet)xlWorkbook.Sheets[1];
