@@ -208,6 +208,20 @@ namespace FileManager.Utilities
         }
 
         /// <summary>
+        /// Parses an email list, sanitizes each address, drops any that collapse to empty,
+        /// and returns a canonical semicolon-delimited string (e.g. "a@x.com; b@y.com").
+        /// </summary>
+        /// <param name="emails">The email list string to sanitize</param>
+        /// <returns>Canonical semicolon-delimited list of sanitized addresses; empty string if none remain</returns>
+        public static string SanitizeEmailList(string emails)
+        {
+            return string.Join("; ",
+                ParseEmailList(emails)
+                    .Select(SanitizeEmailAddress)
+                    .Where(a => !string.IsNullOrWhiteSpace(a)));
+        }
+
+        /// <summary>
         /// Validates and sanitizes an email address in one operation.
         /// </summary>
         /// <param name="email">The email address to validate and sanitize</param>

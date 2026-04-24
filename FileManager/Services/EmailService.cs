@@ -63,12 +63,7 @@ namespace FileManager.Services
 
             foreach (var dirSetting in validDirs)
             {
-                // Sanitize each address in the list and canonicalize to "a@x; b@y".
-                // Drop any address that sanitization collapses to empty to avoid "a; ; b".
-                var sanitizedEmail = string.Join("; ",
-                    EmailValidator.ParseEmailList(dirSetting.email)
-                        .Select(EmailValidator.SanitizeEmailAddress)
-                        .Where(a => !string.IsNullOrWhiteSpace(a)));
+                var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
                 if (sanitizedEmail != dirSetting.email)
                 {
                     _loggingService.LogInfo($"Email address sanitized from '{dirSetting.email}' to '{sanitizedEmail}'");
@@ -111,13 +106,7 @@ namespace FileManager.Services
                     return; // Skip updating configuration with invalid email
                 }
 
-                // Sanitize each address and persist a canonical semicolon-delimited list.
-                // Drop any address that sanitization collapses to empty to avoid "a; ; b".
-                var sanitizedAddresses = EmailValidator.ParseEmailList(email)
-                    .Select(EmailValidator.SanitizeEmailAddress)
-                    .Where(a => !string.IsNullOrWhiteSpace(a))
-                    .ToList();
-                email = string.Join("; ", sanitizedAddresses);
+                email = EmailValidator.SanitizeEmailList(email);
             }
 
             var emailConfigList = _configurationService.GetEmailDirSettings();
@@ -331,13 +320,9 @@ namespace FileManager.Services
                     oApp = new Microsoft.Office.Interop.Outlook.Application();
                     oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
 
-                    // Parse the address list (may be one or many) and sanitize each individually
-                    // before handing to Outlook. Outlook resolves a semicolon-delimited To string.
-                    var recipients = EmailValidator.ParseEmailList(dirSetting.email)
-                        .Select(EmailValidator.SanitizeEmailAddress)
-                        .Where(a => !string.IsNullOrWhiteSpace(a))
-                        .ToList();
-                    var sanitizedEmail = string.Join("; ", recipients);
+                    // Outlook resolves a semicolon-delimited To string natively, so hand it
+                    // the canonical sanitized list (one or many addresses).
+                    var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
                     oMsg.To = sanitizedEmail;
 
                     string fileName = "";
