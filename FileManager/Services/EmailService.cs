@@ -63,10 +63,12 @@ namespace FileManager.Services
 
             foreach (var dirSetting in validDirs)
             {
-                // Sanitize each address in the list and canonicalize to "a@x; b@y"
+                // Sanitize each address in the list and canonicalize to "a@x; b@y".
+                // Drop any address that sanitization collapses to empty to avoid "a; ; b".
                 var sanitizedEmail = string.Join("; ",
                     EmailValidator.ParseEmailList(dirSetting.email)
-                        .Select(EmailValidator.SanitizeEmailAddress));
+                        .Select(EmailValidator.SanitizeEmailAddress)
+                        .Where(a => !string.IsNullOrWhiteSpace(a)));
                 if (sanitizedEmail != dirSetting.email)
                 {
                     _loggingService.LogInfo($"Email address sanitized from '{dirSetting.email}' to '{sanitizedEmail}'");
@@ -109,9 +111,11 @@ namespace FileManager.Services
                     return; // Skip updating configuration with invalid email
                 }
 
-                // Sanitize each address and persist a canonical semicolon-delimited list
+                // Sanitize each address and persist a canonical semicolon-delimited list.
+                // Drop any address that sanitization collapses to empty to avoid "a; ; b".
                 var sanitizedAddresses = EmailValidator.ParseEmailList(email)
                     .Select(EmailValidator.SanitizeEmailAddress)
+                    .Where(a => !string.IsNullOrWhiteSpace(a))
                     .ToList();
                 email = string.Join("; ", sanitizedAddresses);
             }
