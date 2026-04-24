@@ -70,7 +70,16 @@ namespace FileManager.Services
                     dirSetting.email = sanitizedEmail;
                 }
 
-                var basePath = Path.Combine(_basePath, dirSetting.dir);
+                var combinedPath = Path.Combine(_basePath, dirSetting.dir);
+                string basePath, pathError;
+                if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out pathError))
+                {
+                    _loggingService.LogSecurityEvent("PathValidationFailure",
+                        $"EmailService rejected directory outside allowed boundary: {pathError}",
+                        new Dictionary<string, object> { { "dir", dirSetting.dir }, { "basePath", _basePath } });
+                    continue;
+                }
+
                 if (!Directory.Exists(basePath))
                 {
                     continue;
@@ -92,6 +101,17 @@ namespace FileManager.Services
 
         public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
         {
+            // Reject invalid folder names before they can be written to the JSON config and later flow into SendEmails.
+            if (!string.IsNullOrEmpty(folder))
+            {
+                string folderError;
+                if (!InputValidator.IsValidFolderName(folder, out folderError))
+                {
+                    _loggingService.LogValidationFailure("FolderName", folder, folderError);
+                    return;
+                }
+            }
+
             // Validate email address if provided
             // Note: Don't throw exception here as this method is called for all column edits,
             // not just email column. Email validation is handled in Form1's dataGridView1_CellEndEdit
