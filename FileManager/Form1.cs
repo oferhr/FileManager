@@ -112,6 +112,12 @@ namespace FileManager
         /// </summary>
         private bool hasErrors = false;
         
+        /// <summary>
+        /// Domains allowed as email recipients, loaded from App.config key AllowedMailDomains.
+        /// Empty list means all sends are blocked.
+        /// </summary>
+        private readonly List<string> _allowedMailDomains;
+
         // Services
         private readonly ILoggingService _loggingService;
         private readonly IFileCountService _fileCountService;
@@ -163,6 +169,13 @@ namespace FileManager
                 _excel = ConfigurationManager.AppSettings ["ExcelPath"];
                 var sleep = ConfigurationManager.AppSettings ["MailSleepSeconds"];
 
+                // Parse allowlist; tolerate optional leading '@' so config can read as "@company.com" or "company.com".
+                _allowedMailDomains = (ConfigurationManager.AppSettings["AllowedMailDomains"] ?? string.Empty)
+                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim().TrimStart('@'))
+                    .Where(s => s.Length > 0)
+                    .ToList();
+
                 // Parse sleep duration with fallback to 0 if invalid
                 if (!Int32.TryParse(sleep, out _sleep))
                 {
@@ -202,6 +215,7 @@ namespace FileManager
                     _configurationService,
                     _fileCountService,
                     _loggingService,
+                    _allowedMailDomains,
                     UpdateProgressBar);
                 _excelService = new ExcelService(
                     _path,
@@ -807,11 +821,28 @@ namespace FileManager
                     dataGridView1.BeginEdit(true);
                     return;
                 }
-                else
+
+                // Reject disallowed domains at input time so bad values never reach the JSON config.
+                if (!_emailService.IsEmailDomainAllowed(mail, out string domainError))
                 {
-                    // Log successful validation for audit trail
-                    _loggingService.LogInfo($"Email validation successful: {mail}", "EmailValidation");
+                    _loggingService.LogSecurityEvent("EmailDomainNotAllowed",
+                        $"Grid input blocked — {domainError}",
+                        new Dictionary<string, object> { { "Email", mail }, { "Dir", fol } });
+
+                    MessageBox.Show(
+                        $"דומיין לא מורשה: {domainError}\n\nהכתובת: {mail}",
+                        "שגיאת אימות",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning,
+                        MessageBoxDefaultButton.Button1,
+                        MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+
+                    dataGridView1.CurrentCell = dataGridView1.Rows[e.RowIndex].Cells["email"];
+                    dataGridView1.BeginEdit(true);
+                    return;
                 }
+
+                _loggingService.LogInfo($"Email validation successful: {mail}", "EmailValidation");
             }
 
             _emailService.HandleGridCellEndEdit(e.RowIndex, mail, fol, method);

@@ -14,6 +14,8 @@ namespace FileManager.Services
 
             try
             {
+                // Force-disable macros as defence-in-depth. Excel COM default is msoAutomationSecurityLow.
+                xlApp.AutomationSecurity = Microsoft.Office.Core.MsoAutomationSecurity.msoAutomationSecurityForceDisable;
                 xlWorkbook = xlApp.Workbooks.Add();
                 xlApp.Visible = false;
                 string filePath = null;
