@@ -3,14 +3,18 @@
 **Project:** FileManager (.NET Framework 4.8 Windows Forms application)
 **Original audit date:** 2026-04-11
 **Remediation started:** 2026-04-24
-**Document status:** Fixes applied — pending verification re-audit
+**Document status:** Complete — all seven items verified closed by `/cso` re-audit on 2026-04-24
 **Prepared for:** Client delivery
 
 ---
 
 ## 1. Executive Summary
 
-An AI-assisted security audit (`/cso`, daily mode, 8/10 confidence gate) was conducted on the FileManager repository on 2026-04-11. The audit reported:
+An AI-assisted security audit (`/cso`, daily mode, 8/10 confidence gate) was conducted on the FileManager repository on 2026-04-11. A verification re-audit on 2026-04-24 confirms all findings and concerns are closed:
+
+> **Re-audit result: 0 critical / 0 high / 0 medium / 0 tentative. Trend: IMPROVING — 7 resolved, 0 persistent, 0 new.**
+
+The original audit reported:
 
 | Severity | Count |
 |----------|-------|
@@ -335,15 +339,15 @@ The audit confirmed the following areas of the codebase are well-hardened or dem
 
 | Order | Item | Commit | Date | Build status | Verified by `/cso` |
 |-------|------|--------|------|--------------|--------------------|
-| 1 | Finding #3 — Excel `AutomationSecurity` hardening | `4f0da82` | 2026-04-24 | PASS | *(pending re-audit)* |
-| 2 | Finding #2 — `EmailService` path boundary check | `5079086` | 2026-04-24 | PASS | *(pending re-audit)* |
-| 3 | Finding #1 — Email domain allowlist | `13f4e01` | 2026-04-24 | PASS | *(pending re-audit)* |
-| 4 | Concern #4 — NLog.config targets wired | `f76305e` | 2026-04-24 | PASS | *(pending re-audit)* |
-| 5 | Concern #5 — Delete `SecurityHelper.cs` | `9c7dd72` | 2026-04-24 | PASS | *(pending re-audit)* |
-| 6 | Concern #6 — `PathValidator` dead code removed | `0749ba5` | 2026-04-24 | PASS | *(pending re-audit)* |
-| 7 | Concern #7 — Added `.gstack/` to `.gitignore` | `0749ba5` | 2026-04-24 | PASS | *(pending re-audit)* |
+| 1 | Finding #3 — Excel `AutomationSecurity` hardening | `4f0da82` | 2026-04-24 | PASS | **CLOSED** |
+| 2 | Finding #2 — `EmailService` path boundary check | `5079086` | 2026-04-24 | PASS | **CLOSED** |
+| 3 | Finding #1 — Email domain allowlist | `13f4e01` → `f53af3f` | 2026-04-24 | PASS | **CLOSED** |
+| 4 | Concern #4 — NLog.config targets wired | `f76305e` | 2026-04-24 | PASS | **CLOSED** |
+| 5 | Concern #5 — Delete `SecurityHelper.cs` | `9c7dd72` | 2026-04-24 | PASS | **CLOSED** |
+| 6 | Concern #6 — `PathValidator` dead code removed | `0749ba5` | 2026-04-24 | PASS | **CLOSED** |
+| 7 | Concern #7 — Added `.gstack/` to `.gitignore` | `0749ba5` | 2026-04-24 | PASS | **CLOSED** |
 
-Fixes were applied and committed in the order shown above — the order matches the auditor's recommended triage sequence (smallest-blast-radius one-liner first; configuration+logic change last).
+Fixes were applied and committed in the order shown above — the order matches the auditor's recommended triage sequence (smallest-blast-radius one-liner first; configuration+logic change last). Finding #1 received a follow-up review commit (`f53af3f`) to remove a placeholder domain from the allowlist and drop a buggy belt-and-suspenders check; see the Finding #1 section for detail.
 
 **Build verification:** the full solution was built with MSBuild 17.14 (Visual Studio 2022 Community) in Debug configuration after all seven commits landed. Result: build succeeded, no new warnings introduced by the remediation. Pre-existing warnings (unused local `ex` in five catch blocks; one assigned-but-unread field `Form1.CopiedFilesDirectory`) are unchanged and out of remediation scope.
 
@@ -351,37 +355,87 @@ Fixes were applied and committed in the order shown above — the order matches 
 
 ## 7. Verification
 
-Verification of this remediation has two parts: the static-analysis re-audit, and a runtime check of the newly-wired log files.
+Verification has two parts: the static-analysis re-audit (completed) and a runtime check of the newly-wired log files (pending deployment).
 
-### 7.1 Static re-audit via `/cso`
+### 7.1 Static re-audit via `/cso` — COMPLETE
 
-The `/cso` security audit will be re-run against the post-remediation HEAD (`0749ba5` or later). The expected outcome is:
+**Re-audit date:** 2026-04-24 15:00 UTC
+**Re-audit report:** `.gstack/security-reports/2026-04-24-150033.json`
+**Mode:** daily (8/10 confidence gate)
+**Scope:** full — all 15 phases run
 
-- Finding #1 closes — `EmailValidator.IsEmailFromAllowedDomain` now has active callers in `EmailService.SendEmails` and `Form1.dataGridView1_CellEndEdit`; `App.config` carries the `AllowedMailDomains` key; the duplicate `SecurityHelper.IsEmailAllowed` no longer exists.
-- Finding #2 closes — `PathValidator.ValidateAndNormalize` is now invoked in `EmailService.SendEmails` before any `Directory.GetFiles` or `Directory.Delete` call.
-- Finding #3 closes — `AutomationSecurity = msoAutomationSecurityForceDisable` is set before both Excel interop entry points (`Workbooks.Open` in `ExcelService` and `Workbooks.Add` in `ExcelExportService`).
-- The NLog concern closes — `NLog.config` carries two `<target>` elements and matching `<logger>` rules.
-- The `SecurityHelper` dead-code concern closes — the file and its `<Compile>` entry have been removed.
+**Totals:**
 
-*Results of the re-run will be pasted into this subsection, with the finding table from the new `/cso` report as the primary evidence. Any residual findings (including lower-severity items below the daily-mode confidence gate) will be summarised and assigned a disposition.*
+| Severity | Original audit (2026-04-11) | Re-audit (2026-04-24) |
+|----------|----------------------------:|----------------------:|
+| CRITICAL | 0 | 0 |
+| HIGH     | 3 | **0** |
+| MEDIUM   | 0 | 0 |
+| TENTATIVE| 0 | 0 |
+| Trend    | — | **IMPROVING — 7 resolved, 0 persistent, 0 new** |
 
-### 7.2 Runtime log-file verification
+**Filter statistics (re-audit):** 12 candidates scanned → 4 hard-excluded → 8 filtered by the 8/10 confidence gate → **0 reported**.
+
+**Per-item closure evidence (from the re-audit report):**
+
+| # | Item | Status | Evidence cited by re-audit |
+|---|------|--------|----------------------------|
+| 1 | Dormant email domain allowlist | CLOSED | `AllowedMailDomains` in `App.config`; `EmailService.IsEmailDomainAllowed` with fail-closed on empty allowlist; enforced at `Form1.dataGridView1_CellEndEdit` AND `EmailService.SendEmails`; `IsEmailDomainAllowed` in the `IEmailService` contract. |
+| 2 | `EmailService` missing path boundary | CLOSED | `PathValidator.ValidateAndNormalize(combinedPath, _basePath, …)` invoked in `EmailService.SendEmails` before `Directory.Exists` and `GetFiles`; drop-and-log on failure. |
+| 3 | Excel COM opens workbooks with macros | CLOSED | `xlApp.AutomationSecurity = Microsoft.Office.Core.MsoAutomationSecurity.msoAutomationSecurityForceDisable` set before `Workbooks.Open` in `ExcelService`. |
+| 4 | NLog targets unwired | CLOSED | `NLog.config` declares `mainFile` and `securityFile` File targets with 30/90-file archive retention and 10 MB archive threshold; security-event filter routes `SecurityEvent=true` properties to the security log. |
+| 5 | `SecurityHelper` dead class | CLOSED | Repository-wide grep returns no source matches under `FileManager/**/*.cs`; only stale entries remain in gitignored `bin/`/`obj/` artefacts. |
+| 6 | `PathValidator` empty-body dead block | CLOSED | `PathValidator.IsValidPath` body contains only active checks (null/byte/length/chars/traversal/`GetFullPath`). |
+| 7 | `.gstack/` not in `.gitignore` | CLOSED | `.gitignore` contains `.gstack/`; `git ls-files .gstack/` returns no tracked files. |
+
+**STRIDE summary (excerpt from re-audit, `EmailService`):**
+
+- *Spoofing:* email address format + domain allowlist block spoofed recipients.
+- *Tampering:* JSON config tampering mitigated by path boundary + allowlist fail-closed.
+- *Repudiation:* security event log (`securityFile` target) provides audit trail.
+- *Information Disclosure:* domain allowlist is the defence; no plaintext credentials in logs.
+- *Denial of Service:* Outlook throttling via `MailSleepSeconds`.
+- *Elevation of Privilege:* not applicable (no auth system).
+
+### 7.2 Below-gate hygiene notes (for tracking — not findings)
+
+The re-audit flagged two items below the 8/10 daily-mode confidence gate. They are not findings and are not in the scope of the original 2026-04-11 remediation. They are recorded here for awareness and can be addressed in a follow-up change.
+
+1. **`FileManager_TemporaryKey.pfx` tracked in git** (severity: LOW/HYGIENE, confidence: 5/10)
+   Visual Studio auto-generated ClickOnce signing PKCS#12 committed to the repository. The project sets `SignManifests=false` and no runtime code references the file, so the key is inert in the current build configuration. It is still a private-key artefact in version control.
+   *Recommendation:* add `*.pfx` to `.gitignore`, delete the tracked file, and regenerate locally if ClickOnce signing is ever re-enabled.
+
+2. **Silent catch in `EmailService.ArchiveProcessedFiles`** (severity: LOW/HYGIENE, confidence: 4/10)
+   The `catch` for `Directory.Delete(newDir, true)` on an empty archive directory has an empty body with a `// Log error if needed` comment. This is a post-archive cleanup path and not security-critical, but it swallows IO errors contrary to the project's stated "never silent catch" discipline.
+   *Recommendation:* add a `LoggingService.LogWarning` call with the caught exception message.
+
+### 7.3 Runtime log-file verification (deployment-time)
 
 After the next production run of the application:
 
-- `logs/YYYY-MM-DD.log` should exist next to the executable and contain at minimum the `LogInfo("Sending email to…")` entries already present in `EmailService.SendEmails`.
+- `logs/YYYY-MM-DD.log` should exist next to the executable and contain the `LogInfo("Sending email to…")` entries already present in `EmailService.SendEmails`.
 - `logs/security-YYYY-MM-DD.log` should exist and contain the structured `EmailDomainNotAllowed`, `PathValidationFailure`, and validation-failure events whenever the corresponding defensive paths are triggered by user input or tampered config.
 
-If either file is missing, `NLog` is likely blocked by filesystem permissions on the deployment target — in which case the target's `fileName` attribute should be changed to a writable location (e.g. `%LOCALAPPDATA%\FileManager\logs\`).
+If either file is missing, NLog is likely blocked by filesystem permissions on the deployment target — in which case the target's `fileName` attribute should be changed to a writable location (e.g. `%LOCALAPPDATA%\FileManager\logs\`).
 
 ---
 
-## 8. Appendix A — Reference to Original Audit
+## 8. Appendix A — References
 
-- **Original report:** `2026-04-11-172456-report.pdf` (JSON: `.gstack/security-reports/2026-04-11-172456.json`)
-- **Audit mode:** daily, 8/10 confidence gate
-- **Auditor notes on filter stats:** 13 candidates scanned → 4 hard-excluded → 1 confidence-gated → 3 reported
-- **Original status line:** `DONE_WITH_CONCERNS`
+### Original audit (baseline)
+
+- **Report:** `.gstack/security-reports/2026-04-11-172456.json` (also `…-report.pdf`, `…-report.html`)
+- **Mode:** daily, 8/10 confidence gate
+- **Filter stats:** 13 candidates scanned → 4 hard-excluded → 1 confidence-gated → 3 reported
+- **Status line:** `DONE_WITH_CONCERNS`
+
+### Verification re-audit
+
+- **Report:** `.gstack/security-reports/2026-04-24-150033.json`
+- **Mode:** daily, 8/10 confidence gate
+- **Filter stats:** 12 candidates scanned → 4 hard-excluded → 8 confidence-gated → 0 reported
+- **Totals:** 0 critical / 0 high / 0 medium / 0 tentative
+- **Trend vs prior:** IMPROVING — 7 resolved, 0 persistent, 0 new
 
 ---
 
@@ -393,5 +447,5 @@ For production systems handling confidential customer data — especially regula
 
 ---
 
-*Document version: 0.2 (fixes applied, pending `/cso` verification re-audit)*
+*Document version: 1.0 (verified closed by `/cso` re-audit 2026-04-24)*
 *Last updated: 2026-04-24*
