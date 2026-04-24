@@ -784,10 +784,11 @@ namespace FileManager
             var fol = dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["dir"].Value.ToString ();
             var method = dataGridView1.Rows [e.RowIndex].Cells ["method"].Value == null ? string.Empty : dataGridView1.Rows [e.RowIndex].Cells ["method"].Value.ToString ();
 
-            // Validate email address if the email column was edited and contains data
+            // Validate email address(es) if the email column was edited and contains data.
+            // Accepts one or more addresses separated by comma or semicolon.
             if (dataGridView1.Columns[e.ColumnIndex].Name == "email" && !string.IsNullOrWhiteSpace(mail))
             {
-                if (!EmailValidator.IsValidEmail(mail, out string emailError))
+                if (!EmailValidator.IsValidEmailList(mail, out string emailError))
                 {
                     // Log validation failure
                     _loggingService.LogValidationFailure("EmailValidation", mail, emailError);

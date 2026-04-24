@@ -40,7 +40,8 @@ namespace FileManager.Services
 
         public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
         {
-            // Validate all email addresses before processing
+            // Validate all email addresses before processing. Each row may contain a single
+            // address or multiple addresses separated by comma/semicolon.
             // Materialize with .ToList() to avoid duplicate enumeration and duplicate security event logging
             var validDirs = dirSettings.Where(w =>
             {
@@ -48,9 +49,9 @@ namespace FileManager.Services
                     return false;
 
                 string emailError;
-                if (!EmailValidator.IsValidEmail(w.email, out emailError))
+                if (!EmailValidator.IsValidEmailList(w.email, out emailError))
                 {
-                    _loggingService.LogSecurityEvent($"Invalid email address blocked: {w.email} for directory: {w.dir}. Error: {emailError}");
+                    _loggingService.LogSecurityEvent($"Invalid email address(es) blocked: {w.email} for directory: {w.dir}. Error: {emailError}");
                     return false;
                 }
 
@@ -62,8 +63,7 @@ namespace FileManager.Services
 
             foreach (var dirSetting in validDirs)
             {
-                // Sanitize email address
-                var sanitizedEmail = EmailValidator.SanitizeEmailAddress(dirSetting.email);
+                var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
                 if (sanitizedEmail != dirSetting.email)
                 {
                     _loggingService.LogInfo($"Email address sanitized from '{dirSetting.email}' to '{sanitizedEmail}'");
@@ -92,21 +92,21 @@ namespace FileManager.Services
 
         public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
         {
-            // Validate email address if provided
+            // Validate email address(es) if provided. A row may contain a single address or
+            // multiple addresses separated by comma/semicolon.
             // Note: Don't throw exception here as this method is called for all column edits,
             // not just email column. Email validation is handled in Form1's dataGridView1_CellEndEdit
             // for the email column specifically. This is just a safety check.
             if (!string.IsNullOrEmpty(email))
             {
                 string emailError;
-                if (!EmailValidator.IsValidEmail(email, out emailError))
+                if (!EmailValidator.IsValidEmailList(email, out emailError))
                 {
-                    _loggingService.LogWarning($"Skipping grid update due to invalid email: {email}. Error: {emailError}");
+                    _loggingService.LogWarning($"Skipping grid update due to invalid email(s): {email}. Error: {emailError}");
                     return; // Skip updating configuration with invalid email
                 }
 
-                // Sanitize email address
-                email = EmailValidator.SanitizeEmailAddress(email);
+                email = EmailValidator.SanitizeEmailList(email);
             }
 
             var emailConfigList = _configurationService.GetEmailDirSettings();
@@ -320,8 +320,9 @@ namespace FileManager.Services
                     oApp = new Microsoft.Office.Interop.Outlook.Application();
                     oMsg = (MailItem)oApp.CreateItem(OlItemType.olMailItem);
 
-                    // Validate and sanitize email before assignment
-                    var sanitizedEmail = EmailValidator.SanitizeEmailAddress(dirSetting.email);
+                    // Outlook resolves a semicolon-delimited To string natively, so hand it
+                    // the canonical sanitized list (one or many addresses).
+                    var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
                     oMsg.To = sanitizedEmail;
 
                     string fileName = "";
