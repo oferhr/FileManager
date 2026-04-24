@@ -167,7 +167,6 @@
     <Compile Include="Services\IReportManagementService.cs" />
     <Compile Include="Services\LoggingService.cs" />
     <Compile Include="Services\ReportManagementService.cs" />
-    <Compile Include="Security\SecurityHelper.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Utilities\EmailValidator.cs" />
     <Compile Include="Utilities\InputValidator.cs" />
