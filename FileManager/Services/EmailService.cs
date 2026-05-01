@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,15 +14,36 @@ namespace FileManager.Services
 {
     public class EmailService : IEmailService
     {
+        /// <summary>
+        /// Internal data structure that pairs the computed subject key (group name without
+        /// extension) with the list of copied file paths belonging to that group.  Used only
+        /// inside EmailService and intentionally not exposed through the interface.
+        /// </summary>
+        private sealed class MailGroup
+        {
+            /// <summary>Group name without extension — used verbatim as the Outlook subject.</summary>
+            public string SubjectKey { get; set; }
+
+            /// <summary>Full paths of the temporary copies inside the <c>9876789</c> subdirectory.</summary>
+            public List<string> Files { get; set; } = new List<string>();
+        }
+
         private readonly string _basePath;
         private readonly IFileService _fileService;
         private readonly IConfigurationService _configurationService;
         private readonly IFileCountService _fileCountService;
         private readonly ILoggingService _loggingService;
         private readonly Action<int> _progressCallback;
-        private readonly List<string> _allowedMailDomains;
         private readonly string[] _mailCheck = { "איחוד-קצר", "בודד-זהה", "בודד-קצר", "איחוד שמי", "איחוד לפי דוח" };
         private const string CopiedFilesDirectory = "9876789";
+
+        /// <summary>
+        /// When <c>true</c>, per-file and per-group diagnostic info logs are emitted.
+        /// Controlled by the <c>EmailDiagnosticsEnabled</c> key in App.config.
+        /// Defaults to <c>true</c> when the key is absent or unparseable so that
+        /// diagnostics are on by default in new or upgraded installations.
+        /// </summary>
+        private readonly bool _diagnosticsEnabled;
 
         public EmailService(
             string basePath,
@@ -29,7 +51,6 @@ namespace FileManager.Services
             IConfigurationService configurationService,
             IFileCountService fileCountService,
             ILoggingService loggingService,
-            List<string> allowedMailDomains,
             Action<int> progressCallback = null)
         {
             _basePath = basePath;
@@ -37,73 +58,62 @@ namespace FileManager.Services
             _configurationService = configurationService;
             _fileCountService = fileCountService;
             _loggingService = loggingService;
-            _allowedMailDomains = allowedMailDomains ?? new List<string>();
             _progressCallback = progressCallback;
+
+            // Read diagnostic flag. Default to true when the key is missing or unparseable
+            // so that diagnostics are enabled in existing installations that predate the key.
+            var diagFlag = ConfigurationManager.AppSettings["EmailDiagnosticsEnabled"];
+            bool parsed;
+            _diagnosticsEnabled = !bool.TryParse(diagFlag, out parsed) || parsed;
         }
 
-        public bool IsEmailDomainAllowed(string emailOrList, out string errorMessage)
+        /// <summary>
+        /// Emits a diagnostic <see cref="ILoggingService.LogInfo"/> message only when
+        /// <see cref="_diagnosticsEnabled"/> is <c>true</c>.  Use for high-volume per-file
+        /// and per-group traces.  Skip paths and warnings should use
+        /// <see cref="ILoggingService.LogWarning"/> directly so they are always visible.
+        /// </summary>
+        private void LogDiag(string message)
         {
-            if (_allowedMailDomains.Count == 0)
+            if (_diagnosticsEnabled)
             {
-                errorMessage = "No allowed mail domains configured (AllowedMailDomains in App.config is empty).";
-                return false;
+                _loggingService.LogInfo(message);
             }
+        }
 
-            // Accept single-address and multi-address (comma/semicolon) forms. Every address must match the allowlist.
-            var addresses = EmailValidator.ParseEmailList(emailOrList);
-            if (addresses.Count == 0)
-            {
-                errorMessage = "No email addresses found.";
-                return false;
-            }
+        public EmailSendResult SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
+        {
+            var result = new EmailSendResult();
 
-            foreach (var address in addresses)
+            // Pre-filter loop: validate each row and count skips by reason before building
+            // the list of directories that are safe to process.
+            var validDirs = new List<EmailDirSettings>();
+            foreach (var w in dirSettings)
             {
-                if (!EmailValidator.IsEmailFromAllowedDomain(address, _allowedMailDomains, out var addressError))
+                if (string.IsNullOrWhiteSpace(w.email))
                 {
-                    errorMessage = addresses.Count == 1
-                        ? addressError
-                        : $"'{address}': {addressError}";
-                    return false;
+                    result.SkippedNoEmail++;
+                    _loggingService.LogWarning($"[SendEmails] Skipped row with empty or whitespace email. dir='{w.dir}'");
+                    continue;
                 }
-            }
-
-            errorMessage = null;
-            return true;
-        }
-
-        public void SendEmails(List<EmailDirSettings> dirSettings, int sleepSeconds)
-        {
-            // Validate all email addresses before processing. Each row may contain a single
-            // address or multiple addresses separated by comma/semicolon.
-            // Materialize with .ToList() to avoid duplicate enumeration and duplicate security event logging
-            var validDirs = dirSettings.Where(w =>
-            {
-                if (string.IsNullOrEmpty(w.email))
-                    return false;
 
                 string emailError;
                 if (!EmailValidator.IsValidEmailList(w.email, out emailError))
                 {
-                    _loggingService.LogSecurityEvent($"Invalid email address(es) blocked: {w.email} for directory: {w.dir}. Error: {emailError}");
-                    return false;
+                    result.SkippedInvalidFormat++;
+                    _loggingService.LogSecurityEvent("EmailFormatInvalid",
+                        $"Invalid email address(es) blocked: {w.email} for directory: {w.dir}. Error: {emailError}",
+                        new Dictionary<string, object> { { "Email", w.email }, { "Dir", w.dir }, { "Error", emailError } });
+                    continue;
                 }
 
-                string domainError;
-                if (!IsEmailDomainAllowed(w.email, out domainError))
-                {
-                    _loggingService.LogSecurityEvent("EmailDomainNotAllowed",
-                        $"Blocked send to disallowed domain: {w.email}. {domainError}",
-                        new Dictionary<string, object> { { "Email", w.email }, { "Dir", w.dir } });
-                    return false;
-                }
-
-                return true;
-            }).ToList();
+                validDirs.Add(w);
+            }
 
             var counts = validDirs.Count;
-            double pbPart = counts == 0 ? 100 : 100 / counts;
+            double pbPart = counts == 0 ? 100 : 100.0 / counts;
 
+            double progressTotal = 0;
             foreach (var dirSetting in validDirs)
             {
                 var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
@@ -117,6 +127,7 @@ namespace FileManager.Services
                 string basePath, pathError;
                 if (!PathValidator.ValidateAndNormalize(combinedPath, _basePath, out basePath, out pathError))
                 {
+                    result.SkippedMissingFolder++;
                     _loggingService.LogSecurityEvent("PathValidationFailure",
                         $"EmailService rejected directory outside allowed boundary: {pathError}",
                         new Dictionary<string, object> { { "dir", dirSetting.dir }, { "basePath", _basePath } });
@@ -125,6 +136,8 @@ namespace FileManager.Services
 
                 if (!Directory.Exists(basePath))
                 {
+                    result.SkippedMissingFolder++;
+                    _loggingService.LogWarning($"Email directory does not exist: {basePath}");
                     continue;
                 }
 
@@ -132,14 +145,31 @@ namespace FileManager.Services
                     .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") || s.ToLower().EndsWith(".pdf"));
                 var files = lfiles as IList<string> ?? lfiles.ToList();
 
-                if (files.Any())
+                if (!files.Any())
                 {
-                    var arfiles = ProcessFilesForEmail(files, dirSetting);
-                    SendEmailAttachments(arfiles, dirSetting, pbPart, sleepSeconds);
-                    CleanupCopiedFiles(arfiles);
-                    ArchiveProcessedFiles(basePath);
+                    result.SkippedNoFiles++;
+                    _loggingService.LogWarning($"No .tif/.tiff/.pdf files found in directory: {basePath}");
+                    continue;
                 }
+
+                var arfiles = ProcessFilesForEmail(files, dirSetting);
+                if (arfiles.Count == 0)
+                {
+                    result.SkippedNoMailGroups++;
+                    _loggingService.LogWarning($"[SendEmails] No mail groups produced for dir='{dirSetting.dir}'. Files present but none in '1' subdirectory — leaving folder untouched.");
+                    progressTotal += pbPart;
+                    if (progressTotal > 100) progressTotal = 100;
+                    _progressCallback?.Invoke((int)progressTotal);
+                    continue;
+                }
+
+                SendEmailAttachments(arfiles, dirSetting, pbPart, sleepSeconds, result, ref progressTotal);
+                CleanupCopiedFiles(arfiles);
+                ArchiveProcessedFiles(basePath);
             }
+
+            _progressCallback?.Invoke(100);
+            return result;
         }
 
         public void HandleGridCellEndEdit(int rowIndex, string email, string folder, string method)
@@ -288,82 +318,113 @@ namespace FileManager.Services
             return emailsDs;
         }
 
-        private List<List<string>> ProcessFilesForEmail(IList<string> files, EmailDirSettings dirSetting)
+        /// <summary>
+        /// Copies all eligible files from the <c>1</c> subdirectory into a temporary
+        /// <c>9876789</c> staging folder, computes the mail file name for each file, and
+        /// groups the resulting paths into <see cref="MailGroup"/> instances.
+        /// </summary>
+        /// <remarks>
+        /// Grouping is performed by index rather than substring matching so that files
+        /// whose names are substrings of one another (e.g. <c>1.pdf</c> and <c>11.pdf</c>)
+        /// are correctly placed into separate groups.
+        /// </remarks>
+        private List<MailGroup> ProcessFilesForEmail(IList<string> files, EmailDirSettings dirSetting)
         {
+            // Parallel lists: lCopiedNames[i] is the computed mail-name for the file whose
+            // staging path is lpaths[i].  Index correspondence is maintained throughout so
+            // that GroupBy on lCopiedNames can resolve back to the correct lpaths entries.
             var lCopiedNames = new List<string>();
             var lpaths = new List<string>();
-            var arfiles = new List<List<string>>();
             var ardirs = new List<string>();
 
             foreach (var file in files)
             {
-                var isGoodDirectory = false;
                 var currentDir = Path.GetFileName(Path.GetDirectoryName(file));
-                
-                if (currentDir == "1")
+
+                if (currentDir != "1")
                 {
-                    if (!ardirs.Contains(currentDir))
-                    {
-                        ardirs.Add(currentDir);
-                    }
-                    isGoodDirectory = true;
+                    LogDiag($"[ProcessFilesForEmail] Skipped (not in '1' subdir). file='{file}'");
+                    continue;
                 }
 
-                if (!isGoodDirectory)
+                if (!ardirs.Contains(currentDir))
                 {
-                    continue;
+                    ardirs.Add(currentDir);
                 }
 
                 var fileName = Path.GetFileName(file);
                 if (fileName == null || _fileService.IsThumbsInPath(file))
                 {
+                    LogDiag($"[ProcessFilesForEmail] Skipped (Thumbs.db or null name). file='{file}'");
                     continue;
                 }
 
-                var newFileName = fileName;
-                var newFile = file;
-                if (fileName.Trim().Contains(" "))
-                {
-                    newFileName = fileName.Replace(" ", "_");
-                }
+                // Replace spaces in the destination filename to avoid issues with paths
+                // that contain spaces when Outlook processes the attachment.
+                var newFileName = fileName.Trim().Contains(" ") ? fileName.Replace(" ", "_") : fileName;
 
                 var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
-                if (!Directory.Exists(copiedPath))
+                string newFile;
+                try
                 {
-                    Directory.CreateDirectory(copiedPath);
-                }
-                
-                newFile = Path.Combine(copiedPath, newFileName);
-                File.Copy(file, newFile, true);
+                    if (!Directory.Exists(copiedPath))
+                    {
+                        Directory.CreateDirectory(copiedPath);
+                    }
 
+                    newFile = Path.Combine(copiedPath, newFileName);
+                    if (File.Exists(newFile))
+                    {
+                        var stem = Path.GetFileNameWithoutExtension(newFileName);
+                        var ext = Path.GetExtension(newFileName);
+                        newFile = Path.Combine(copiedPath, $"{stem}_{Guid.NewGuid():N}{ext}");
+                    }
+
+                    File.Copy(file, newFile, false);
+                }
+                catch (System.Exception ex)
+                {
+                    _loggingService.LogError("EmailService.ProcessFilesForEmail", ex, $"Failed to stage file for email: {file}");
+                    continue;
+                }
+
+                // Record the computed mail name (used as the group key) and the staged path.
                 lCopiedNames.Add(_fileService.GetMailFileName(fileName, dirSetting.icheck));
                 lpaths.Add(newFile);
+                LogDiag($"[ProcessFilesForEmail] Added file. dir='{dirSetting.dir}', original='{fileName}', mailName='{lCopiedNames[lCopiedNames.Count - 1]}', staged='{newFile}'");
             }
 
-            // Group file names
-            var duplicateKeys = lCopiedNames.GroupBy(x => x).Select(group => group.Key);
-            var enumerable = duplicateKeys as string[] ?? duplicateKeys.ToArray();
-            
-            if (enumerable.Any())
+            // Group by the computed mail name using index pairs so that exact equality is
+            // used for matching.  This prevents a file named "1.pdf" from being placed into
+            // the same group as "11.pdf" (the old Contains-based approach would mis-group them).
+            var arfiles = new List<MailGroup>();
+
+            var groups = Enumerable.Range(0, lCopiedNames.Count).GroupBy(i => lCopiedNames[i]);
+            foreach (var group in groups)
             {
-                foreach (var duplicateKey in enumerable)
+                arfiles.Add(new MailGroup
                 {
-                    var xduplicateKey = Path.GetFileNameWithoutExtension(duplicateKey);
-                    xduplicateKey = duplicateKey.Replace(" ", "_");
-                    var ll = from ln in lpaths where ln.Contains(xduplicateKey) select ln;
-                    arfiles.Add(new List<string>(ll.ToList()));
-                }
+                    // Strip the extension from the group key to reproduce the v1.2.44
+                    // subject behaviour: subject is the group name without extension.
+                    SubjectKey = Path.GetFileNameWithoutExtension(group.Key),
+                    Files = group.Select(i => lpaths[i]).ToList()
+                });
+                LogDiag($"[ProcessFilesForEmail] Group built. dir='{dirSetting.dir}', subjectKey='{Path.GetFileNameWithoutExtension(group.Key)}', fileCount={group.Count()}, files=[{string.Join(", ", group.Select(i => Path.GetFileName(lpaths[i])))}]");
             }
 
             return arfiles;
         }
 
-        private void SendEmailAttachments(List<List<string>> arfiles, EmailDirSettings dirSetting, double pbPart, int sleepSeconds)
+        private void SendEmailAttachments(List<MailGroup> arfiles, EmailDirSettings dirSetting, double pbPart, int sleepSeconds, EmailSendResult result, ref double progressTotal)
         {
             var pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
 
             foreach (var arfile in arfiles)
             {
+                // Count this email as attempted before entering the try block so that
+                // exceptions during setup (e.g. COM creation failure) are still tracked.
+                result.Attempted++;
+
                 Microsoft.Office.Interop.Outlook.Application oApp = null;
                 MailItem oMsg = null;
 
@@ -377,48 +438,41 @@ namespace FileManager.Services
                     var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
                     oMsg.To = sanitizedEmail;
 
-                    string fileName = "";
-                    try
+                    // Restore v1.2.44 subject behaviour:
+                    //   - For icheck == 2: the pre-refactor pipeline ran GetMailFileName once
+                    //     during grouping (producing SubjectKey) and then again with
+                    //     keepExtension=true to form the subject. We reproduce that exactly —
+                    //     no further extension stripping.
+                    //   - For all other icheck values: the subject is SubjectKey directly
+                    //     (group name without extension), which matches v1.2.44.
+                    string subject;
+                    if (dirSetting.icheck == 2)
                     {
-                        fileName = Path.GetFileName(arfile[0]);
+                        subject = _fileService.GetMailFileName(arfile.SubjectKey, dirSetting.icheck, true);
                     }
-                    catch (System.Exception ex)
+                    else
                     {
-                        // Don't access arfile[0] again if it caused the exception (e.g., IndexOutOfRangeException)
-                        var safeFileInfo = arfile != null && arfile.Count > 0 ? arfile[0] : "[empty attachment list]";
-                        _loggingService.LogError($"Failed to get filename for email attachment: {safeFileInfo}", ex);
-                        throw; // Rethrow to outer catch which will cleanup COM objects
-                    }
-
-                    var subject = string.Empty;
-                    if (fileName != null)
-                    {
-                        subject = dirSetting.icheck == 2 ? _fileService.GetMailFileName(fileName, dirSetting.icheck, true) : fileName;
+                        subject = arfile.SubjectKey;
                     }
 
                     // Sanitize subject to prevent header injection
                     subject = InputValidator.SanitizeString(subject);
                     oMsg.Subject = subject;
 
-                    foreach (var curFile in arfile)
+                    foreach (var curFile in arfile.Files)
                     {
                         oMsg.Attachments.Add(curFile, OlAttachmentType.olByValue, Type.Missing, Type.Missing);
                     }
+
+                    LogDiag($"[SendEmailAttachments] Group prepared. recipient='{sanitizedEmail}', subject='{subject}', attachments=[{string.Join(", ", arfile.Files.Select(Path.GetFileName))}]");
 
                     oMsg.GetInspector.Activate();
                     var signature = oMsg.HTMLBody;
                     oMsg.HTMLBody = string.Empty + signature;
 
-                    _loggingService.LogInfo($"Sending email to {sanitizedEmail} with {arfile.Count} attachments, subject: {subject}");
+                    _loggingService.LogInfo($"Sending email to {sanitizedEmail} with {arfile.Files.Count} attachments, subject: {subject}");
                     oMsg.Send();
-
-                    var dVal = pbIncrement;
-                    var val = Convert.ToInt32(dVal);
-                    if (val > 100)
-                    {
-                        val = 100;
-                    }
-                    _progressCallback?.Invoke(val);
+                    result.Succeeded++;
 
                     if (sleepSeconds > 0)
                     {
@@ -428,10 +482,15 @@ namespace FileManager.Services
                 catch (System.Exception ex)
                 {
                     _loggingService.LogError($"Failed to send email to {dirSetting.email}", ex);
+                    result.FailedRecipients.Add($"{dirSetting.email}: {ex.Message}");
                     // Continue processing other emails even if one fails
                 }
                 finally
                 {
+                    progressTotal += pbIncrement;
+                    if (progressTotal > 100) progressTotal = 100;
+                    _progressCallback?.Invoke((int)progressTotal);
+
                     // Always release COM objects to prevent resource leaks
                     if (oMsg != null)
                     {
@@ -447,11 +506,11 @@ namespace FileManager.Services
             }
         }
 
-        private void CleanupCopiedFiles(List<List<string>> arfiles)
+        private void CleanupCopiedFiles(List<MailGroup> arfiles)
         {
             foreach (var arfile in arfiles)
             {
-                foreach (var curFile in arfile)
+                foreach (var curFile in arfile.Files)
                 {
                     if (curFile.Contains(CopiedFilesDirectory))
                     {
@@ -499,9 +558,9 @@ namespace FileManager.Services
                 {
                     Directory.Delete(newDir, true);
                 }
-                catch
+                catch (System.Exception ex)
                 {
-                    // Log error if needed
+                    _loggingService.LogWarning($"[ArchiveProcessedFiles] Failed to delete empty archive directory '{newDir}': {ex.Message}");
                 }
             }
 
@@ -511,13 +570,17 @@ namespace FileManager.Services
                 {
                     Directory.Delete(checkedPath);
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
-                    Directory.Delete(checkedPath, true);
+                    _loggingService.LogWarning($"[ArchiveProcessedFiles] Non-empty '1' folder '{checkedPath}', falling back to recursive delete: {ex.Message}");
+                    try { Directory.Delete(checkedPath, true); }
+                    catch (System.Exception inner) { _loggingService.LogError("EmailService", inner, $"[ArchiveProcessedFiles] Recursive delete of '{checkedPath}' failed."); }
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException ex)
                 {
-                    Directory.Delete(checkedPath, true);
+                    _loggingService.LogWarning($"[ArchiveProcessedFiles] Access denied on '{checkedPath}', falling back to recursive delete: {ex.Message}");
+                    try { Directory.Delete(checkedPath, true); }
+                    catch (System.Exception inner) { _loggingService.LogError("EmailService", inner, $"[ArchiveProcessedFiles] Recursive delete of '{checkedPath}' failed."); }
                 }
             }
         }
