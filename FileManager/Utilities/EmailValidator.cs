@@ -280,44 +280,5 @@ namespace FileManager.Utilities
 
             return true;
         }
-
-        /// <summary>
-        /// Validates that an email belongs to an allowed domain.
-        /// </summary>
-        /// <param name="email">The email address to validate</param>
-        /// <param name="allowedDomains">List of allowed domain names (e.g., "example.com")</param>
-        /// <param name="errorMessage">Error message if validation fails</param>
-        /// <returns>True if email domain is allowed, false otherwise</returns>
-        public static bool IsEmailFromAllowedDomain(string email, List<string> allowedDomains, out string errorMessage)
-        {
-            errorMessage = null;
-
-            if (!IsValidEmail(email, out string validationError))
-            {
-                errorMessage = validationError;
-                return false;
-            }
-
-            if (allowedDomains == null || allowedDomains.Count == 0)
-            {
-                errorMessage = "No allowed domains specified";
-                return false;
-            }
-
-            var parts = email.Split('@');
-            string domain = parts[1].ToLowerInvariant();
-
-            bool isAllowed = allowedDomains.Any(d =>
-                domain.Equals(d.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase) ||
-                domain.EndsWith("." + d.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase));
-
-            if (!isAllowed)
-            {
-                errorMessage = $"Email domain '{domain}' is not in the allowed domains list";
-                return false;
-            }
-
-            return true;
-        }
     }
 }

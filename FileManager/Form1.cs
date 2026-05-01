@@ -112,12 +112,6 @@ namespace FileManager
         /// </summary>
         private bool hasErrors = false;
         
-        /// <summary>
-        /// Domains allowed as email recipients, loaded from App.config key AllowedMailDomains.
-        /// Empty list means all sends are blocked.
-        /// </summary>
-        private readonly List<string> _allowedMailDomains;
-
         // Services
         private readonly ILoggingService _loggingService;
         private readonly IFileCountService _fileCountService;
@@ -169,13 +163,6 @@ namespace FileManager
                 _excel = ConfigurationManager.AppSettings ["ExcelPath"];
                 var sleep = ConfigurationManager.AppSettings ["MailSleepSeconds"];
 
-                // Parse allowlist; tolerate optional leading '@' so config can read as "@company.com" or "company.com".
-                _allowedMailDomains = (ConfigurationManager.AppSettings["AllowedMailDomains"] ?? string.Empty)
-                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(s => s.Trim().TrimStart('@'))
-                    .Where(s => s.Length > 0)
-                    .ToList();
-
                 // Parse sleep duration with fallback to 0 if invalid
                 if (!Int32.TryParse(sleep, out _sleep))
                 {
@@ -215,7 +202,6 @@ namespace FileManager
                     _configurationService,
                     _fileCountService,
                     _loggingService,
-                    _allowedMailDomains,
                     UpdateProgressBar);
                 _excelService = new ExcelService(
                     _path,
@@ -716,9 +702,36 @@ namespace FileManager
                     return;
                 }
 
-                _emailService.SendEmails(dirSettings, _sleep);
-                
-                MessageBox.Show("המיילים נשלחו בהצלחה");
+                var result = _emailService.SendEmails(dirSettings, _sleep);
+
+                _loggingService.LogInfo($"Mail batch result: attempted={result.Attempted}, succeeded={result.Succeeded}, failed={result.FailedRecipients.Count}, skipped={result.SkippedTotal}");
+
+                string message;
+                MessageBoxIcon icon;
+                if (result.AllSucceeded)
+                {
+                    message = $"המיילים נשלחו בהצלחה ({result.Succeeded})";
+                    icon = MessageBoxIcon.Information;
+                }
+                else if (result.Succeeded == 0 && result.FailedRecipients.Count == 0 && result.SkippedTotal > 0)
+                {
+                    message = $"לא נשלחו מיילים. דולגו: {result.SkippedTotal} — בדוק קובץ הלוג";
+                    icon = MessageBoxIcon.Warning;
+                }
+                else
+                {
+                    message = string.Format(
+                        "המיילים נשלחו: {0} הצליחו, {1} נכשלו, {2} דולגו — בדוק קובץ הלוג",
+                        result.Succeeded,
+                        result.FailedRecipients.Count,
+                        result.SkippedTotal);
+                    icon = MessageBoxIcon.Warning;
+                }
+
+                MessageBox.Show(message, "שליחת מיילים", MessageBoxButtons.OK, icon,
+                    MessageBoxDefaultButton.Button1,
+                    MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+
                 btnMail.Enabled = false;
             }
             catch (System.Exception ex)
@@ -817,26 +830,6 @@ namespace FileManager
                         MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
 
                     // Keep focus on the cell to allow correction
-                    dataGridView1.CurrentCell = dataGridView1.Rows[e.RowIndex].Cells["email"];
-                    dataGridView1.BeginEdit(true);
-                    return;
-                }
-
-                // Reject disallowed domains at input time so bad values never reach the JSON config.
-                if (!_emailService.IsEmailDomainAllowed(mail, out string domainError))
-                {
-                    _loggingService.LogSecurityEvent("EmailDomainNotAllowed",
-                        $"Grid input blocked — {domainError}",
-                        new Dictionary<string, object> { { "Email", mail }, { "Dir", fol } });
-
-                    MessageBox.Show(
-                        $"דומיין לא מורשה: {domainError}\n\nהכתובת: {mail}",
-                        "שגיאת אימות",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning,
-                        MessageBoxDefaultButton.Button1,
-                        MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
-
                     dataGridView1.CurrentCell = dataGridView1.Rows[e.RowIndex].Cells["email"];
                     dataGridView1.BeginEdit(true);
                     return;

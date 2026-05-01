@@ -142,6 +142,7 @@
     <Compile Include="Services\ArchiveService.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
     <Compile Include="Services\DuplicateManagementService.cs" />
+    <Compile Include="Services\EmailSendResult.cs" />
     <Compile Include="Services\EmailService.cs" />
     <Compile Include="Services\ExcelExportService.cs" />
     <Compile Include="Services\ExcelService.cs" />
