@@ -111,6 +111,7 @@ namespace FileManager.Services
             var counts = validDirs.Count;
             double pbPart = counts == 0 ? 100 : 100.0 / counts;
 
+            double progressTotal = 0;
             foreach (var dirSetting in validDirs)
             {
                 var sanitizedEmail = EmailValidator.SanitizeEmailList(dirSetting.email);
@@ -155,11 +156,12 @@ namespace FileManager.Services
                     _loggingService.LogWarning($"[SendEmails] No mail groups produced for dir='{dirSetting.dir}'. Likely no files in '1' subdirectory.");
                 }
 
-                SendEmailAttachments(arfiles, dirSetting, pbPart, sleepSeconds, result);
+                SendEmailAttachments(arfiles, dirSetting, pbPart, sleepSeconds, result, ref progressTotal);
                 CleanupCopiedFiles(arfiles);
                 ArchiveProcessedFiles(basePath);
             }
 
+            _progressCallback?.Invoke(100);
             return result;
         }
 
@@ -390,7 +392,7 @@ namespace FileManager.Services
             return arfiles;
         }
 
-        private void SendEmailAttachments(List<MailGroup> arfiles, EmailDirSettings dirSetting, double pbPart, int sleepSeconds, EmailSendResult result)
+        private void SendEmailAttachments(List<MailGroup> arfiles, EmailDirSettings dirSetting, double pbPart, int sleepSeconds, EmailSendResult result, ref double progressTotal)
         {
             var pbIncrement = arfiles.Count == 0 ? 100 : pbPart / arfiles.Count;
 
@@ -416,16 +418,14 @@ namespace FileManager.Services
                     // Restore v1.2.44 subject behaviour:
                     //   - For icheck == 2: the pre-refactor pipeline ran GetMailFileName once
                     //     during grouping (producing SubjectKey) and then again with
-                    //     keepExtension=true before using it as the subject.  We reproduce
-                    //     that by calling GetMailFileName on SubjectKey and stripping the
-                    //     extension from the result.
+                    //     keepExtension=true to form the subject. We reproduce that exactly —
+                    //     no further extension stripping.
                     //   - For all other icheck values: the subject is SubjectKey directly
-                    //     (group name without extension), which matches v1.2.44 exactly.
+                    //     (group name without extension), which matches v1.2.44.
                     string subject;
                     if (dirSetting.icheck == 2)
                     {
-                        subject = Path.GetFileNameWithoutExtension(
-                            _fileService.GetMailFileName(arfile.SubjectKey, dirSetting.icheck, true));
+                        subject = _fileService.GetMailFileName(arfile.SubjectKey, dirSetting.icheck, true);
                     }
                     else
                     {
@@ -451,13 +451,9 @@ namespace FileManager.Services
                     oMsg.Send();
                     result.Succeeded++;
 
-                    var dVal = pbIncrement;
-                    var val = Convert.ToInt32(dVal);
-                    if (val > 100)
-                    {
-                        val = 100;
-                    }
-                    _progressCallback?.Invoke(val);
+                    progressTotal += pbIncrement;
+                    if (progressTotal > 100) progressTotal = 100;
+                    _progressCallback?.Invoke((int)progressTotal);
 
                     if (sleepSeconds > 0)
                     {

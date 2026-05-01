@@ -79,6 +79,22 @@ Legend: ⏸ pending · ▶ in-progress · ✅ done · ⚠ blocked · ⏭ deferre
 
 ---
 
+## Code review follow-ups (applied to this PR)
+
+Reviewer of commit `e854bd5` flagged 9 defects (R1–R9). Per reviewer's bottom line, addressed R1 (mandatory) and R6 (visible regression on lines the orchestrator touched). R2–R5 and R7–R9 left for separate cleanup tickets — all LOW severity.
+
+| # | Severity | Status | Note |
+|---|----------|--------|------|
+| R1 | MED | ✅ fixed | Dropped outer `Path.GetFileNameWithoutExtension` wrap on `icheck==2` subject — `SubjectKey` is already extension-stripped at group construction. Now matches v1.2.44 byte-for-byte. |
+| R2 | LOW | ⏭ defer | `validDirs` materialized only for `.Any()` in Form1.btnMail_Click — clarity-only. |
+| R3 | LOW | ⏭ defer | Redundant `SanitizeEmailList` on `dirSetting.email` (mutation + re-sanitize). Idempotent, no functional impact. |
+| R4 | LOW | ⏭ defer | Multi-enumeration of `IGrouping` in LogDiag — trivial perf. |
+| R5 | LOW | ⏭ defer | `Path.GetFileNameWithoutExtension(group.Key)` evaluated twice — cosmetic. |
+| R6 | MED | ✅ fixed | Restored cumulative progress-bar advancement — `double progressTotal` accumulator declared in `SendEmails`, passed by `ref` into `SendEmailAttachments`, capped at 100, terminal `Invoke(100)` call after the outer loop. Pre-existing regression introduced by post-refactor commit `9b52875`. |
+| R7 | LOW | ⏭ defer | `ardirs` dead variable — orchestrator deliberately preserved during Phase 3+7. |
+| R8 | LOW | ⏭ defer | Single-arg `LogSecurityEvent` overload mislabels invalid-format email events as `PathTraversal`. Forensic log noise only. |
+| R9 | LOW | ⏭ defer | `SendEmails` does not null-guard `dirSettings`. In-process caller always passes a list. |
+
 ## Out-of-scope items captured during work
 
 - **Pre-existing CS0168 warnings** (`'ex' declared but never used`) in `ExcelExportService.cs` lines 140 and 176, `DuplicateManagementService.cs` lines 360 and 374, and `Form1.cs` line 2220. Untouched — outside this plan's scope.
