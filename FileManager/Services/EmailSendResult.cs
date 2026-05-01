@@ -27,6 +27,9 @@ namespace FileManager.Services
         /// <summary>Rows skipped because no .tif/.tiff/.pdf files were found in the directory.</summary>
         public int SkippedNoFiles { get; set; }
 
+        /// <summary>Rows skipped because files exist but none are in the '1' subdirectory.</summary>
+        public int SkippedNoMailGroups { get; set; }
+
         /// <summary>
         /// Recipient strings (plus brief reason) for every email where <c>oMsg.Send()</c> threw.
         /// Format: &quot;recipient@domain.com: exception message&quot;.
@@ -36,7 +39,7 @@ namespace FileManager.Services
         /// <summary>Sum of all skip counters.</summary>
         public int SkippedTotal
         {
-            get { return SkippedNoEmail + SkippedInvalidFormat + SkippedMissingFolder + SkippedNoFiles; }
+            get { return SkippedNoEmail + SkippedInvalidFormat + SkippedMissingFolder + SkippedNoFiles + SkippedNoMailGroups; }
         }
 
         /// <summary>

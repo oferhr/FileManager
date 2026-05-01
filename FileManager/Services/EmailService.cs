@@ -90,10 +90,10 @@ namespace FileManager.Services
             var validDirs = new List<EmailDirSettings>();
             foreach (var w in dirSettings)
             {
-                if (string.IsNullOrEmpty(w.email))
+                if (string.IsNullOrWhiteSpace(w.email))
                 {
                     result.SkippedNoEmail++;
-                    _loggingService.LogWarning($"[SendEmails] Skipped row with empty email. dir='{w.dir}'");
+                    _loggingService.LogWarning($"[SendEmails] Skipped row with empty or whitespace email. dir='{w.dir}'");
                     continue;
                 }
 
@@ -101,7 +101,9 @@ namespace FileManager.Services
                 if (!EmailValidator.IsValidEmailList(w.email, out emailError))
                 {
                     result.SkippedInvalidFormat++;
-                    _loggingService.LogSecurityEvent($"Invalid email address(es) blocked: {w.email} for directory: {w.dir}. Error: {emailError}");
+                    _loggingService.LogSecurityEvent("EmailFormatInvalid",
+                        $"Invalid email address(es) blocked: {w.email} for directory: {w.dir}. Error: {emailError}",
+                        new Dictionary<string, object> { { "Email", w.email }, { "Dir", w.dir }, { "Error", emailError } });
                     continue;
                 }
 
@@ -153,7 +155,12 @@ namespace FileManager.Services
                 var arfiles = ProcessFilesForEmail(files, dirSetting);
                 if (arfiles.Count == 0)
                 {
-                    _loggingService.LogWarning($"[SendEmails] No mail groups produced for dir='{dirSetting.dir}'. Likely no files in '1' subdirectory.");
+                    result.SkippedNoMailGroups++;
+                    _loggingService.LogWarning($"[SendEmails] No mail groups produced for dir='{dirSetting.dir}'. Files present but none in '1' subdirectory — leaving folder untouched.");
+                    progressTotal += pbPart;
+                    if (progressTotal > 100) progressTotal = 100;
+                    _progressCallback?.Invoke((int)progressTotal);
+                    continue;
                 }
 
                 SendEmailAttachments(arfiles, dirSetting, pbPart, sleepSeconds, result, ref progressTotal);
@@ -357,13 +364,29 @@ namespace FileManager.Services
                 var newFileName = fileName.Trim().Contains(" ") ? fileName.Replace(" ", "_") : fileName;
 
                 var copiedPath = Path.Combine(Path.GetDirectoryName(file), CopiedFilesDirectory);
-                if (!Directory.Exists(copiedPath))
+                string newFile;
+                try
                 {
-                    Directory.CreateDirectory(copiedPath);
-                }
+                    if (!Directory.Exists(copiedPath))
+                    {
+                        Directory.CreateDirectory(copiedPath);
+                    }
 
-                var newFile = Path.Combine(copiedPath, newFileName);
-                File.Copy(file, newFile, true);
+                    newFile = Path.Combine(copiedPath, newFileName);
+                    if (File.Exists(newFile))
+                    {
+                        var stem = Path.GetFileNameWithoutExtension(newFileName);
+                        var ext = Path.GetExtension(newFileName);
+                        newFile = Path.Combine(copiedPath, $"{stem}_{Guid.NewGuid():N}{ext}");
+                    }
+
+                    File.Copy(file, newFile, false);
+                }
+                catch (System.Exception ex)
+                {
+                    _loggingService.LogError("EmailService.ProcessFilesForEmail", ex, $"Failed to stage file for email: {file}");
+                    continue;
+                }
 
                 // Record the computed mail name (used as the group key) and the staged path.
                 lCopiedNames.Add(_fileService.GetMailFileName(fileName, dirSetting.icheck));
@@ -451,10 +474,6 @@ namespace FileManager.Services
                     oMsg.Send();
                     result.Succeeded++;
 
-                    progressTotal += pbIncrement;
-                    if (progressTotal > 100) progressTotal = 100;
-                    _progressCallback?.Invoke((int)progressTotal);
-
                     if (sleepSeconds > 0)
                     {
                         Thread.Sleep(sleepSeconds * 1000);
@@ -468,6 +487,10 @@ namespace FileManager.Services
                 }
                 finally
                 {
+                    progressTotal += pbIncrement;
+                    if (progressTotal > 100) progressTotal = 100;
+                    _progressCallback?.Invoke((int)progressTotal);
+
                     // Always release COM objects to prevent resource leaks
                     if (oMsg != null)
                     {
@@ -535,9 +558,9 @@ namespace FileManager.Services
                 {
                     Directory.Delete(newDir, true);
                 }
-                catch
+                catch (System.Exception ex)
                 {
-                    // Log error if needed
+                    _loggingService.LogWarning($"[ArchiveProcessedFiles] Failed to delete empty archive directory '{newDir}': {ex.Message}");
                 }
             }
 
@@ -547,13 +570,17 @@ namespace FileManager.Services
                 {
                     Directory.Delete(checkedPath);
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
-                    Directory.Delete(checkedPath, true);
+                    _loggingService.LogWarning($"[ArchiveProcessedFiles] Non-empty '1' folder '{checkedPath}', falling back to recursive delete: {ex.Message}");
+                    try { Directory.Delete(checkedPath, true); }
+                    catch (System.Exception inner) { _loggingService.LogError("EmailService", inner, $"[ArchiveProcessedFiles] Recursive delete of '{checkedPath}' failed."); }
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException ex)
                 {
-                    Directory.Delete(checkedPath, true);
+                    _loggingService.LogWarning($"[ArchiveProcessedFiles] Access denied on '{checkedPath}', falling back to recursive delete: {ex.Message}");
+                    try { Directory.Delete(checkedPath, true); }
+                    catch (System.Exception inner) { _loggingService.LogError("EmailService", inner, $"[ArchiveProcessedFiles] Recursive delete of '{checkedPath}' failed."); }
                 }
             }
         }

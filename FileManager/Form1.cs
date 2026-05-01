@@ -736,10 +736,14 @@ namespace FileManager
             }
             catch (System.Exception ex)
             {
-                using (var w = File.AppendText ( "log.txt" )) {
-                    Log ("error in mail send : /n" + ex.Message + ",----/n" +  (ex.InnerException?.Message ?? "") + "----/n" + ex.StackTrace, w );
-                }
-                MessageBox.Show("המיילים לא נשלחו בהצלחה");
+                _loggingService.LogError("btnMail_Click", ex, "Mail send aborted with unexpected exception in btnMail_Click");
+                MessageBox.Show(
+                    $"המיילים לא נשלחו בהצלחה: {ex.Message}",
+                    "שליחת מיילים",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error,
+                    MessageBoxDefaultButton.Button1,
+                    MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
             }
         }
 

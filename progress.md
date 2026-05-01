@@ -79,6 +79,38 @@ Legend: ⏸ pending · ▶ in-progress · ✅ done · ⚠ blocked · ⏭ deferre
 
 ---
 
+## Second-round review fixes (CodeRabbit + multi-agent ultrareview, applied to PR #8)
+
+Two reviews ran on commit `c76c926`. Triaged jointly.
+
+### Applied (commit pending after this update)
+
+| ID | Severity | What | Where |
+|----|----------|------|-------|
+| C1 | Critical | `Form1.btnMail_Click` outer catch routed through `_loggingService.LogError` (was writing to ad-hoc `log.txt`); MessageBox now surfaces `ex.Message` and uses RTL/Hebrew styling consistent with the Phase-2 result MessageBoxes | `Form1.cs:737-747` |
+| C2 | Critical | `File.Copy` and `Directory.CreateDirectory` inside `ProcessFilesForEmail` wrapped in try/catch; failure logs and skips the file rather than aborting the whole row | `EmailService.cs:359-376` |
+| C3 | Critical | `arfiles.Count == 0` path now increments `SkippedNoMailGroups`, advances progress by `pbPart`, and `continue`s before `ArchiveProcessedFiles`. Prevents data loss when `basePath\1` contains nested unsent files | `EmailService.cs:154-164` |
+| H1 | High | Empty `catch { /* Log error if needed */ }` at `Directory.Delete(newDir, true)` replaced with logged catch | `EmailService.cs:545-548` |
+| H2 | High | Recursive-delete fallback at `Directory.Delete(checkedPath)` now logs the original IOException/UnauthorizedAccessException AND wraps the recursive delete in its own try/catch | `EmailService.cs:551-572` |
+| H3 | High | `IsNullOrEmpty(w.email)` → `IsNullOrWhiteSpace(w.email)` so `" "` is bucketed as `SkippedNoEmail` rather than `SkippedInvalidFormat` | `EmailService.cs:93` |
+| H4 | High | Filename collision after space normalization — when `newFile` already exists, append GUID stem; `File.Copy(... overwrite: false)` so silent overwrites cannot occur | `EmailService.cs:367-373` |
+| H6 | Med | `LogSecurityEvent` for invalid-format email upgraded to 3-arg overload with `eventType: "EmailFormatInvalid"` and structured properties (was being recorded as `PathTraversal`) | `EmailService.cs:104-106` |
+| CR#5 | UX | Progress accumulator `progressTotal += pbIncrement;` moved into the `finally` block so failed sends contribute exactly one increment each — bar no longer stalls during partial failures | `EmailService.cs:488-505` |
+
+New field: `EmailSendResult.SkippedNoMailGroups` — included in `SkippedTotal` so `AllSucceeded` picks it up automatically.
+
+### Not applied (deferred to follow-up cleanup ticket)
+
+| ID | Severity | Why deferred |
+|----|----------|--------------|
+| Multi-agent #7 (subject divergence) | High | Disagree — current code matches plan §2 phase 3 acceptance and earlier reviewer R1 confirmed byte-for-byte v1.2.44. The multi-agent claim contradicts both. |
+| Comment rot — "v1.2.44" anchors per CLAUDE.md | Med | Cosmetic; clean in a separate PR alongside other comment cleanup. |
+| Missing `source=` on existing `LogWarning` calls | Med | NLog filtering improvement; out of scope. |
+| CRLF strip from `ex.Message` before `FailedRecipients.Add` | Med | Defensive; defer. |
+| `EmailSendResult` setter encapsulation (`{ get; }` only + helper methods) | Low | Type-design improvement. |
+| CodeRabbit markdown fence language tag on `EMAIL_FIX_PLAN.md` | Nit | Pure linter cosmetic. |
+| Pre-existing empty `catch { }` blocks in `ExcelExportService.cs` | Med | Out of scope; observed by agent — track separately. |
+
 ## Code review follow-ups (applied to this PR)
 
 Reviewer of commit `e854bd5` flagged 9 defects (R1–R9). Per reviewer's bottom line, addressed R1 (mandatory) and R6 (visible regression on lines the orchestrator touched). R2–R5 and R7–R9 left for separate cleanup tickets — all LOW severity.
