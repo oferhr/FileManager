@@ -94,8 +94,8 @@ using System.Runtime.InteropServices;
 
 /// <summary>
 /// File version displayed in Windows file properties.
-/// Current version: 1.2.50
+/// Current version: 1.2.53
 /// Recent updates include: .NET 4.8 upgrade, enhanced documentation,
 /// copy file functionality, mail archive persistence.
 /// </summary>
-[assembly: AssemblyFileVersion("1.2.51")]
+[assembly: AssemblyFileVersion("1.2.53")]
