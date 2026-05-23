@@ -1,0 +1,12 @@
+{
+  "CopyFiles": true,
+  "SplitFolders": true,
+  "FixFileNames": true,
+  "CountFiles": true,
+  "FixDuplicates": true,
+  "SetExcelNames": true,
+  "SetReportsNames": true,
+  "SendEmails": true,
+  "Archive": true,
+  "DeleteFiles": true
+}

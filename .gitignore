@@ -301,3 +301,8 @@ tmpclaude-*
 
 ## /cso security audit reports — keep out of repo history
 .gstack/
+
+## Ad-hoc review prompts and security remediation reports — keep out of repo history
+REVIEWER_PROMPT.md
+SECURITY_REMEDIATION_*.pdf
+SECURITY_REMEDIATION_*.md

@@ -98,4 +98,4 @@ using System.Runtime.InteropServices;
 /// Recent updates include: .NET 4.8 upgrade, enhanced documentation,
 /// copy file functionality, mail archive persistence.
 /// </summary>
-[assembly: AssemblyFileVersion("1.2.53")]
+[assembly: AssemblyFileVersion("1.2.54")]
