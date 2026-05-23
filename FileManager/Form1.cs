@@ -121,6 +121,7 @@ namespace FileManager
         private readonly IFileNameManagementService _fileNameManagementService;
         private readonly IEmailService _emailService;
         private readonly IExcelService _excelService;
+        private readonly IActionConfigService _actionConfigService;
 
         /// <summary>
         /// Original unfiltered list of email directory settings for the email grid.
@@ -171,6 +172,7 @@ namespace FileManager
 
                 // Initialize services
                 _loggingService = new LoggingService();
+                _actionConfigService = new ActionConfigService(_loggingService);
                 _configurationService = new ConfigurationService(_config, _loggingService);
                 _fileService = new FileService(true, _loggingService);
                 _fileCountService = new FileCountService(
@@ -522,6 +524,45 @@ namespace FileManager
         //    }
         //    return false;
         //}
+        /// <summary>
+        /// Checks <c>actions.json</c> for the named action. Logs a skip message when disabled.
+        /// Returns true when the action is enabled (or the file/key is missing).
+        /// </summary>
+        private bool IsActionAllowed(string actionName)
+        {
+            if (_actionConfigService == null)
+            {
+                return true;
+            }
+            if (_actionConfigService.IsActionEnabled(actionName))
+            {
+                return true;
+            }
+            _loggingService?.LogInfo($"Skipping action '{actionName}' — disabled in actions.json", "Form1");
+            return false;
+        }
+
+        /// <summary>
+        /// Gate for explicit user-clicked buttons. Returns true if the action is allowed.
+        /// When disabled, shows a Hebrew RTL message so the user knows the click was deliberately ignored.
+        /// </summary>
+        private bool IsButtonActionAllowed(string actionName)
+        {
+            if (IsActionAllowed(actionName))
+            {
+                return true;
+            }
+
+            MessageBox.Show(
+                $"הפעולה '{actionName}' מנוטרלת בקובץ ההגדרות actions.json",
+                "פעולה מנוטרלת",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information,
+                MessageBoxDefaultButton.Button1,
+                MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+            return false;
+        }
+
         // Helper methods for service callbacks
         private void UpdateProgressBar(int value)
         {
@@ -578,19 +619,34 @@ namespace FileManager
             boxSummary.Visible = false;
             Application.DoEvents();
 
-            // Execute file processing workflow
-            CopyFiles();            // Copy files based on copy settings
-            SplitFolders();         // Split folders according to configuration
-            FixFileNames ( true );  // Fix file names (Migdal format)
-            CountFiles ();          // Count files in selected directories
-            SetExcelNames ();       // Set Excel file names based on content analysis
-            SetReportsNames ();     // Apply report naming conventions
+            // Execute file processing workflow (each step gated by actions.json).
+            // Each action is now independent — FixDuplicates and the non-Migdal FixFileNames
+            // were previously nested inside CountFiles and are now hoisted to their own gates.
+            var anyRan = false;
+            if (IsActionAllowed(ActionNames.CopyFiles))       { CopyFiles();        anyRan = true; }
+            if (IsActionAllowed(ActionNames.SplitFolders))    { SplitFolders();     anyRan = true; }
+            if (IsActionAllowed(ActionNames.FixFileNames))    { FixFileNames(true); anyRan = true; }
+            if (IsActionAllowed(ActionNames.CountFiles))      { CountFiles();       anyRan = true; }
+            if (IsActionAllowed(ActionNames.FixDuplicates))   { FixDuplicates();    anyRan = true; }
+            if (IsActionAllowed(ActionNames.FixFileNames))    { FixFileNames(false); anyRan = true; }
+            if (IsActionAllowed(ActionNames.SetExcelNames))   { SetExcelNames();    anyRan = true; }
+            if (IsActionAllowed(ActionNames.SetReportsNames)) { SetReportsNames();  anyRan = true; }
 
-            // Enable mail functionality after processing
-            btnMail.Enabled = true;
+            // Only enable mail when something actually ran (and SendEmails is allowed)
+            btnMail.Enabled = anyRan && _actionConfigService.IsActionEnabled(ActionNames.SendEmails);
 
             // Notify user of completion status
-            if (hasErrors)
+            if (!anyRan)
+            {
+                MessageBox.Show(
+                    "לא בוצעו פעולות — כל הפעולות מנוטרלות בקובץ actions.json",
+                    "אין פעולות לביצוע",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information,
+                    MessageBoxDefaultButton.Button1,
+                    MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+            }
+            else if (hasErrors)
             {
                 MessageBox.Show("הפעולה הסתיימה עם בעיותץ בדוק קובץ לוג");
             }
@@ -614,6 +670,7 @@ namespace FileManager
         /// </summary>
         private void btnDel_Click ( object sender, EventArgs e )
         {
+            if (!IsButtonActionAllowed(ActionNames.DeleteFiles)) return;
             DelteFiles();
         }
 
@@ -684,6 +741,7 @@ namespace FileManager
         /// </remarks>
         private void btnMail_Click ( object sender, EventArgs e )
         {
+            if (!IsButtonActionAllowed(ActionNames.SendEmails)) return;
             try
             {
                 // Initialize progress indicators
@@ -1334,6 +1392,7 @@ namespace FileManager
 
         private void btnArchive_Click ( object sender, EventArgs e )
         {
+            if (!IsButtonActionAllowed(ActionNames.Archive)) return;
 
             try {
                 var parentPath = txtFolderArchiveParent.Text;
@@ -1849,15 +1908,11 @@ namespace FileManager
 
                 if (checkedItems.Count == 0)
                 {
-                    FixDuplicates();
-                    FixFileNames(false);
                     return;
                 }
-                
+
                 var list = SetSelectedItems(checkedItems, true);
-                FixDuplicates();
-                FixFileNames(false);
-                
+
                 //open the grid form with the selected data.
                 var grid = new ResultGrid(list.OrderBy(o=>o.FileName).ToList());
                 grid.Show();

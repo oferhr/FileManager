@@ -139,6 +139,8 @@
     <Compile Include="ResultGrid.Designer.cs">
       <DependentUpon>ResultGrid.cs</DependentUpon>
     </Compile>
+    <Compile Include="Services\ActionConfigService.cs" />
+    <Compile Include="Services\ActionNames.cs" />
     <Compile Include="Services\ArchiveService.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
     <Compile Include="Services\DuplicateManagementService.cs" />
@@ -152,6 +154,7 @@
     <Compile Include="Services\FileNameManagementService.cs" />
     <Compile Include="Services\FileService.cs" />
     <Compile Include="Services\FolderSplitService.cs" />
+    <Compile Include="Services\IActionConfigService.cs" />
     <Compile Include="Services\IArchiveService.cs" />
     <Compile Include="Services\IConfigurationService.cs" />
     <Compile Include="Services\IDuplicateManagementService.cs" />
@@ -190,6 +193,9 @@
     </EmbeddedResource>
     <None Include="FileManager_TemporaryKey.pfx" />
     <Content Include="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="actions.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="NLog.xsd">
