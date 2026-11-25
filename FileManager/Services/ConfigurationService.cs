@@ -48,10 +48,10 @@ namespace FileManager.Services
             return ReadSettings<EmailDirSettings>("fileManager_emailDirConfig.json");
         }
 
-        public void SetEmailDirSettings(List<EmailDirSettings> settings)
+        public bool SetEmailDirSettings(List<EmailDirSettings> settings)
         {
             var configPath = GetValidatedConfigPath("fileManager_emailDirConfig.json");
-            SaveSettings(configPath, settings);
+            return SaveSettings(configPath, settings);
         }
 
         public List<FolderSettings> GetFolderSettings()
@@ -59,10 +59,10 @@ namespace FileManager.Services
             return ReadSettings<FolderSettings>("fileManager_foldersConfig.json");
         }
 
-        public void SetFolderSettings(List<FolderSettings> settings)
+        public bool SetFolderSettings(List<FolderSettings> settings)
         {
             var configPath = GetValidatedConfigPath("fileManager_foldersConfig.json");
-            SaveSettings(configPath, settings);
+            return SaveSettings(configPath, settings);
         }
 
         public List<CountSettings> GetCountSettings()
@@ -70,10 +70,10 @@ namespace FileManager.Services
             return ReadSettings<CountSettings>("fileManager_countsConfig.json");
         }
 
-        public void SetCountSettings(List<CountSettings> settings)
+        public bool SetCountSettings(List<CountSettings> settings)
         {
             var configPath = GetValidatedConfigPath("fileManager_countsConfig.json");
-            SaveSettings(configPath, settings);
+            return SaveSettings(configPath, settings);
         }
 
         public List<SplitSettings> GetSplitSettings()
@@ -81,10 +81,10 @@ namespace FileManager.Services
             return ReadSettings<SplitSettings>("fileManager_splitConfig.json");
         }
 
-        public void SetSplitSettings(List<SplitSettings> settings)
+        public bool SetSplitSettings(List<SplitSettings> settings)
         {
             var configPath = GetValidatedConfigPath("fileManager_splitConfig.json");
-            SaveSettings(configPath, settings);
+            return SaveSettings(configPath, settings);
         }
 
         public List<CopySettings> GetCopySettings()
@@ -92,11 +92,11 @@ namespace FileManager.Services
             return ReadSettings<CopySettings>("fileManager_copyConfig.json");
         }
 
-        public void SetCopySettings(List<CopySettings> settings)
+        public bool SetCopySettings(List<CopySettings> settings)
         {
             // Fix: Use lowercase "copyConfig" for consistency
             var configPath = GetValidatedConfigPath("fileManager_copyConfig.json");
-            SaveSettings(configPath, settings);
+            return SaveSettings(configPath, settings);
         }
 
         public List<ArchiveSettings> GetArchiveSettings()
@@ -104,10 +104,10 @@ namespace FileManager.Services
             return ReadSettings<ArchiveSettings>("fileManager_archiveConfig.json");
         }
 
-        public void SetArchiveSettings(List<ArchiveSettings> settings)
+        public bool SetArchiveSettings(List<ArchiveSettings> settings)
         {
             var configPath = GetValidatedConfigPath("fileManager_archiveConfig.json");
-            SaveSettings(configPath, settings);
+            return SaveSettings(configPath, settings);
         }
 
         /// <summary>
@@ -160,15 +160,52 @@ namespace FileManager.Services
             return settings;
         }
 
-        private void SaveSettings<T>(string configPath, List<T> settings)
+        /// <summary>
+        /// Persists settings to disk. Returns true when the content is written (or already on disk
+        /// unchanged), and false when the write is skipped because the location is read-only/locked.
+        /// Throws for any other failure.
+        /// </summary>
+        private bool SaveSettings<T>(string configPath, List<T> settings)
         {
             lock (LockObject)
             {
+                var sjson = JsonConvert.SerializeObject(settings.ToArray());
+
+                // Skip the write when the on-disk content is already identical. Most of these
+                // saves re-persist a selection that was just loaded from the same file, so this
+                // avoids pointless writes — and means a read-only config location no longer
+                // fails when nothing actually changed.
                 try
                 {
-                    var sjson = JsonConvert.SerializeObject(settings.ToArray());
+                    if (File.Exists(configPath) &&
+                        string.Equals(File.ReadAllText(configPath), sjson, StringComparison.Ordinal))
+                    {
+                        _loggingService.LogInfo($"ConfigWrite skipped — content unchanged: {configPath}", "ConfigurationService");
+                        return true;
+                    }
+                }
+                catch (IOException) { /* unreadable — fall through and attempt the write */ }
+                catch (UnauthorizedAccessException) { /* unreadable — fall through and attempt the write */ }
+
+                try
+                {
                     File.WriteAllText(configPath, sjson);
                     _loggingService.LogFileOperation("ConfigWrite", configPath, true);
+                    return true;
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+                {
+                    // Persisting settings is a convenience, not a prerequisite for the running
+                    // action. When the config location is read-only or locked (e.g. a shared drive
+                    // where this user lacks write access), log a warning and continue rather than
+                    // aborting the caller's workflow. This is a handled, non-fatal condition, so it
+                    // is logged at Warn (not as a failed file operation, which would be Error-level).
+                    // Other exception types still propagate below.
+                    _loggingService.LogWarning(
+                        $"Could not persist settings to {configPath} (location not writable): {ex.Message}. " +
+                        "Continuing without saving.",
+                        "ConfigurationService");
+                    return false;
                 }
                 catch (Exception ex)
                 {

@@ -77,9 +77,10 @@ namespace FileManager
         const string LtrMark = "\u200E";
 
         /// <summary>
-        /// Lock object for thread-safe operations.
+        /// Tracks whether the "config location is read-only" notice has already been shown this
+        /// session, so interactive saves warn the user at most once instead of on every edit.
         /// </summary>
-        private static readonly object LockObject = new object ();
+        private bool _configReadOnlyNoticeShown = false;
 
         /// <summary>
         /// Temporary directory name for copied files during processing.
@@ -783,6 +784,21 @@ namespace FileManager
                         result.Succeeded,
                         result.FailedRecipients.Count,
                         result.SkippedTotal);
+                    icon = MessageBoxIcon.Warning;
+                }
+
+                if (result.ErrorFilesMoved > 0)
+                {
+                    // "X folders created under the Error folder with a total of Y files"
+                    message += string.Format(
+                        "\n\nנוצרו {0} תיקיות תחת תיקיית Error עם סה\"כ {1} קבצים",
+                        result.ErrorFoldersCreated,
+                        result.ErrorFilesMoved);
+                }
+                if (result.ErrorFilesMoveFailed > 0)
+                {
+                    // "N oversized files could not be moved to the Error folder — check the log"
+                    message += $"\n\n{result.ErrorFilesMoveFailed} קבצים גדולים לא הועברו לתיקיית Error — בדוק קובץ הלוג";
                     icon = MessageBoxIcon.Warning;
                 }
 
@@ -2454,33 +2470,41 @@ namespace FileManager
 
 
 
+        // These three delegate to ConfigurationService so every action's settings save shares the
+        // same skip-if-unchanged + non-fatal-on-read-only behavior (see SaveSettings). They were
+        // previously inline File.WriteAllText calls that overwrote unconditionally and threw on a
+        // read-only config location. Each is reached from an interactive grid edit, so a skipped
+        // save (read-only location) is surfaced to the user once via NotifyConfigReadOnlyOnce.
         private void setSplitSettings ( List<SplitSettings> folSettings )
         {
-            var configPath = Path.Combine ( _config, "fileManager_splitConfig.json" );
-
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
-                File.WriteAllText ( configPath, sjson );
-            }
+            if (!_configurationService.SetSplitSettings ( folSettings )) NotifyConfigReadOnlyOnce ();
         }
         private void setCopySettings(List<CopySettings> folSettings)
         {
-            var configPath = Path.Combine(_config, "fileManager_CopyConfig.json");
-
-            lock (LockObject)
-            {
-                var sjson = JsonConvert.SerializeObject(folSettings.ToArray());
-                File.WriteAllText(configPath, sjson);
-            }
+            if (!_configurationService.SetCopySettings(folSettings)) NotifyConfigReadOnlyOnce ();
         }
         private void setArchiveSettings ( List<ArchiveSettings> folSettings )
         {
-            var configPath = Path.Combine ( _config, "fileManager_archiveConfig.json" );
+            if (!_configurationService.SetArchiveSettings ( folSettings )) NotifyConfigReadOnlyOnce ();
+        }
 
-            lock (LockObject) {
-                var sjson = JsonConvert.SerializeObject ( folSettings.ToArray () );
-                File.WriteAllText ( configPath, sjson );
-            }
+        /// <summary>
+        /// Shows a single non-blocking notice (once per session) when settings could not be saved
+        /// because the configuration location is read-only or locked. The condition is already
+        /// logged by ConfigurationService; this just informs the user their change won't persist.
+        /// </summary>
+        private void NotifyConfigReadOnlyOnce ()
+        {
+            if (_configReadOnlyNoticeShown) return;
+            _configReadOnlyNoticeShown = true;
+
+            MessageBox.Show (
+                "לא ניתן לשמור הגדרות — מיקום קובץ ההגדרות מוגן מפני כתיבה. השינוי לא יישמר.",
+                "אזהרה",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button1,
+                MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading );
         }
         
 

@@ -38,6 +38,21 @@ namespace FileManager.Services
         private const string CopiedFilesDirectory = "9876789";
 
         /// <summary>
+        /// Name of the per-client folder (sibling of 1, 2, 3...) that receives files too large
+        /// to send through Outlook. Its contents are never parsed by the send flow.
+        /// </summary>
+        private const string ErrorFolderName = "Error";
+
+        /// <summary>Fallback for the <c>BigFileSize</c> App.config key, in MB.</summary>
+        private const int DefaultBigFileSizeMb = 10;
+
+        /// <summary>
+        /// Files strictly larger than this many bytes are moved to the Error folder before sending.
+        /// Read from the <c>BigFileSize</c> key (MB) in App.config.
+        /// </summary>
+        private readonly long _bigFileSizeBytes;
+
+        /// <summary>
         /// When <c>true</c>, per-file and per-group diagnostic info logs are emitted.
         /// Controlled by the <c>EmailDiagnosticsEnabled</c> key in App.config.
         /// Defaults to <c>true</c> when the key is absent or unparseable so that
@@ -65,6 +80,20 @@ namespace FileManager.Services
             var diagFlag = ConfigurationManager.AppSettings["EmailDiagnosticsEnabled"];
             bool parsed;
             _diagnosticsEnabled = !bool.TryParse(diagFlag, out parsed) || parsed;
+
+            // Oversized-file threshold in MB. Fall back to the default when the key is missing,
+            // unparseable or non-positive (deployed .exe.config files may predate the key).
+            var bigFileSizeSetting = ConfigurationManager.AppSettings["BigFileSize"];
+            int bigFileSizeMb;
+            if (!int.TryParse(bigFileSizeSetting, out bigFileSizeMb) || bigFileSizeMb <= 0)
+            {
+                if (bigFileSizeSetting != null)
+                {
+                    _loggingService.LogWarning($"[EmailService] Invalid BigFileSize value '{bigFileSizeSetting}' in App.config; using default {DefaultBigFileSizeMb}MB.");
+                }
+                bigFileSizeMb = DefaultBigFileSizeMb;
+            }
+            _bigFileSizeBytes = bigFileSizeMb * 1024L * 1024L;
         }
 
         /// <summary>
@@ -110,6 +139,10 @@ namespace FileManager.Services
                 validDirs.Add(w);
             }
 
+            // Before anything is sent, move files that are too large for Outlook out of the
+            // numbered subfolders (1, 2, 3...) of every client into <client>\Error\<N>.
+            MoveOversizedFilesToErrorFolders(validDirs, result);
+
             var counts = validDirs.Count;
             double pbPart = counts == 0 ? 100 : 100.0 / counts;
 
@@ -141,8 +174,12 @@ namespace FileManager.Services
                     continue;
                 }
 
+                // The Error folder holds files that were too large to send; never parse it.
+                // Without this, <client>\Error\1\x.pdf would look like a "1" file below.
+                var errorRoot = Path.Combine(basePath, ErrorFolderName) + Path.DirectorySeparatorChar;
                 var lfiles = Directory.GetFiles(basePath, "*.*", SearchOption.AllDirectories)
-                    .Where(s => s.ToLower().EndsWith(".tif") || s.ToLower().EndsWith(".tiff") || s.ToLower().EndsWith(".pdf"));
+                    .Where(s => !s.StartsWith(errorRoot, StringComparison.OrdinalIgnoreCase))
+                    .Where(IsAttachableFile);
                 var files = lfiles as IList<string> ?? lfiles.ToList();
 
                 if (!files.Any())
@@ -316,6 +353,148 @@ namespace FileManager.Services
             }
 
             return emailsDs;
+        }
+
+        /// <summary>Returns <c>true</c> for the file types the send flow attaches (.tif/.tiff/.pdf).</summary>
+        private static bool IsAttachableFile(string path)
+        {
+            var lower = path.ToLowerInvariant();
+            return lower.EndsWith(".tif") || lower.EndsWith(".tiff") || lower.EndsWith(".pdf");
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> for the numbered client subfolders (1, 2, 3 ... 99), following the
+        /// codebase convention that these are short (fewer than 3 chars) numeric names.
+        /// </summary>
+        private static bool IsNumberedSubfolder(string folderName)
+        {
+            return !string.IsNullOrEmpty(folderName) && folderName.Length < 3 && folderName.All(char.IsDigit);
+        }
+
+        /// <summary>Returns <c>true</c> when the file is larger than the BigFileSize threshold.</summary>
+        private bool IsOversized(string path)
+        {
+            try
+            {
+                return new FileInfo(path).Length > _bigFileSizeBytes;
+            }
+            catch (System.Exception ex)
+            {
+                _loggingService.LogError("EmailService.IsOversized", ex, $"Failed to read size of '{path}'; treating it as not oversized.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// For every client directory, moves .tif/.tiff/.pdf files larger than the
+        /// <c>BigFileSize</c> threshold out of its numbered subfolders (1, 2, 3...) into
+        /// <c>&lt;client&gt;\Error\&lt;N&gt;</c>, so Outlook never tries to attach them.
+        /// Only the top level of each numbered folder is scanned (not the staging folder or
+        /// archives), and the Error folder itself is never scanned.
+        /// </summary>
+        private void MoveOversizedFilesToErrorFolders(List<EmailDirSettings> dirs, EmailSendResult result)
+        {
+            foreach (var dirSetting in dirs)
+            {
+                string clientPath, pathError;
+                if (!PathValidator.ValidateAndNormalize(Path.Combine(_basePath, dirSetting.dir), _basePath, out clientPath, out pathError)
+                    || !Directory.Exists(clientPath))
+                {
+                    // The send loop reports and counts this row as skipped; nothing to do here.
+                    continue;
+                }
+
+                string[] subDirs;
+                try
+                {
+                    subDirs = Directory.GetDirectories(clientPath);
+                }
+                catch (System.Exception ex)
+                {
+                    _loggingService.LogError("EmailService.MoveOversizedFilesToErrorFolders", ex, $"Failed to list subfolders of '{clientPath}'");
+                    continue;
+                }
+
+                foreach (var subDir in subDirs)
+                {
+                    var subName = Path.GetFileName(subDir);
+                    if (!IsNumberedSubfolder(subName))
+                    {
+                        continue;
+                    }
+
+                    string[] candidates;
+                    try
+                    {
+                        candidates = Directory.GetFiles(subDir, "*.*", SearchOption.TopDirectoryOnly);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        _loggingService.LogError("EmailService.MoveOversizedFilesToErrorFolders", ex, $"Failed to list files in '{subDir}'");
+                        continue;
+                    }
+
+                    var oversized = candidates
+                        .Where(f => IsAttachableFile(f) && !_fileService.IsThumbsInPath(f))
+                        .Where(IsOversized)
+                        .ToList();
+                    if (oversized.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var errorDir = Path.Combine(clientPath, ErrorFolderName, subName);
+                    string normalizedErrorDir, errorDirError;
+                    if (!PathValidator.ValidateAndNormalize(errorDir, _basePath, out normalizedErrorDir, out errorDirError))
+                    {
+                        result.ErrorFilesMoveFailed += oversized.Count;
+                        _loggingService.LogSecurityEvent("PathValidationFailure",
+                            $"EmailService rejected Error folder path: {errorDirError}",
+                            new Dictionary<string, object> { { "Path", errorDir }, { "basePath", _basePath } });
+                        continue;
+                    }
+
+                    var movedHere = 0;
+                    foreach (var file in oversized)
+                    {
+                        try
+                        {
+                            Directory.CreateDirectory(normalizedErrorDir);
+
+                            var fileName = Path.GetFileName(file);
+                            var dest = Path.Combine(normalizedErrorDir, fileName);
+                            if (File.Exists(dest))
+                            {
+                                dest = Path.Combine(normalizedErrorDir,
+                                    $"{Path.GetFileNameWithoutExtension(fileName)}_{Guid.NewGuid():N}{Path.GetExtension(fileName)}");
+                            }
+
+                            _fileService.MoveFiles(file, dest);
+                            movedHere++;
+                            _loggingService.LogInfo($"[MoveOversizedFilesToErrorFolders] Moved oversized file ({new FileInfo(dest).Length} bytes > {_bigFileSizeBytes}) '{file}' -> '{dest}'");
+                        }
+                        catch (System.Exception ex)
+                        {
+                            // The file stays in its numbered folder; if that is "1" it will still be
+                            // attached and the send is likely to fail. Surface it in the result.
+                            result.ErrorFilesMoveFailed++;
+                            _loggingService.LogError("EmailService.MoveOversizedFilesToErrorFolders", ex,
+                                $"Failed to move oversized file '{file}' to '{normalizedErrorDir}'. It will remain in place.");
+                        }
+                    }
+
+                    if (movedHere > 0)
+                    {
+                        result.ErrorFoldersCreated++;
+                        result.ErrorFilesMoved += movedHere;
+                    }
+                }
+            }
+
+            if (result.ErrorFilesMoved > 0 || result.ErrorFilesMoveFailed > 0)
+            {
+                _loggingService.LogInfo($"[MoveOversizedFilesToErrorFolders] Threshold={_bigFileSizeBytes} bytes. Error subfolders used={result.ErrorFoldersCreated}, files moved={result.ErrorFilesMoved}, move failures={result.ErrorFilesMoveFailed}");
+            }
         }
 
         /// <summary>

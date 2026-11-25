@@ -36,6 +36,18 @@ namespace FileManager.Services
         /// </summary>
         public List<string> FailedRecipients { get; set; } = new List<string>();
 
+        /// <summary>
+        /// Number of <c>Error\N</c> subfolders that received oversized files during this run
+        /// (counted once per client/subfolder pair). Not a skip; reported separately.
+        /// </summary>
+        public int ErrorFoldersCreated { get; set; }
+
+        /// <summary>Total number of oversized files moved into <c>Error\N</c> subfolders during this run.</summary>
+        public int ErrorFilesMoved { get; set; }
+
+        /// <summary>Number of oversized files that could not be moved to the Error folder (see log).</summary>
+        public int ErrorFilesMoveFailed { get; set; }
+
         /// <summary>Sum of all skip counters.</summary>
         public int SkippedTotal
         {
