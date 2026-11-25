@@ -306,3 +306,6 @@ tmpclaude-*
 REVIEWER_PROMPT.md
 SECURITY_REMEDIATION_*.pdf
 SECURITY_REMEDIATION_*.md
+
+# Release zips (may contain client config)
+/out/

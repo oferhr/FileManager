@@ -164,29 +164,28 @@ namespace FileManager.Services
 
         public void SetSelectedExcelFolders(List<string> checkedItems)
         {
-            var items = String.Empty;
-            foreach (var checkedItem in checkedItems)
-            {
-                //set a comma delimited string to be saved in Settings
-                items += checkedItem + ",";
-            }
+            // Comma-delimited string to persist in settings (mirrors LoadExcelFolders' Split(',')).
+            var newValue = string.Join(",", checkedItems);
 
             var folderSettings = _configurationService.GetFolderSettings();
             if (folderSettings.Count > 0)
             {
-                folderSettings.First().ExcelFolders = items.TrimEnd(',');
+                folderSettings.First().ExcelFolders = newValue;
             }
             else
             {
                 folderSettings.Add(new FolderSettings
                 {
-                    ExcelFolders = items.TrimEnd(','),
+                    ExcelFolders = newValue,
                     reportsFolders = string.Empty,
                     fileNamesFolders = string.Empty,
                     selectedFolders = string.Empty,
                     duplicatesFolders = string.Empty
                 });
             }
+
+            // Persistence is skip-if-unchanged and non-fatal-on-read-only — handled centrally
+            // in ConfigurationService.SaveSettings, so every action's settings save behaves the same.
             _configurationService.SetFolderSettings(folderSettings);
         }
 
